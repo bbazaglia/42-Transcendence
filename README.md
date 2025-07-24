@@ -1,71 +1,87 @@
-# Pong Tournament
+# ft_transcendence
 
-A single-page application for playing Pong tournaments with multiple players.
+A modern web application featuring a classic Pong game. This project is built with a decoupled, containerized architecture, separating the frontend user interface from the backend data service.
+
+## Architecture Overview
+
+The application is managed entirely by Docker Compose, allowing for a seamless one-command setup for any developer.
+
+-   **Frontend**: A Single-Page Application (SPA) built with TypeScript and Tailwind CSS. It handles all visuals, user interaction, and runs the Pong game logic entirely in the browser. It is served by a secure Nginx server configured for HTTPS.
+
+-   **Backend**: A secure and efficient API server built with Node.js and Fastify. Its sole responsibilities are managing user accounts, authentication (JWT), and persisting game data to an SQLite database.
+
+## Tech Stack
+
+-   **Frontend**: TypeScript, Tailwind CSS
+-   **Backend**: Node.js, Fastify
+-   **Database**: SQLite
+-   **Web Server**: Nginx
+-   **Containerization**: Docker, Docker Compose
 
 ## Features
 
-- **Live Pong Game**: Play Pong against another player using the same keyboard
-- **Tournament System**: Organize tournaments with multiple players
-- **Registration System**: Players can register with custom aliases
-- **Matchmaking**: Automatic tournament bracket generation and match scheduling
-- **Single Page Application**: Full client-side routing with browser back/forward support
+-   Classic Pong gameplay rendered on the client-side.
+-   User registration and login.
+-   Secure API with JWT authentication.
+-   Match history and user statistics persistence.
+-   HTTPS-first configuration with modern security practices.
+-   Fully containerized for easy setup and deployment.
 
-## Controls
+## Getting Started
 
-- **Player 1**: W (up) / S (down)
-- **Player 2**: Up Arrow / Down Arrow
+### Prerequisites
 
-## Setup
+-   [Docker](https://docs.docker.com/get-docker/)
+-   [Docker Compose](https://docs.docker.com/compose/install/)
 
-1. Install dependencies:
-```bash
-npm install
-```
+### Installation
 
-2. Start the development server:
-```bash
-npm run dev
-```
+1.  **Clone the repository:**
+    ```bash
+    git clone <your-repository-url>
+    cd ft_transcendence
+    ```
 
-3. Open your browser and navigate to `http://localhost:3000`
+2.  **Create the environment file:**
+    Copy the example environment file to create your own local configuration.
+    ```bash
+    cp .env.example .env
+    ```
+    You can modify the `JWT_SECRET` in the `.env` file to a new random string for better security.
 
-## Build
+3.  **Build and run the containers:**
+    ```bash
+    docker-compose up --build
+    ```
+    This command will build the Docker images for the frontend and backend services and start the application.
 
-To build for production:
-```bash
-npm run build
-```
+4.  **Access the application:**
+    Open your web browser and navigate to:
+    **`https://localhost:8443`**
 
-## Technology Stack
+    > **Note:** You will see a browser warning about an insecure connection. This is expected because the application uses a self-signed SSL certificate for local development. You can safely proceed to the site.
 
-- **Frontend**: TypeScript, Tailwind CSS
-- **Build Tool**: Vite
-- **Game Engine**: HTML5 Canvas with requestAnimationFrame
-- **Routing**: Custom client-side router
+## Environment Variables
+
+The following environment variables are used by the backend service and are configured in the `.env` file:
+
+-   `JWT_SECRET`: A secret key used for signing and verifying JSON Web Tokens.
+-   `DATABASE_PATH`: The path inside the container where the SQLite database file is stored. Defaults to `/app/data/database.sqlite`.
 
 ## Project Structure
 
 ```
-src/
-├── App.ts              # Main application class
-├── Router.ts           # Client-side routing
-├── TournamentManager.ts # Tournament logic and bracket generation
-├── GameManager.ts      # Pong game logic and rendering
-├── main.ts            # Application entry point
-└── style.css          # Global styles with Tailwind CSS
+.
+├── backend/
+│   ├── src/
+│   ├── Dockerfile      # Production-ready Dockerfile for the backend
+│   └── package.json
+├── frontend/
+│   ├── src/
+│   ├── Dockerfile      # Multi-stage Dockerfile for the frontend
+│   ├── nginx.conf      # Nginx configuration with HTTPS and security headers
+│   └── package.json
+├── .env.example        # Example environment variables
+├── docker-compose.yml  # Docker Compose file to orchestrate services
+└── README.md           # You are here
 ```
-
-## Game Rules
-
-- First player to reach 5 points wins
-- Ball bounces off paddles and walls
-- Ball angle changes based on where it hits the paddle
-- Both players have identical paddle speed for fair play
-
-## Tournament System
-
-- Supports 4, 8, or 16 players
-- Single elimination bracket
-- Random player seeding
-- Automatic winner advancement
-- Clear match scheduling and results display 

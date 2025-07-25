@@ -111,11 +111,18 @@ export class GameManager {
   }
 
   private resetGame(): void {
+    // Reset scores
+    this.score1 = 0
+    this.score2 = 0
+    
+    // Reset ball position and speed
     this.ball.x = 400
     this.ball.y = 200
-    this.ball.dx = Math.random() > 0.5 ? 4 : -4
-    this.ball.dy = Math.random() > 0.5 ? 4 : -4
+    const ballSpeed = this.customization?.getSettings().ballSpeed || 4
+    this.ball.dx = Math.random() > 0.5 ? ballSpeed : -ballSpeed
+    this.ball.dy = Math.random() > 0.5 ? ballSpeed : -ballSpeed
 
+    // Reset paddle positions
     this.leftPaddle.y = 175
     this.rightPaddle.y = 175
     
@@ -127,7 +134,53 @@ export class GameManager {
   private applyCustomizationSettings(): void {
     if (!this.customization) return
     
+    console.log('⚙️ Applying customization settings...')
+    console.log('Current winning score before:', this.winningScore)
+    
     this.customization.applySettingsToGame(this)
+    
+    console.log('Current winning score after:', this.winningScore)
+    console.log('Settings from customization:', this.customization.getSettings())
+  }
+
+  private checkForSettingsUpdates(): void {
+    if (!this.customization) return
+    
+    // Check if settings have changed (only check occasionally to avoid performance issues)
+    if (Math.random() < 0.01) { // 1% chance per frame = ~once per 1.67 seconds
+      const currentSettings = this.customization.getSettings()
+      
+      // Check if winning score changed
+      if (currentSettings.winningScore !== this.winningScore) {
+        console.log(`🎯 Winning score updated during game: ${this.winningScore} → ${currentSettings.winningScore}`)
+        this.winningScore = currentSettings.winningScore
+      }
+      
+      // Check if ball speed changed
+      if (currentSettings.ballSpeed !== this.ball.speed) {
+        console.log(`⚡ Ball speed updated during game: ${this.ball.speed} → ${currentSettings.ballSpeed}`)
+        this.applyBallSpeedUpdate(currentSettings.ballSpeed)
+      }
+      
+      // Check if paddle speed changed
+      if (currentSettings.paddleSpeed !== this.leftPaddle.speed) {
+        console.log(`🏓 Paddle speed updated during game: ${this.leftPaddle.speed} → ${currentSettings.paddleSpeed}`)
+        this.leftPaddle.speed = currentSettings.paddleSpeed
+        this.rightPaddle.speed = currentSettings.paddleSpeed
+      }
+    }
+  }
+
+  private applyBallSpeedUpdate(newSpeed: number): void {
+    // Update ball speed while preserving direction
+    const currentSpeed = Math.sqrt(this.ball.dx * this.ball.dx + this.ball.dy * this.ball.dy)
+    if (currentSpeed > 0) {
+      const directionX = this.ball.dx / currentSpeed
+      const directionY = this.ball.dy / currentSpeed
+      this.ball.dx = directionX * newSpeed
+      this.ball.dy = directionY * newSpeed
+    }
+    this.ball.speed = newSpeed
   }
 
   private gameLoop(): void {
@@ -147,6 +200,7 @@ export class GameManager {
     this.checkCollisions()
     this.checkScoring()
     this.spawnPowerUps()
+    this.checkForSettingsUpdates()
   }
 
   private updatePaddles(): void {
@@ -307,9 +361,11 @@ export class GameManager {
     // Main ball scoring
     if (this.ball.x <= 0) {
       this.score2++
+      console.log(`🎯 Player 2 scores! Score: ${this.score1}-${this.score2} (Target: ${this.winningScore})`)
       this.resetBall()
     } else if (this.ball.x >= 800) {
       this.score1++
+      console.log(`🎯 Player 1 scores! Score: ${this.score1}-${this.score2} (Target: ${this.winningScore})`)
       this.resetBall()
     }
 
@@ -317,9 +373,11 @@ export class GameManager {
     this.additionalBalls = this.additionalBalls.filter(ball => {
       if (ball.x <= 0) {
         this.score2++
+        console.log(`🎯 Player 2 scores (additional ball)! Score: ${this.score1}-${this.score2} (Target: ${this.winningScore})`)
         return false
       } else if (ball.x >= 800) {
         this.score1++
+        console.log(`🎯 Player 1 scores (additional ball)! Score: ${this.score1}-${this.score2} (Target: ${this.winningScore})`)
         return false
       }
       return true
@@ -327,6 +385,7 @@ export class GameManager {
 
     // Check for game end
     if (this.score1 >= this.winningScore || this.score2 >= this.winningScore) {
+      console.log(`🏆 Game Over! Final Score: ${this.score1}-${this.score2} (Target: ${this.winningScore})`)
       this.endGame()
     }
   }
@@ -334,8 +393,9 @@ export class GameManager {
   private resetBall(): void {
     this.ball.x = 400
     this.ball.y = 200
-    this.ball.dx = Math.random() > 0.5 ? 4 : -4
-    this.ball.dy = Math.random() > 0.5 ? 4 : -4
+    const ballSpeed = this.customization?.getSettings().ballSpeed || 4
+    this.ball.dx = Math.random() > 0.5 ? ballSpeed : -ballSpeed
+    this.ball.dy = Math.random() > 0.5 ? ballSpeed : -ballSpeed
   }
 
   private endGame(): void {

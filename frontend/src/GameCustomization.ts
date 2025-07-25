@@ -247,10 +247,15 @@ export class GameCustomization {
   }
 
   applySettingsToGame(game: any): void {
-    // Apply ball speed
+    // Apply ball speed - normalize the direction and apply new speed
+    const currentSpeed = Math.sqrt(game.ball.dx * game.ball.dx + game.ball.dy * game.ball.dy)
+    if (currentSpeed > 0) {
+      const directionX = game.ball.dx / currentSpeed
+      const directionY = game.ball.dy / currentSpeed
+      game.ball.dx = directionX * this.settings.ballSpeed
+      game.ball.dy = directionY * this.settings.ballSpeed
+    }
     game.ball.speed = this.settings.ballSpeed
-    game.ball.dx = game.ball.dx > 0 ? this.settings.ballSpeed : -this.settings.ballSpeed
-    game.ball.dy = game.ball.dy > 0 ? this.settings.ballSpeed : -this.settings.ballSpeed
 
     // Apply paddle speed
     game.leftPaddle.speed = this.settings.paddleSpeed
@@ -258,6 +263,15 @@ export class GameCustomization {
 
     // Apply winning score
     game.winningScore = this.settings.winningScore
+
+    // Debug logging
+    console.log('🎮 Game settings applied:', {
+      ballSpeed: this.settings.ballSpeed,
+      paddleSpeed: this.settings.paddleSpeed,
+      winningScore: this.settings.winningScore,
+      powerUpsEnabled: this.settings.powerUpsEnabled,
+      mapTheme: this.settings.mapTheme
+    })
   }
 
   renderCustomizationMenu(): string {

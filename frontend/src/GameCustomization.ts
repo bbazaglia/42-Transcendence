@@ -4,7 +4,6 @@ export interface GameSettings {
   winningScore: number
   powerUpsEnabled: boolean
   mapTheme: string
-  difficulty: 'easy' | 'normal' | 'hard'
 }
 
 export interface PowerUp {
@@ -191,8 +190,7 @@ export class GameCustomization {
       paddleSpeed: 5,
       winningScore: 5,
       powerUpsEnabled: false,
-      mapTheme: 'classic',
-      difficulty: 'normal'
+      mapTheme: 'classic'
     }
   }
 
@@ -260,22 +258,6 @@ export class GameCustomization {
 
     // Apply winning score
     game.winningScore = this.settings.winningScore
-
-    // Apply difficulty modifiers
-    switch (this.settings.difficulty) {
-      case 'easy':
-        game.leftPaddle.height = 60
-        game.rightPaddle.height = 60
-        break
-      case 'normal':
-        game.leftPaddle.height = 50
-        game.rightPaddle.height = 50
-        break
-      case 'hard':
-        game.leftPaddle.height = 40
-        game.rightPaddle.height = 40
-        break
-    }
   }
 
   renderCustomizationMenu(): string {
@@ -298,15 +280,6 @@ export class GameCustomization {
             <div class="space-y-6">
               <h3 class="text-xl font-bold text-white border-b border-white/20 pb-2 orbitron-font">Game Settings</h3>
               
-              <div>
-                <label class="block text-white font-semibold mb-2">Difficulty</label>
-                <select id="difficulty" class="w-full p-3 rounded-lg bg-white/10 text-white border border-white/20 focus:border-cyan-400 focus:outline-none">
-                  <option value="easy" ${this.settings.difficulty === 'easy' ? 'selected' : ''}>Easy</option>
-                  <option value="normal" ${this.settings.difficulty === 'normal' ? 'selected' : ''}>Normal</option>
-                  <option value="hard" ${this.settings.difficulty === 'hard' ? 'selected' : ''}>Hard</option>
-                </select>
-              </div>
-
               <div>
                 <label class="block text-white font-semibold mb-2">Ball Speed: <span id="ballSpeedValue">${this.settings.ballSpeed}</span></label>
                 <input type="range" id="ballSpeed" min="2" max="8" value="${this.settings.ballSpeed}" 

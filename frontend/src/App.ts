@@ -338,7 +338,6 @@ export class App {
     }
 
     ;(window as any).saveCustomizationSettings = () => {
-      const difficulty = (document.getElementById('difficulty') as HTMLSelectElement)?.value
       const ballSpeed = parseInt((document.getElementById('ballSpeed') as HTMLInputElement)?.value || '4')
       const paddleSpeed = parseInt((document.getElementById('paddleSpeed') as HTMLInputElement)?.value || '5')
       const winningScore = parseInt((document.getElementById('winningScore') as HTMLInputElement)?.value || '5')
@@ -346,7 +345,6 @@ export class App {
       const mapTheme = (document.querySelector('input[name="mapTheme"]:checked') as HTMLInputElement)?.value
 
       this.customization.updateSettings({
-        difficulty: difficulty as 'easy' | 'normal' | 'hard',
         ballSpeed,
         paddleSpeed,
         winningScore,
@@ -363,8 +361,7 @@ export class App {
         paddleSpeed: 5,
         winningScore: 5,
         powerUpsEnabled: false,
-        mapTheme: 'classic',
-        difficulty: 'normal'
+        mapTheme: 'classic'
       })
       this.closeCustomizationMenu()
       this.render()

@@ -153,13 +153,13 @@ export class TournamentManager {
       
       if (!nextMatch.player1) {
         nextMatch.player1 = winner
-        console.log('Set player1 to:', winner)
+        // console.log('Set player1 to:', winner)
       } else if (!nextMatch.player2) {
         nextMatch.player2 = winner
-        console.log('Set player2 to:', winner)
+        // console.log('Set player2 to:', winner)
       }
       
-      console.log('Next match after update:', nextMatch)
+      // console.log('Next match after update:', nextMatch)
     } else {
       console.log('Next match index out of bounds')
     }
@@ -177,25 +177,25 @@ export class TournamentManager {
       return null
     }
 
-    console.log('=== GETTING NEXT MATCH ===')
-    console.log('Current tournament matches:')
-    this.currentTournament.matches.forEach((m, i) => {
-      console.log(`Match ${i}: ${m.player1} vs ${m.player2} (Winner: ${m.winner})`)
-    })
+    // console.log('=== GETTING NEXT MATCH ===')
+    // console.log('Current tournament matches:')
+    // this.currentTournament.matches.forEach((m, i) => {
+    //   console.log(`Match ${i}: ${m.player1} vs ${m.player2} (Winner: ${m.winner})`)
+    // })
 
     // Check each match individually
-    this.currentTournament.matches.forEach((match, i) => {
-      const hasNoWinner = !match.winner
-      const hasPlayer1 = !!match.player1
-      const hasPlayer2 = !!match.player2
-      console.log(`Match ${i} check: noWinner=${hasNoWinner}, hasPlayer1=${hasPlayer1}, hasPlayer2=${hasPlayer2}`)
-    })
+    // this.currentTournament.matches.forEach((match, i) => {
+    //   const hasNoWinner = !match.winner
+    //   const hasPlayer1 = !!match.player1
+    //   const hasPlayer2 = !!match.player2
+    //   console.log(`Match ${i} check: noWinner=${hasNoWinner}, hasPlayer1=${hasPlayer1}, hasPlayer2=${hasPlayer2}`)
+    // })
 
     const nextMatch = this.currentTournament.matches.find(match => 
       !match.winner && match.player1 && match.player2
     )
     
-    console.log('Next match found:', nextMatch)
+    // console.log('Next match found:', nextMatch)
     return nextMatch || null
   }
 

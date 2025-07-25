@@ -38,11 +38,16 @@ export class GameCustomization {
       name: 'Speed Boost',
       description: 'Increases ball speed for 10 seconds',
       effect: (game) => {
+        // console.log(`⚡ Speed Boost effect triggered!`)
+        // console.log(`⚡ Original ball speed: ${game.ball.speed}`)
         const originalSpeed = game.ball.speed
         game.ball.speed *= 1.5
         game.ball.dx *= 1.5
         game.ball.dy *= 1.5
+        // console.log(`⚡ New ball speed: ${game.ball.speed}`)
+        // console.log(`⚡ Ball velocity: dx=${game.ball.dx.toFixed(2)}, dy=${game.ball.dy.toFixed(2)}`)
         setTimeout(() => {
+          // console.log(`⚡ Speed Boost expired, restoring original speed: ${originalSpeed}`)
           game.ball.speed = originalSpeed
           game.ball.dx = game.ball.dx > 0 ? originalSpeed : -originalSpeed
           game.ball.dy = game.ball.dy > 0 ? originalSpeed : -originalSpeed
@@ -57,10 +62,14 @@ export class GameCustomization {
       name: 'Paddle Grow',
       description: 'Increases paddle size for 8 seconds',
       effect: (game) => {
+        // console.log(`📏 Paddle Grow effect triggered!`)
+        // console.log(`📏 Original paddle height: ${game.leftPaddle.height}`)
         const originalHeight = game.leftPaddle.height
         game.leftPaddle.height *= 1.5
         game.rightPaddle.height *= 1.5
+        // console.log(`📏 New paddle height: ${game.leftPaddle.height}`)
         setTimeout(() => {
+          // console.log(`📏 Paddle Grow expired, restoring original height: ${originalHeight}`)
           game.leftPaddle.height = originalHeight
           game.rightPaddle.height = originalHeight
         }, 8000)
@@ -74,11 +83,16 @@ export class GameCustomization {
       name: 'Slow Motion',
       description: 'Slows down the ball for 6 seconds',
       effect: (game) => {
+        // console.log(`🐌 Slow Motion effect triggered!`)
+        // console.log(`🐌 Original ball speed: ${game.ball.speed}`)
         const originalSpeed = game.ball.speed
         game.ball.speed *= 0.5
         game.ball.dx *= 0.5
         game.ball.dy *= 0.5
+        // console.log(`🐌 New ball speed: ${game.ball.speed}`)
+        // console.log(`🐌 Ball velocity: dx=${game.ball.dx.toFixed(2)}, dy=${game.ball.dy.toFixed(2)}`)
         setTimeout(() => {
+          // console.log(`🐌 Slow Motion expired, restoring original speed: ${originalSpeed}`)
           game.ball.speed = originalSpeed
           game.ball.dx = game.ball.dx > 0 ? originalSpeed : -originalSpeed
           game.ball.dy = game.ball.dy > 0 ? originalSpeed : -originalSpeed
@@ -93,6 +107,8 @@ export class GameCustomization {
       name: 'Multi Ball',
       description: 'Creates additional balls for 12 seconds',
       effect: (game) => {
+        // console.log(`⚽ Multi Ball effect triggered!`)
+        // console.log(`⚽ Current additional balls: ${game.additionalBalls ? game.additionalBalls.length : 0}`)
         if (!game.additionalBalls) game.additionalBalls = []
         const newBall = {
           x: game.ball.x,
@@ -103,8 +119,13 @@ export class GameCustomization {
           speed: game.ball.speed
         }
         game.additionalBalls.push(newBall)
+        // console.log(`⚽ New ball added! Total additional balls: ${game.additionalBalls.length}`)
+        // console.log(`⚽ New ball position: (${newBall.x.toFixed(1)}, ${newBall.y.toFixed(1)})`)
+        // console.log(`⚽ New ball velocity: dx=${newBall.dx.toFixed(2)}, dy=${newBall.dy.toFixed(2)}`)
         setTimeout(() => {
+          // console.log(`⚽ Multi Ball expired, removing additional ball`)
           game.additionalBalls = game.additionalBalls.filter((b: any) => b !== newBall)
+          // console.log(`⚽ Remaining additional balls: ${game.additionalBalls.length}`)
         }, 12000)
       },
       duration: 12000,
@@ -220,12 +241,25 @@ export class GameCustomization {
   }
 
   activatePowerUp(powerUpId: string, game: any): void {
+    // console.log(`🎁 Attempting to activate power-up: ${powerUpId}`)
+    // console.log(`🎁 Power-ups enabled: ${this.settings.powerUpsEnabled}`)
+    
     const powerUp = this.powerUps.find(p => p.id === powerUpId)
-    if (!powerUp || !this.settings.powerUpsEnabled) return
+    if (!powerUp) {
+      // console.log(`🎁 Power-up not found: ${powerUpId}`)
+      return
+    }
+    
+    if (!this.settings.powerUpsEnabled) {
+      // console.log(`🎁 Power-ups are disabled in settings`)
+      return
+    }
 
+    // console.log(`🎁 Activating power-up: ${powerUp.name} (${powerUp.description})`)
     const endTime = Date.now() + powerUp.duration
     this.activePowerUps.set(powerUpId, { powerUp, endTime })
     powerUp.effect(game)
+    // console.log(`🎁 Power-up activated! Duration: ${powerUp.duration}ms, End time: ${new Date(endTime).toLocaleTimeString()}`)
   }
 
   getActivePowerUps(): Array<{ powerUp: PowerUp; endTime: number }> {
@@ -265,13 +299,13 @@ export class GameCustomization {
     game.winningScore = this.settings.winningScore
 
     // Debug logging
-    console.log('🎮 Game settings applied:', {
-      ballSpeed: this.settings.ballSpeed,
-      paddleSpeed: this.settings.paddleSpeed,
-      winningScore: this.settings.winningScore,
-      powerUpsEnabled: this.settings.powerUpsEnabled,
-      mapTheme: this.settings.mapTheme
-    })
+    // console.log('🎮 Game settings applied:', {
+    //   ballSpeed: this.settings.ballSpeed,
+    //   paddleSpeed: this.settings.paddleSpeed,
+    //   winningScore: this.settings.winningScore,
+    //   powerUpsEnabled: this.settings.powerUpsEnabled,
+    //   mapTheme: this.settings.mapTheme
+    // })
   }
 
   renderCustomizationMenu(): string {

@@ -74,10 +74,10 @@ export class GameManager {
   }
 
   startGame(tournamentManager?: any, currentMatch?: { player1: string; player2: string }, customization?: any): void {
-    console.log('=== STARTING GAME ===')
-    console.log('Tournament manager passed:', !!tournamentManager)
-    console.log('Current match passed:', currentMatch)
-    console.log('Customization passed:', !!customization)
+    // console.log('=== STARTING GAME ===')
+    // console.log('Tournament manager passed:', !!tournamentManager)
+    // console.log('Current match passed:', currentMatch)
+    // console.log('Customization passed:', !!customization)
     
     this.canvas = document.getElementById('gameCanvas') as HTMLCanvasElement
     if (!this.canvas) return
@@ -89,10 +89,10 @@ export class GameManager {
     this.currentMatch = currentMatch || null
     this.customization = customization
     
-    console.log('Game initialized with:')
-    console.log('- Tournament manager:', !!this.tournamentManager)
-    console.log('- Current match:', this.currentMatch)
-    console.log('- Customization:', !!this.customization)
+    // console.log('Game initialized with:')
+    // console.log('- Tournament manager:', !!this.tournamentManager)
+    // console.log('- Current match:', this.currentMatch)
+    // console.log('- Customization:', !!this.customization)
 
     this.resetGame()
     this.applyCustomizationSettings()
@@ -134,13 +134,15 @@ export class GameManager {
   private applyCustomizationSettings(): void {
     if (!this.customization) return
     
-    console.log('⚙️ Applying customization settings...')
-    console.log('Current winning score before:', this.winningScore)
+    // console.log('⚙️ Applying customization settings...')
+    // console.log('Current winning score before:', this.winningScore)
+    // console.log('Current paddle speeds before - Left:', this.leftPaddle.speed, 'Right:', this.rightPaddle.speed)
     
     this.customization.applySettingsToGame(this)
     
-    console.log('Current winning score after:', this.winningScore)
-    console.log('Settings from customization:', this.customization.getSettings())
+    // console.log('Current winning score after:', this.winningScore)
+    // console.log('Current paddle speeds after - Left:', this.leftPaddle.speed, 'Right:', this.rightPaddle.speed)
+    // console.log('Settings from customization:', this.customization.getSettings())
   }
 
   private checkForSettingsUpdates(): void {
@@ -152,21 +154,24 @@ export class GameManager {
       
       // Check if winning score changed
       if (currentSettings.winningScore !== this.winningScore) {
-        console.log(`🎯 Winning score updated during game: ${this.winningScore} → ${currentSettings.winningScore}`)
+        // console.log(`🎯 Winning score updated during game: ${this.winningScore} → ${currentSettings.winningScore}`)
         this.winningScore = currentSettings.winningScore
       }
       
       // Check if ball speed changed
       if (currentSettings.ballSpeed !== this.ball.speed) {
-        console.log(`⚡ Ball speed updated during game: ${this.ball.speed} → ${currentSettings.ballSpeed}`)
+        // console.log(`⚡ Ball speed updated during game: ${this.ball.speed} → ${currentSettings.ballSpeed}`)
         this.applyBallSpeedUpdate(currentSettings.ballSpeed)
       }
       
       // Check if paddle speed changed
       if (currentSettings.paddleSpeed !== this.leftPaddle.speed) {
-        console.log(`🏓 Paddle speed updated during game: ${this.leftPaddle.speed} → ${currentSettings.paddleSpeed}`)
+        // console.log(`🏓 Paddle speed updated during game: ${this.leftPaddle.speed} → ${currentSettings.paddleSpeed}`)
+        // console.log(`🏓 Left paddle speed: ${this.leftPaddle.speed} → ${currentSettings.paddleSpeed}`)
+        // console.log(`🏓 Right paddle speed: ${this.rightPaddle.speed} → ${currentSettings.paddleSpeed}`)
         this.leftPaddle.speed = currentSettings.paddleSpeed
         this.rightPaddle.speed = currentSettings.paddleSpeed
+        // console.log(`🏓 Paddle speeds after update - Left: ${this.leftPaddle.speed}, Right: ${this.rightPaddle.speed}`)
       }
     }
   }
@@ -229,6 +234,13 @@ export class GameManager {
     // Keep paddles within canvas bounds
     this.leftPaddle.y = Math.max(0, Math.min(350, this.leftPaddle.y))
     this.rightPaddle.y = Math.max(0, Math.min(350, this.rightPaddle.y))
+
+    // Debug paddle movement (only log occasionally to avoid spam)
+    // if (Math.random() < 0.001) { // 0.1% chance per frame = ~once per 16.7 seconds
+    //   if (this.leftPaddle.dy !== 0 || this.rightPaddle.dy !== 0) {
+    //     console.log(`🏓 Paddle movement - Left speed: ${this.leftPaddle.speed}, dy: ${this.leftPaddle.dy}, Right speed: ${this.rightPaddle.speed}, dy: ${this.rightPaddle.dy}`)
+    //   }
+    // }
   }
 
   private updateBall(): void {
@@ -254,7 +266,13 @@ export class GameManager {
   }
 
   private updatePowerUps(): void {
-    // Power-ups can have animations or effects here
+    // Check if power-ups should be disabled and remove existing ones
+    if (this.customization && !this.customization.getSettings().powerUpsEnabled) {
+      if (this.powerUps.length > 0) {
+        console.log(`🚫 Power-ups disabled - removing ${this.powerUps.length} existing power-ups`)
+        this.powerUps = []
+      }
+    }
   }
 
   private spawnPowerUps(): void {
@@ -265,12 +283,16 @@ export class GameManager {
       const powerUpTypes = ['speed_boost', 'paddle_grow', 'slow_motion', 'multi_ball']
       const randomType = powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)]
       
-      this.powerUps.push({
-        x: Math.random() * 700 + 50,
-        y: Math.random() * 300 + 50,
+      // Spawn power-ups in the center area where the ball is more likely to be
+      const newPowerUp = {
+        x: Math.random() * 400 + 200, // Center area: 200-600
+        y: Math.random() * 200 + 100, // Center area: 100-300
         type: randomType,
         id: `powerup_${Date.now()}_${Math.random()}`
-      })
+      }
+      
+      this.powerUps.push(newPowerUp)
+      // console.log(`🎁 Power-up spawned! Type: ${randomType}, Position: (${newPowerUp.x.toFixed(1)}, ${newPowerUp.y.toFixed(1)}), Total power-ups: ${this.powerUps.length}`)
     }
   }
 
@@ -308,25 +330,35 @@ export class GameManager {
   }
 
   private checkPowerUpCollisions(): void {
-    if (!this.customization) return
+    if (!this.customization || !this.customization.getSettings().powerUpsEnabled) return
     
     this.powerUps = this.powerUps.filter(powerUp => {
-      // Check collision with left paddle
-      if (powerUp.x >= this.leftPaddle.x && 
-          powerUp.x <= this.leftPaddle.x + this.leftPaddle.width &&
-          powerUp.y >= this.leftPaddle.y &&
-          powerUp.y <= this.leftPaddle.y + this.leftPaddle.height) {
+      // Check collision with main ball
+      const distanceToMainBall = Math.sqrt(
+        Math.pow(powerUp.x - this.ball.x, 2) + Math.pow(powerUp.y - this.ball.y, 2)
+      )
+      if (distanceToMainBall <= this.ball.radius + 15) { // 15 is power-up radius
+        // console.log(`🎁 Power-up collected by ball! Type: ${powerUp.type}`)
+        // console.log(`🎁 Power-up position: (${powerUp.x.toFixed(1)}, ${powerUp.y.toFixed(1)})`)
+        // console.log(`🎁 Ball position: (${this.ball.x.toFixed(1)}, ${this.ball.y.toFixed(1)})`)
+        // console.log(`🎁 Distance: ${distanceToMainBall.toFixed(1)}`)
         this.customization.activatePowerUp(powerUp.type, this)
         return false // Remove power-up
       }
       
-      // Check collision with right paddle
-      if (powerUp.x >= this.rightPaddle.x && 
-          powerUp.x <= this.rightPaddle.x + this.rightPaddle.width &&
-          powerUp.y >= this.rightPaddle.y &&
-          powerUp.y <= this.rightPaddle.y + this.rightPaddle.height) {
-        this.customization.activatePowerUp(powerUp.type, this)
-        return false // Remove power-up
+      // Check collision with additional balls
+      for (const ball of this.additionalBalls) {
+        const distanceToBall = Math.sqrt(
+          Math.pow(powerUp.x - ball.x, 2) + Math.pow(powerUp.y - ball.y, 2)
+        )
+        if (distanceToBall <= ball.radius + 15) {
+          // console.log(`🎁 Power-up collected by additional ball! Type: ${powerUp.type}`)
+          // console.log(`🎁 Power-up position: (${powerUp.x.toFixed(1)}, ${powerUp.y.toFixed(1)})`)
+          // console.log(`🎁 Ball position: (${ball.x.toFixed(1)}, ${ball.y.toFixed(1)})`)
+          // console.log(`🎁 Distance: ${distanceToBall.toFixed(1)}`)
+          this.customization.activatePowerUp(powerUp.type, this)
+          return false // Remove power-up
+        }
       }
       
       return true // Keep power-up
@@ -361,11 +393,11 @@ export class GameManager {
     // Main ball scoring
     if (this.ball.x <= 0) {
       this.score2++
-      console.log(`🎯 Player 2 scores! Score: ${this.score1}-${this.score2} (Target: ${this.winningScore})`)
+      // console.log(`🎯 Player 2 scores! Score: ${this.score1}-${this.score2} (Target: ${this.winningScore})`)
       this.resetBall()
     } else if (this.ball.x >= 800) {
       this.score1++
-      console.log(`🎯 Player 1 scores! Score: ${this.score1}-${this.score2} (Target: ${this.winningScore})`)
+      // console.log(`🎯 Player 1 scores! Score: ${this.score1}-${this.score2} (Target: ${this.winningScore})`)
       this.resetBall()
     }
 
@@ -373,11 +405,11 @@ export class GameManager {
     this.additionalBalls = this.additionalBalls.filter(ball => {
       if (ball.x <= 0) {
         this.score2++
-        console.log(`🎯 Player 2 scores (additional ball)! Score: ${this.score1}-${this.score2} (Target: ${this.winningScore})`)
+        // console.log(`🎯 Player 2 scores (additional ball)! Score: ${this.score1}-${this.score2} (Target: ${this.winningScore})`)
         return false
       } else if (ball.x >= 800) {
         this.score1++
-        console.log(`🎯 Player 1 scores (additional ball)! Score: ${this.score1}-${this.score2} (Target: ${this.winningScore})`)
+        // console.log(`🎯 Player 1 scores (additional ball)! Score: ${this.score1}-${this.score2} (Target: ${this.winningScore})`)
         return false
       }
       return true
@@ -385,7 +417,7 @@ export class GameManager {
 
     // Check for game end
     if (this.score1 >= this.winningScore || this.score2 >= this.winningScore) {
-      console.log(`🏆 Game Over! Final Score: ${this.score1}-${this.score2} (Target: ${this.winningScore})`)
+      // console.log(`🏆 Game Over! Final Score: ${this.score1}-${this.score2} (Target: ${this.winningScore})`)
       this.endGame()
     }
   }
@@ -407,10 +439,10 @@ export class GameManager {
     const winner = this.score1 > this.score2 ? 'Player 1' : 'Player 2'
     
     // Record the match result if this is a tournament match
-    console.log('=== GAME ENDED ===')
-    console.log('Tournament manager exists:', !!this.tournamentManager)
-    console.log('Current match exists:', !!this.currentMatch)
-    console.log('Current match:', this.currentMatch)
+    // console.log('=== GAME ENDED ===')
+    // console.log('Tournament manager exists:', !!this.tournamentManager)
+    // console.log('Current match exists:', !!this.currentMatch)
+    // console.log('Current match:', this.currentMatch)
     
     if (this.tournamentManager && this.currentMatch) {
       const winnerName = winner === 'Player 1' ? this.currentMatch.player1 : this.currentMatch.player2
@@ -498,16 +530,16 @@ export class GameManager {
     // Draw power-ups
     this.powerUps.forEach(powerUp => {
       ctx.beginPath()
-      ctx.arc(powerUp.x, powerUp.y, 8, 0, Math.PI * 2)
+      ctx.arc(powerUp.x, powerUp.y, 15, 0, Math.PI * 2)
       ctx.fillStyle = this.getPowerUpColor(powerUp.type)
       ctx.fill()
       ctx.closePath()
       
       // Draw power-up icon
       ctx.fillStyle = '#ffffff'
-      ctx.font = '12px Arial'
+      ctx.font = '16px Arial'
       ctx.textAlign = 'center'
-      ctx.fillText(this.getPowerUpIcon(powerUp.type), powerUp.x, powerUp.y + 4)
+      ctx.fillText(this.getPowerUpIcon(powerUp.type), powerUp.x, powerUp.y + 5)
     })
 
     // Draw score

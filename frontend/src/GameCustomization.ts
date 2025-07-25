@@ -355,7 +355,7 @@ export class GameCustomization {
 
             <!-- Map Themes -->
             <div class="space-y-6">
-              <h3 class="text-xl font-bold text-white border-b border-white/20 pb-2">Map Themes</h3>
+              <h3 class="text-xl font-bold text-white border-b border-white/20 pb-2 orbitron-font">Map Themes</h3>
               
               <div class="grid grid-cols-2 gap-4">
                 ${this.mapThemes.map(theme => `
@@ -385,7 +385,7 @@ export class GameCustomization {
 
           <!-- Power-ups Preview -->
           <div id="powerUpsPreview" class="mt-8 transition-opacity duration-300" style="display: ${this.settings.powerUpsEnabled ? 'block' : 'none'}; opacity: ${this.settings.powerUpsEnabled ? '1' : '0'};">
-            <h3 class="text-xl font-bold text-white border-b border-white/20 pb-2 mb-4">Available Power-ups</h3>
+            <h3 class="text-xl font-bold text-white border-b border-white/20 pb-2 mb-4 orbitron-font">Available Power-ups</h3>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
               ${this.powerUps.map(powerUp => `
                 <div class="bg-white/5 backdrop-blur-sm rounded-lg p-4 border border-white/10">

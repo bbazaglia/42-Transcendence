@@ -18,40 +18,40 @@ export class App {
   init(): void {
     this.setupRouting()
     this.render()
-    
+
     // Listen for tournament updates
     window.addEventListener('tournament-updated', () => {
       console.log('Tournament updated, re-rendering...')
       this.render()
     })
-    
-    // Expose debug methods to window for testing
-    ;(window as any).debugTournament = {
-      setMatchResult: (matchIndex: number, winner: string) => {
-        this.tournamentManager.debugSetMatchResult(matchIndex, winner)
-        this.render() // Refresh the display
-      },
-      getCurrentTournament: () => this.tournamentManager.getCurrentTournament(),
-      resetTournament: () => {
-        this.tournamentManager.resetTournament()
-        this.render() // Refresh the display
-      },
-      clearStorage: () => {
-        localStorage.removeItem('currentTournament')
-        console.log('localStorage cleared')
-      },
-      testFirstMatch: () => {
-        const tournament = this.tournamentManager.getCurrentTournament()
-        if (tournament && tournament.matches[0]) {
-          const match = tournament.matches[0]
-          if (match.player1 && match.player2) {
-            console.log('Testing first match result...')
-            this.tournamentManager.debugSetMatchResult(0, match.player1)
-            window.location.reload()
+
+      // Expose debug methods to window for testing
+      ; (window as any).debugTournament = {
+        setMatchResult: (matchIndex: number, winner: string) => {
+          this.tournamentManager.debugSetMatchResult(matchIndex, winner)
+          this.render() // Refresh the display
+        },
+        getCurrentTournament: () => this.tournamentManager.getCurrentTournament(),
+        resetTournament: () => {
+          this.tournamentManager.resetTournament()
+          this.render() // Refresh the display
+        },
+        clearStorage: () => {
+          localStorage.removeItem('currentTournament')
+          console.log('localStorage cleared')
+        },
+        testFirstMatch: () => {
+          const tournament = this.tournamentManager.getCurrentTournament()
+          if (tournament && tournament.matches[0]) {
+            const match = tournament.matches[0]
+            if (match.player1 && match.player2) {
+              console.log('Testing first match result...')
+              this.tournamentManager.debugSetMatchResult(0, match.player1)
+              window.location.reload()
+            }
           }
         }
       }
-    }
   }
 
   private setupRouting(): void {
@@ -59,7 +59,7 @@ export class App {
     this.router.addRoute('/tournament', () => this.showTournamentPage())
     this.router.addRoute('/game', () => this.showGamePage())
     this.router.addRoute('/register', () => this.showRegistrationPage())
-    
+
     // Handle browser back/forward buttons
     window.addEventListener('popstate', () => {
       this.render()
@@ -93,13 +93,13 @@ export class App {
             
             <!-- Action buttons -->
             <div class="flex flex-col sm:flex-row gap-6 justify-center items-center">
-              <button onclick="window.location.href='/tournament'" 
+              <button id="tournament-btn" 
                       class="group relative px-8 py-4 bg-gradient-to-r from-purple-600 to-cyan-600 text-white font-bold text-xl rounded-xl shadow-2xl hover:shadow-purple-500/25 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1">
                 <span class="relative z-10 orbitron-font">🏆 Start Tournament</span>
                 <div class="absolute inset-0 bg-gradient-to-r from-purple-700 to-cyan-700 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </button>
               
-              <button onclick="window.location.href='/game'" 
+              <button id="quick-game-btn" 
                       class="group relative px-8 py-4 bg-gradient-to-r from-teal-600 to-cyan-500 text-white font-bold text-xl rounded-xl shadow-2xl hover:shadow-teal-500/25 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1">
                 <span class="relative z-10 orbitron-font">⚡ Quick Game</span>
                 <div class="absolute inset-0 bg-gradient-to-r from-teal-700 to-cyan-600 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -127,6 +127,17 @@ export class App {
         </div>
       </div>
     `
+    document.getElementById('quick-game-btn')?.addEventListener('click', (e) => {
+      e.preventDefault()
+      window.history.pushState({}, '', '/game')
+      this.render()
+    })
+
+    document.getElementById('tournament-btn')?.addEventListener('click', (e) => {
+      e.preventDefault()
+      window.history.pushState({}, '', '/tournament')
+      this.render()
+    })
   }
 
   private showTournamentPage(): void {
@@ -135,7 +146,7 @@ export class App {
       this.showRegistrationPage()
       return
     }
-    
+
     this.rootElement.innerHTML = `
       <div class="min-h-screen mesh-gradient relative overflow-hidden">
         
@@ -155,11 +166,11 @@ export class App {
             
             <!-- Action Buttons -->
             <div class="text-center mt-8 space-x-4">
-              <button onclick="window.location.href='/'" 
+              <button id="back-home-btn" 
                       class="px-4 py-2 bg-gradient-to-r from-purple-600 to-cyan-600 text-white font-medium rounded-lg shadow-lg hover:shadow-purple-500/25 transition-all duration-300 transform hover:scale-105 text-sm">
                 ← Back to Home
               </button>
-              <button onclick="debugTournament.resetTournament(); window.location.href='/register'" 
+              <button id="reset-tournament-btn" 
                       class="px-4 py-2 bg-gradient-to-r from-cyan-600 to-purple-600 text-white font-medium rounded-lg shadow-lg hover:shadow-cyan-500/25 transition-all duration-300 transform hover:scale-105 text-sm">
                 Reset Tournament
               </button>
@@ -168,6 +179,18 @@ export class App {
         </div>
       </div>
     `
+    document.getElementById('back-home-btn')?.addEventListener('click', (e) => {
+      e.preventDefault()
+      window.history.pushState({}, '', '/')
+      this.render()
+    })
+    document.getElementById('reset-tournament-btn')?.addEventListener('click', (e) => {
+      e.preventDefault()
+      this.tournamentManager.resetTournament()
+      window.history.pushState({}, '', '/register')
+      this.render()
+    })
+    this.afterRenderTournamentPage()
   }
 
   private showGamePage(): void {
@@ -191,7 +214,7 @@ export class App {
             
             <!-- Back to Home Button -->
             <div class="mt-6">
-              <button onclick="window.location.href='/'" 
+              <button id="back-home-btn" 
                       class="px-4 py-2 bg-gradient-to-r from-purple-600 to-cyan-600 text-white font-medium rounded-lg shadow-lg hover:shadow-purple-500/25 transition-all duration-300 transform hover:scale-105 text-sm">
                 ← Back to Home
               </button>
@@ -200,14 +223,20 @@ export class App {
         </div>
       </div>
     `
+    document.getElementById('back-home-btn')?.addEventListener('click', (e) => {
+      e.preventDefault()
+      window.history.pushState({}, '', '/')
+      this.render()
+    })
+
     // Get the next match from tournament manager
     console.log('=== GETTING NEXT MATCH ===')
     console.log('Tournament manager instance:', this.tournamentManager)
     console.log('Current tournament:', this.tournamentManager.getCurrentTournament())
-    
+
     const nextMatch = this.tournamentManager.getNextMatch()
     console.log('Next match found:', nextMatch)
-    
+
     if (nextMatch) {
       console.log('Starting game with tournament manager and match:', {
         player1: nextMatch.player1,
@@ -342,7 +371,7 @@ export class App {
             Tournament Complete!
           </h3>
           <p class="text-white text-xl mb-6 font-semibold">Winner: <span class="text-emerald-400">${finalMatch.winner}</span></p>
-          <button onclick="debugTournament.resetTournament(); window.location.href='/register'" 
+          <button id="new-tournament-btn" 
                   class="px-8 py-4 bg-gradient-to-r from-purple-600 to-cyan-600 text-white font-bold rounded-xl shadow-lg hover:shadow-purple-500/25 transition-all duration-300 transform hover:scale-105">
             🏆 New Tournament
           </button>
@@ -352,7 +381,7 @@ export class App {
 
     // Find the next match that has both players assigned and no winner
     const nextMatch = tournament.matches.find((match: any) => !match.winner && match.player1 && match.player2)
-    
+
     if (!nextMatch) {
       // If no match is ready, show a waiting message
       return `
@@ -364,9 +393,9 @@ export class App {
           <p class="text-gray-300 text-lg mb-6">Complete the current round to advance to the next matches</p>
           <div class="text-sm text-gray-400">
             <p>Current matches in progress:</p>
-            ${tournament.matches.filter((m: any) => m.player1 && m.player2 && !m.winner).map((m: any, i: number) => 
-              `<p class="mt-1">• ${m.player1} vs ${m.player2}</p>`
-            ).join('')}
+            ${tournament.matches.filter((m: any) => m.player1 && m.player2 && !m.winner).map((m: any) =>
+        `<p class="mt-1">• ${m.player1} vs ${m.player2}</p>`
+      ).join('')}
           </div>
         </div>
       `
@@ -381,11 +410,26 @@ export class App {
         <div class="text-3xl font-bold text-white mb-6 bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
           ${nextMatch.player1} vs ${nextMatch.player2}
         </div>
-        <button onclick="window.location.href='/game'" 
+        <button id="start-match-btn" 
                 class="px-8 py-4 bg-gradient-to-r from-teal-600 to-cyan-500 text-white font-bold rounded-xl shadow-lg hover:shadow-teal-500/25 transition-all duration-300 transform hover:scale-105">
           <span class="orbitron-font">Start Match</span>
         </button>
       </div>
     `
   }
-} 
+
+  // After rendering tournament page, attach event listener for new-tournament-btn and start-match-btn
+  private afterRenderTournamentPage(): void {
+    document.getElementById('new-tournament-btn')?.addEventListener('click', (e) => {
+      e.preventDefault()
+      this.tournamentManager.resetTournament()
+      window.history.pushState({}, '', '/tournament')
+      this.render()
+    })
+    document.getElementById('start-match-btn')?.addEventListener('click', (e) => {
+      e.preventDefault()
+      window.history.pushState({}, '', '/game')
+      this.render()
+    })
+  }
+}

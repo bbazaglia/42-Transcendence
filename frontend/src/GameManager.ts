@@ -72,16 +72,16 @@ export class GameManager {
     console.log('=== STARTING GAME ===')
     console.log('Tournament manager passed:', !!tournamentManager)
     console.log('Current match passed:', currentMatch)
-    
+
     this.canvas = document.getElementById('gameCanvas') as HTMLCanvasElement
     if (!this.canvas) return
 
     this.ctx = this.canvas.getContext('2d')
     if (!this.ctx) return
 
-    this.tournamentManager = tournamentManager
+    this.tournamentManager = tournamentManager || null
     this.currentMatch = currentMatch || null
-    
+
     console.log('Game initialized with:')
     console.log('- Tournament manager:', !!this.tournamentManager)
     console.log('- Current match:', this.currentMatch)
@@ -109,6 +109,9 @@ export class GameManager {
 
     this.leftPaddle.y = 175
     this.rightPaddle.y = 175
+
+    this.score1 = 0
+    this.score2 = 0
   }
 
   private gameLoop(): void {
@@ -168,18 +171,18 @@ export class GameManager {
   private checkCollisions(): void {
     // Ball collision with left paddle
     if (this.ball.x <= this.leftPaddle.x + this.leftPaddle.width &&
-        this.ball.y >= this.leftPaddle.y &&
-        this.ball.y <= this.leftPaddle.y + this.leftPaddle.height &&
-        this.ball.dx < 0) {
+      this.ball.y >= this.leftPaddle.y &&
+      this.ball.y <= this.leftPaddle.y + this.leftPaddle.height &&
+      this.ball.dx < 0) {
       this.ball.dx = -this.ball.dx
       this.adjustBallAngle(this.leftPaddle)
     }
 
     // Ball collision with right paddle
     if (this.ball.x + this.ball.radius >= this.rightPaddle.x &&
-        this.ball.y >= this.rightPaddle.y &&
-        this.ball.y <= this.rightPaddle.y + this.rightPaddle.height &&
-        this.ball.dx > 0) {
+      this.ball.y >= this.rightPaddle.y &&
+      this.ball.y <= this.rightPaddle.y + this.rightPaddle.height &&
+      this.ball.dx > 0) {
       this.ball.dx = -this.ball.dx
       this.adjustBallAngle(this.rightPaddle)
     }
@@ -203,7 +206,7 @@ export class GameManager {
     const hitPoint = (this.ball.y - paddle.y) / paddle.height
     const angle = (hitPoint - 0.5) * Math.PI / 3 // -30 to 30 degrees
     const speed = Math.sqrt(this.ball.dx * this.ball.dx + this.ball.dy * this.ball.dy)
-    
+
     this.ball.dx = Math.cos(angle) * speed * (paddle === this.leftPaddle ? 1 : -1)
     this.ball.dy = Math.sin(angle) * speed
   }
@@ -240,13 +243,13 @@ export class GameManager {
     }
 
     const winner = this.score1 > this.score2 ? 'Player 1' : 'Player 2'
-    
+
     // Record the match result if this is a tournament match
     console.log('=== GAME ENDED ===')
     console.log('Tournament manager exists:', !!this.tournamentManager)
     console.log('Current match exists:', !!this.currentMatch)
     console.log('Current match:', this.currentMatch)
-    
+
     if (this.tournamentManager && this.currentMatch) {
       const winnerName = winner === 'Player 1' ? this.currentMatch.player1 : this.currentMatch.player2
       console.log('Game ended, recording result:', {
@@ -266,9 +269,11 @@ export class GameManager {
 
     setTimeout(() => {
       alert(`Game Over! ${winner} wins!`)
-      // Use router navigation instead of full page reload
-      window.history.pushState({}, '', '/tournament')
-      // Trigger a custom event to notify the app to re-render
+      if (this.tournamentManager && this.currentMatch) {
+        window.history.pushState({}, '', '/tournament')
+      } else {
+        window.history.pushState({}, '', '/')
+      }
       window.dispatchEvent(new CustomEvent('tournament-updated'))
     }, 100)
   }
@@ -325,4 +330,4 @@ export class GameManager {
       cancelAnimationFrame(this.animationId)
     }
   }
-} 
+}

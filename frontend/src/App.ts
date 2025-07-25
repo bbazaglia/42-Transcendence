@@ -1,23 +1,27 @@
 import { Router } from './Router'
 import { TournamentManager } from './TournamentManager'
 import { GameManager } from './GameManager'
+import { GameCustomization } from './GameCustomization'
 
 export class App {
   private router: Router
   private tournamentManager: TournamentManager
   private gameManager: GameManager
+  private customization: GameCustomization
   private rootElement: HTMLElement
 
   constructor() {
     this.router = new Router()
     this.tournamentManager = new TournamentManager()
     this.gameManager = new GameManager()
+    this.customization = GameCustomization.getInstance()
     this.rootElement = document.getElementById('root')!
   }
 
   init(): void {
     this.setupRouting()
     this.render()
+    this.setupCustomizationHandlers()
     
     // Listen for tournament updates
     window.addEventListener('tournament-updated', () => {
@@ -88,7 +92,7 @@ export class App {
             <!-- Subtitle -->
             <p class="text-xl text-gray-300 mb-12 max-w-2xl mx-auto">
               Experience the ultimate competitive Pong experience with tournament brackets, 
-              real-time gameplay, and epic battles for glory.
+              real-time gameplay, epic battles for glory, and customizable game options.
             </p>
             
             <!-- Action buttons -->
@@ -104,10 +108,16 @@ export class App {
                 <span class="relative z-10 orbitron-font">⚡ Quick Game</span>
                 <div class="absolute inset-0 bg-gradient-to-r from-teal-700 to-cyan-600 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </button>
+              
+              <button onclick="openCustomizationMenu()" 
+                      class="group relative px-8 py-4 bg-gradient-to-r from-pink-600 to-purple-500 text-white font-bold text-xl rounded-xl shadow-2xl hover:shadow-pink-500/25 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1">
+                <span class="relative z-10 orbitron-font">⚙️ Customize Game</span>
+                <div class="absolute inset-0 bg-gradient-to-r from-pink-700 to-purple-600 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              </button>
             </div>
             
             <!-- Features preview -->
-            <div class="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+            <div class="mt-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-4xl mx-auto">
               <div class="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10 hover:bg-white/10 transition-all duration-300">
                 <h3 class="text-lg font-semibold text-white mb-2 orbitron-font">Local Multiplayer</h3>
                 <p class="text-gray-400 text-sm">Play against friends on the same device with smooth 60fps gameplay</p>
@@ -119,8 +129,13 @@ export class App {
               </div>
               
               <div class="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10 hover:bg-white/10 transition-all duration-300">
-                <h3 class="text-lg font-semibold text-white mb-2 orbitron-font">Instant Play</h3>
-                <p class="text-gray-400 text-sm">Jump into a quick game anytime, no registration required</p>
+                <h3 class="text-lg font-semibold text-white mb-2 orbitron-font">Game Customization</h3>
+                <p class="text-gray-400 text-sm">Customize themes, power-ups, difficulty, and game settings</p>
+              </div>
+              
+              <div class="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10 hover:bg-white/10 transition-all duration-300">
+                <h3 class="text-lg font-semibold text-white mb-2 orbitron-font">Power-ups & Effects</h3>
+                <p class="text-gray-400 text-sm">Experience exciting power-ups that enhance gameplay</p>
               </div>
             </div>
           </div>
@@ -199,6 +214,8 @@ export class App {
           </div>
         </div>
       </div>
+      ${this.customization.renderSettingsButton()}
+      ${this.customization.renderActivePowerUps()}
     `
     // Get the next match from tournament manager
     console.log('=== GETTING NEXT MATCH ===')
@@ -216,10 +233,10 @@ export class App {
       this.gameManager.startGame(this.tournamentManager, {
         player1: nextMatch.player1!,
         player2: nextMatch.player2!
-      })
+      }, this.customization)
     } else {
       console.log('No next match found, starting game without tournament')
-      this.gameManager.startGame()
+      this.gameManager.startGame(undefined, undefined, this.customization)
     }
   }
 
@@ -305,6 +322,129 @@ export class App {
         this.tournamentManager.startTournament(aliases)
         window.history.pushState({}, '', '/tournament')
         this.render()
+      }
+    })
+  }
+
+  private setupCustomizationHandlers(): void {
+    // Expose customization functions to window
+    ;(window as any).openCustomizationMenu = () => {
+      this.rootElement.insertAdjacentHTML('beforeend', this.customization.renderCustomizationMenu())
+      this.setupCustomizationFormHandlers()
+    }
+
+    ;(window as any).closeCustomizationMenu = () => {
+      this.closeCustomizationMenu()
+    }
+
+    ;(window as any).saveCustomizationSettings = () => {
+      const difficulty = (document.getElementById('difficulty') as HTMLSelectElement)?.value
+      const ballSpeed = parseInt((document.getElementById('ballSpeed') as HTMLInputElement)?.value || '4')
+      const paddleSpeed = parseInt((document.getElementById('paddleSpeed') as HTMLInputElement)?.value || '5')
+      const winningScore = parseInt((document.getElementById('winningScore') as HTMLInputElement)?.value || '5')
+      const powerUpsEnabled = (document.getElementById('powerUpsEnabled') as HTMLInputElement)?.checked
+      const mapTheme = (document.querySelector('input[name="mapTheme"]:checked') as HTMLInputElement)?.value
+
+      this.customization.updateSettings({
+        difficulty: difficulty as 'easy' | 'normal' | 'hard',
+        ballSpeed,
+        paddleSpeed,
+        winningScore,
+        powerUpsEnabled: powerUpsEnabled || false,
+        mapTheme: mapTheme || 'classic'
+      })
+
+      this.closeCustomizationMenu()
+    }
+
+    ;(window as any).resetToDefaults = () => {
+      this.customization.updateSettings({
+        ballSpeed: 4,
+        paddleSpeed: 5,
+        winningScore: 5,
+        powerUpsEnabled: false,
+        mapTheme: 'classic',
+        difficulty: 'normal'
+      })
+      this.closeCustomizationMenu()
+      this.render()
+    }
+  }
+
+  private closeCustomizationMenu(): void {
+    const menu = document.querySelector('.fixed.inset-0.bg-black\\/80')
+    if (menu) {
+      menu.remove()
+    }
+  }
+
+  private setupCustomizationFormHandlers(): void {
+    // Update range input values in real-time
+    const ballSpeedInput = document.getElementById('ballSpeed') as HTMLInputElement
+    const paddleSpeedInput = document.getElementById('paddleSpeed') as HTMLInputElement
+    const winningScoreInput = document.getElementById('winningScore') as HTMLInputElement
+
+    ballSpeedInput?.addEventListener('input', () => {
+      const valueElement = document.getElementById('ballSpeedValue')
+      if (valueElement) {
+        valueElement.textContent = ballSpeedInput.value
+      }
+    })
+
+    paddleSpeedInput?.addEventListener('input', () => {
+      const valueElement = document.getElementById('paddleSpeedValue')
+      if (valueElement) {
+        valueElement.textContent = paddleSpeedInput.value
+      }
+    })
+
+    winningScoreInput?.addEventListener('input', () => {
+      const valueElement = document.getElementById('winningScoreValue')
+      if (valueElement) {
+        valueElement.textContent = winningScoreInput.value
+      }
+    })
+
+    // Add real-time theme selection feedback
+    const themeInputs = document.querySelectorAll('input[name="mapTheme"]')
+    themeInputs.forEach(input => {
+      input.addEventListener('change', (e) => {
+        const target = e.target as HTMLInputElement
+        const themeId = target.value
+        
+        // Remove selected styling from all theme options
+        document.querySelectorAll('input[name="mapTheme"]').forEach(radio => {
+          const radioTarget = radio as HTMLInputElement
+          const label = document.querySelector(`label[for="theme_${radioTarget.value}"]`)
+          const themeDiv = label?.querySelector('div')
+          if (themeDiv) {
+            themeDiv.className = 'p-4 rounded-lg border-2 transition-all duration-300 border-white/20 bg-white/5 hover:bg-white/10'
+          }
+        })
+        
+        // Add selected styling to the chosen theme
+        const selectedLabel = document.querySelector(`label[for="theme_${themeId}"]`)
+        const selectedThemeDiv = selectedLabel?.querySelector('div')
+        if (selectedThemeDiv) {
+          selectedThemeDiv.className = 'p-4 rounded-lg border-2 transition-all duration-300 border-cyan-400 bg-cyan-400/20'
+        }
+      })
+    })
+
+    // Add real-time power-ups toggle feedback
+    const powerUpsCheckbox = document.getElementById('powerUpsEnabled') as HTMLInputElement
+    powerUpsCheckbox?.addEventListener('change', () => {
+      const powerUpsSection = document.getElementById('powerUpsPreview')
+      if (powerUpsSection) {
+        if (powerUpsCheckbox.checked) {
+          powerUpsSection.style.display = 'block'
+          powerUpsSection.style.opacity = '1'
+        } else {
+          powerUpsSection.style.opacity = '0'
+          setTimeout(() => {
+            powerUpsSection.style.display = 'none'
+          }, 300)
+        }
       }
     })
   }

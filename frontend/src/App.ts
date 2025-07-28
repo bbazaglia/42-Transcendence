@@ -261,6 +261,14 @@ export class App {
       console.log('No next match found, starting game without tournament')
       this.gameManager.startGame(undefined, undefined, this.customization)
     }
+
+    // Add event listener for the Back to Home button in game page
+    document.getElementById('back-home-btn')?.addEventListener('click', (e) => {
+      e.preventDefault()
+      this.gameManager.stopGame()
+      window.history.pushState({}, '', '/')
+      this.render()
+    })
   }
 
   private showRegistrationPage(): void {

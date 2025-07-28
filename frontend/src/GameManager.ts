@@ -85,7 +85,7 @@ export class GameManager {
     this.ctx = this.canvas.getContext('2d')
     if (!this.ctx) return
 
-    this.tournamentManager = tournamentManager
+    this.tournamentManager = tournamentManager || null
     this.currentMatch = currentMatch || null
     this.customization = customization
     
@@ -438,7 +438,7 @@ export class GameManager {
     }
 
     const winner = this.score1 > this.score2 ? 'Player 1' : 'Player 2'
-    
+
     // Record the match result if this is a tournament match
     // console.log('=== GAME ENDED ===')
     // console.log('Tournament manager exists:', !!this.tournamentManager)
@@ -584,4 +584,4 @@ export class GameManager {
       cancelAnimationFrame(this.animationId)
     }
   }
-} 
+}

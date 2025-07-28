@@ -3,6 +3,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    init: true
     volumes:
       - db_data:/app/data
     env_file:
@@ -13,6 +14,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    init: true
     ports:
       - "80:80"
       - "8443:443"

@@ -19,14 +19,14 @@ export class TournamentManager {
   startTournament(aliases: string[]): void {
     // Shuffle players for random seeding
     const shuffledPlayers = [...aliases].sort(() => Math.random() - 0.5)
-    
+
     this.currentTournament = {
       players: shuffledPlayers,
       matches: this.generateBracket(shuffledPlayers),
       winner: null,
       currentRound: 1
     }
-    
+
     // Save tournament to localStorage
     this.saveTournament()
   }
@@ -95,26 +95,26 @@ export class TournamentManager {
     return matches
   }
 
-  recordMatchResult(player1: string, player2: string, winner:string): void {
+  recordMatchResult(player1: string, player2: string, winner: string): void {
     if (!this.currentTournament) return;
-  
+
     // Helper function to normalize player names by trimming and converting to lowercase.
     const normalize = (name: string | null | undefined): string => {
-      if (!name) return ''; 
+      if (!name) return '';
       return name.trim().toLowerCase();
     };
-  
+
     const normalizedP1 = normalize(player1);
     const normalizedP2 = normalize(player2);
-  
+
     const match = this.currentTournament.matches.find(m => {
       const normalizedM1 = normalize(m.player1);
       const normalizedM2 = normalize(m.player2);
-  
+
       return (normalizedP1 === normalizedM1 && normalizedP2 === normalizedM2) ||
-             (normalizedP1 === normalizedM2 && normalizedP2 === normalizedM1);
+        (normalizedP1 === normalizedM2 && normalizedP2 === normalizedM1);
     });
-  
+
     if (match) {
       console.log('✅ Found match, updating winner:', { p1: match.player1, p2: match.player2, winner });
       match.winner = winner;
@@ -140,17 +140,17 @@ export class TournamentManager {
     // Find the next match in the bracket
     const currentMatchIndex = this.currentTournament.matches.indexOf(currentMatch)
     console.log('Current match index:', currentMatchIndex)
-    
+
     // Calculate next match index based on bracket structure
     const firstRoundMatches = Math.ceil(this.currentTournament.players.length / 2)
     const nextMatchIndex = firstRoundMatches + Math.floor(currentMatchIndex / 2)
-    
+
     console.log('Next match index:', nextMatchIndex, 'Total matches:', this.currentTournament.matches.length)
 
     if (nextMatchIndex < this.currentTournament.matches.length) {
       const nextMatch = this.currentTournament.matches[nextMatchIndex]
       console.log('Next match before update:', nextMatch)
-      
+
       if (!nextMatch.player1) {
         nextMatch.player1 = winner
         // console.log('Set player1 to:', winner)
@@ -191,7 +191,7 @@ export class TournamentManager {
     //   console.log(`Match ${i} check: noWinner=${hasNoWinner}, hasPlayer1=${hasPlayer1}, hasPlayer2=${hasPlayer2}`)
     // })
 
-    const nextMatch = this.currentTournament.matches.find(match => 
+    const nextMatch = this.currentTournament.matches.find(match =>
       !match.winner && match.player1 && match.player2
     )
     
@@ -207,7 +207,7 @@ export class TournamentManager {
   // Debug method to manually set a match result (temporary)
   debugSetMatchResult(matchIndex: number, winner: string): void {
     if (!this.currentTournament || matchIndex >= this.currentTournament.matches.length) return
-    
+
     const match = this.currentTournament.matches[matchIndex]
     if (match.player1 && match.player2) {
       match.winner = winner
@@ -216,4 +216,4 @@ export class TournamentManager {
       console.log(`Debug: Set match ${matchIndex} winner to ${winner}`)
     }
   }
-} 
+}

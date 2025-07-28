@@ -463,10 +463,17 @@ export class GameManager {
 
     setTimeout(() => {
       alert(`Game Over! ${winner} wins!`)
-      // Use router navigation instead of full page reload
-      window.history.pushState({}, '', '/tournament')
-      // Trigger a custom event to notify the app to re-render
-      window.dispatchEvent(new CustomEvent('tournament-updated'))
+      
+      // Redirect based on game type
+      if (this.tournamentManager && this.currentMatch) {
+        // Tournament match - go to tournament page
+        window.history.pushState({}, '', '/tournament')
+        window.dispatchEvent(new CustomEvent('tournament-updated'))
+      } else {
+        // Quick match - go back to home page
+        window.history.pushState({}, '', '/')
+        window.dispatchEvent(new CustomEvent('tournament-updated'))
+      }
     }, 100)
   }
 

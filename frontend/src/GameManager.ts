@@ -94,8 +94,8 @@ export class GameManager {
     // console.log('- Current match:', this.currentMatch)
     // console.log('- Customization:', !!this.customization)
 
-    this.resetGame()
     this.applyCustomizationSettings()
+    this.resetGame()
     this.gameRunning = true
     this.gameLoop()
   }
@@ -119,6 +119,7 @@ export class GameManager {
     this.ball.x = 400
     this.ball.y = 200
     const ballSpeed = this.customization?.getSettings().ballSpeed || 4
+    this.ball.speed = ballSpeed
     this.ball.dx = Math.random() > 0.5 ? ballSpeed : -ballSpeed
     this.ball.dy = Math.random() > 0.5 ? ballSpeed : -ballSpeed
 

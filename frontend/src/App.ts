@@ -61,7 +61,8 @@ export class App {
   private setupRouting(): void {
     this.router.addRoute('/', () => this.showHomePage())
     this.router.addRoute('/tournament', () => this.showTournamentPage())
-    this.router.addRoute('/game', () => this.showGamePage())
+    this.router.addRoute('/game', () => this.showGamePage(false)) // Tournament game
+    this.router.addRoute('/quick-game', () => this.showGamePage(true)) // Quick game
     this.router.addRoute('/register', () => this.showRegistrationPage())
 
     // Handle browser back/forward buttons
@@ -144,7 +145,7 @@ export class App {
     `
     document.getElementById('quick-game-btn')?.addEventListener('click', (e) => {
       e.preventDefault()
-      window.history.pushState({}, '', '/game')
+      window.history.pushState({}, '', '/quick-game')
       this.render()
     })
 
@@ -208,7 +209,7 @@ export class App {
     this.afterRenderTournamentPage()
   }
 
-  private showGamePage(): void {
+  private showGamePage(isQuickGame: boolean): void {
     this.rootElement.innerHTML = `
       <div class="min-h-screen mesh-gradient relative overflow-hidden">
         
@@ -216,7 +217,7 @@ export class App {
         <div class="relative z-10 flex items-center justify-center min-h-screen px-4">
           <div class="text-center">
             <h2 class="text-4xl font-black mb-6 bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 bg-clip-text text-transparent press-start-font">
-              Pong Game
+              ${isQuickGame ? 'Quick Game' : 'Tournament Match'}
             </h2>
             <div class="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 shadow-2xl">
               <canvas id="gameCanvas" width="800" height="400" class="border-2 border-white/30 rounded-lg shadow-2xl"></canvas>
@@ -241,26 +242,33 @@ export class App {
       ${this.customization.renderSettingsButton()}
       ${this.customization.renderActivePowerUps()}
     `
-    // Get the next match from tournament manager
-    console.log('=== GETTING NEXT MATCH ===')
-    console.log('Tournament manager instance:', this.tournamentManager)
-    console.log('Current tournament:', this.tournamentManager.getCurrentTournament())
-
-    const nextMatch = this.tournamentManager.getNextMatch()
-    console.log('Next match found:', nextMatch)
-
-    if (nextMatch) {
-      console.log('Starting game with tournament manager and match:', {
-        player1: nextMatch.player1,
-        player2: nextMatch.player2
-      })
-      this.gameManager.startGame(this.tournamentManager, {
-        player1: nextMatch.player1!,
-        player2: nextMatch.player2!
-      }, this.customization)
-    } else {
-      console.log('No next match found, starting game without tournament')
+    
+    if (isQuickGame) {
+      // Quick game - start without tournament manager
+      console.log('Starting quick game without tournament')
       this.gameManager.startGame(undefined, undefined, this.customization)
+    } else {
+      // Tournament game - get the next match from tournament manager
+      console.log('=== GETTING NEXT MATCH ===')
+      console.log('Tournament manager instance:', this.tournamentManager)
+      console.log('Current tournament:', this.tournamentManager.getCurrentTournament())
+
+      const nextMatch = this.tournamentManager.getNextMatch()
+      console.log('Next match found:', nextMatch)
+
+      if (nextMatch) {
+        console.log('Starting game with tournament manager and match:', {
+          player1: nextMatch.player1,
+          player2: nextMatch.player2
+        })
+        this.gameManager.startGame(this.tournamentManager, {
+          player1: nextMatch.player1!,
+          player2: nextMatch.player2!
+        }, this.customization)
+      } else {
+        console.log('No next match found, starting game without tournament')
+        this.gameManager.startGame(undefined, undefined, this.customization)
+      }
     }
 
     // Add event listener for the Back to Home button in game page

@@ -22,6 +22,8 @@ export class GameManager {
   private animationId: number | null = null
   private gameRunning: boolean = false
   private gamePaused: boolean = false
+  private gameOver: boolean = false
+  private gameWinner: string | null = null
 
   // Game objects
   private leftPaddle: Paddle
@@ -126,6 +128,10 @@ export class GameManager {
     // Reset pause state
     this.gamePaused = false
     
+    // Reset game over state
+    this.gameOver = false
+    this.gameWinner = null
+    
     // Reset ball position and speed
     this.ball.x = 400
     this.ball.y = 200
@@ -201,14 +207,14 @@ export class GameManager {
   }
 
   private gameLoop(): void {
-    if (!this.gameRunning) return
+    if (!this.gameRunning && !this.gameOver) return
 
-    // Only update game state if not paused
-    if (!this.gamePaused) {
+    // Only update game state if not paused and not game over
+    if (!this.gamePaused && !this.gameOver) {
       this.update()
     }
     
-    // Always render (to show pause overlay when paused)
+    // Always render (to show pause overlay when paused or game over overlay)
     this.render()
 
     this.animationId = requestAnimationFrame(() => this.gameLoop())
@@ -457,6 +463,8 @@ export class GameManager {
     }
 
     const winner = this.score1 > this.score2 ? 'Player 1' : 'Player 2'
+    this.gameWinner = winner
+    this.gameOver = true
 
     // Record the match result if this is a tournament match
     // console.log('=== GAME ENDED ===')
@@ -477,24 +485,18 @@ export class GameManager {
         this.currentMatch.player2,
         winnerName
       )
-    } else {
-      console.log('❌ Cannot record match result - missing tournament manager or current match')
-    }
-
-    setTimeout(() => {
-      alert(`Game Over! ${winner} wins!`)
       
-      // Redirect based on game type
-      if (this.tournamentManager && this.currentMatch) {
-        // Tournament match - go to tournament page
+      // For tournament matches, redirect after a short delay
+      setTimeout(() => {
         window.history.pushState({}, '', '/tournament')
         window.dispatchEvent(new CustomEvent('tournament-updated'))
-      } else {
-        // Quick match - go back to home page
-        window.history.pushState({}, '', '/')
-        window.dispatchEvent(new CustomEvent('tournament-updated'))
-      }
-    }, 100)
+      }, 2000)
+    } else {
+      console.log('Quick game ended - showing game over screen')
+      // For quick games, we'll show the game over overlay
+      // The user can choose to play again or go back to main
+      this.showGameOverButtons()
+    }
   }
 
   private render(): void {
@@ -618,6 +620,39 @@ export class GameManager {
     this.gameRunning = false
     if (this.animationId) {
       cancelAnimationFrame(this.animationId)
+    }
+  }
+
+  // Methods for quick game game over screen
+  playAgain(): void {
+    this.resetGame()
+    this.gameRunning = true
+    this.gameLoop()
+    
+    // Hide the game over buttons
+    const gameOverButtons = document.getElementById('game-over-buttons')
+    if (gameOverButtons) {
+      gameOverButtons.classList.add('hidden')
+    }
+  }
+
+  backToMain(): void {
+    this.stopGame()
+    window.history.pushState({}, '', '/')
+    window.dispatchEvent(new CustomEvent('tournament-updated'))
+  }
+
+  // Show game over buttons for quick games
+  showGameOverButtons(): void {
+    const gameOverButtons = document.getElementById('game-over-buttons')
+    if (gameOverButtons) {
+      gameOverButtons.classList.remove('hidden')
+      
+      // Update the winner text in the HTML
+      const winnerText = document.getElementById('winner-text')
+      if (winnerText && this.gameWinner) {
+        winnerText.textContent = `${this.gameWinner} Wins!`
+      }
     }
   }
 }

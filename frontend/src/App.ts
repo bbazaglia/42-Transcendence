@@ -219,8 +219,28 @@ export class App {
             <h2 class="text-4xl font-black mb-6 bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 bg-clip-text text-transparent press-start-font">
               ${isQuickGame ? 'Quick Game' : 'Tournament Match'}
             </h2>
-            <div class="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 shadow-2xl">
+            <div class="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 shadow-2xl relative">
               <canvas id="gameCanvas" width="800" height="400" class="border-2 border-white/30 rounded-lg shadow-2xl"></canvas>
+              
+              <!-- Game Over Buttons (for quick games only) -->
+              ${isQuickGame ? `
+                <div id="game-over-buttons" class="absolute inset-0 flex items-center justify-center hidden">
+                  <div class="bg-black/80 backdrop-blur-sm rounded-2xl p-8 border border-white/20 text-center">
+                    <h3 class="text-3xl font-bold text-white mb-2">Game Over</h3>
+                    <p class="text-xl text-yellow-400 mb-6" id="winner-text">Player Wins!</p>
+                    <div class="space-y-4">
+                      <button id="play-again-btn" 
+                              class="px-6 py-3 bg-gradient-to-r from-teal-600 to-cyan-500 text-white font-bold rounded-lg shadow-lg hover:shadow-teal-500/25 transition-all duration-300 transform hover:scale-105 mr-4">
+                        Play Again
+                      </button>
+                      <button id="back-main-btn" 
+                              class="px-6 py-3 bg-gradient-to-r from-purple-600 to-cyan-600 text-white font-bold rounded-lg shadow-lg hover:shadow-purple-500/25 transition-all duration-300 transform hover:scale-105">
+                        Back to Main
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ` : ''}
             </div>
             <div class="mt-6 text-white space-y-2">
               <p class="text-lg font-semibold">Controls</p>
@@ -247,6 +267,9 @@ export class App {
       // Quick game - start without tournament manager
       console.log('Starting quick game without tournament')
       this.gameManager.startGame(undefined, undefined, this.customization)
+      
+      // Set up game over button handlers for quick games
+      this.setupQuickGameButtons()
     } else {
       // Tournament game - get the next match from tournament manager
       console.log('=== GETTING NEXT MATCH ===')
@@ -578,6 +601,19 @@ export class App {
       e.preventDefault()
       window.history.pushState({}, '', '/game')
       this.render()
+    })
+  }
+
+  // Set up game over button handlers for quick games
+  private setupQuickGameButtons(): void {
+    document.getElementById('play-again-btn')?.addEventListener('click', (e) => {
+      e.preventDefault()
+      this.gameManager.playAgain()
+    })
+
+    document.getElementById('back-main-btn')?.addEventListener('click', (e) => {
+      e.preventDefault()
+      this.gameManager.backToMain()
     })
   }
 }

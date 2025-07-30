@@ -21,6 +21,7 @@ export class GameManager {
   private ctx: CanvasRenderingContext2D | null = null
   private animationId: number | null = null
   private gameRunning: boolean = false
+  private gamePaused: boolean = false
 
   // Game objects
   private leftPaddle: Paddle
@@ -102,6 +103,13 @@ export class GameManager {
 
   private setupKeyboardControls(): void {
     document.addEventListener('keydown', (e) => {
+      // Handle pause/unpause with space key
+      if (e.key === ' ' && !e.repeat) {
+        e.preventDefault() // Prevent page scrolling
+        this.gamePaused = !this.gamePaused
+        return
+      }
+      
       this.keys[e.key] = true
     })
 
@@ -114,6 +122,9 @@ export class GameManager {
     // Reset scores
     this.score1 = 0
     this.score2 = 0
+    
+    // Reset pause state
+    this.gamePaused = false
     
     // Reset ball position and speed
     this.ball.x = 400
@@ -192,7 +203,12 @@ export class GameManager {
   private gameLoop(): void {
     if (!this.gameRunning) return
 
-    this.update()
+    // Only update game state if not paused
+    if (!this.gamePaused) {
+      this.update()
+    }
+    
+    // Always render (to show pause overlay when paused)
     this.render()
 
     this.animationId = requestAnimationFrame(() => this.gameLoop())
@@ -210,6 +226,9 @@ export class GameManager {
   }
 
   private updatePaddles(): void {
+    // Don't update paddles if game is paused
+    if (this.gamePaused) return
+    
     // Player 1 controls (W/S keys)
     if (this.keys['w'] || this.keys['W']) {
       this.leftPaddle.dy = -this.leftPaddle.speed
@@ -556,6 +575,23 @@ export class GameManager {
     ctx.textAlign = 'center'
     ctx.fillText(this.score1.toString(), 200, 50)
     ctx.fillText(this.score2.toString(), 600, 50)
+
+    // Draw pause overlay if game is paused
+    if (this.gamePaused) {
+      // Semi-transparent overlay
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      
+      // Pause text
+      ctx.fillStyle = '#ffffff'
+      ctx.font = '48px Arial'
+      ctx.textAlign = 'center'
+      ctx.fillText('PAUSED', canvas.width / 2, canvas.height / 2 - 20)
+      
+      // Instructions
+      ctx.font = '16px Arial'
+      ctx.fillText('Press SPACE to resume', canvas.width / 2, canvas.height / 2 + 20)
+    }
   }
 
   private getPowerUpColor(type: string): string {

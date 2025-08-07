@@ -309,7 +309,7 @@ export class GameCustomization {
   }
 
   renderCustomizationMenu(): string {
-    const currentTheme = this.getCurrentTheme()
+    //const currentTheme = this.getCurrentTheme()
     
     return `
       <div class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">

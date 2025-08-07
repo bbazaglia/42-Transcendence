@@ -1,7 +1,10 @@
 # Stage 1: Build static assets
 FROM node:lts-alpine3.22 AS builder
 WORKDIR /app
-COPY package*.json ./
+COPY package.json package-lock.json ./
+RUN npm install -g npm@latest
+RUN npm i --package-lock-only
+RUN npm audit fix --force
 RUN npm install
 COPY . .
 RUN npm run build

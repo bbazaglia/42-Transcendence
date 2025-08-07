@@ -1,19 +1,13 @@
 import Fastify from 'fastify';
-import cors from '@fastify/cors';
+import app from './app.js';
 
+// Create the Fastify instance
 const fastify = Fastify({
   logger: true
 });
 
-// Register the CORS plugin
-await fastify.register(cors, { 
-  origin: ["http://localhost:5173", "http://localhost:8443"]
-});
-
-// Example API route
-fastify.get('/api/health', async (request, reply) => {
-  return { status: 'ok' };
-});
+// Register our main app plugin
+await fastify.register(app);
 
 // Start the server
 const start = async () => {

@@ -3,7 +3,7 @@ export const createUserTableSQL = `
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     display_name TEXT NOT NULL UNIQUE,
     email TEXT NOT NULL UNIQUE,
-    hashed_password TEXT,
+    password_hash TEXT,
     avatar_url TEXT DEFAULT '/default-avatar.png',
     wins INTEGER DEFAULT 0,
     losses INTEGER DEFAULT 0,

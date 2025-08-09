@@ -12,6 +12,7 @@ export default async function (fastify, opts) {
     // Apply authentication hook to all routes in this plugin
     fastify.addHook('preHandler', fastify.authenticate);
 
+    // NOT USED AT THE MOMENT: logic changed to use WebSocket for profile updates
     // Gets the profile information of the currently logged-in user.
     fastify.get('/me', {
         schema: {
@@ -48,6 +49,7 @@ export default async function (fastify, opts) {
         }
     });
 
+    // NOT USED AT THE MOMENT: logic changed to use WebSocket for profile updates
     // Updates the profile information (like display name) of the logged-in user.
     fastify.put('/me', {
         schema: {
@@ -82,6 +84,7 @@ export default async function (fastify, opts) {
         }
     });
 
+    // NOT USED AT THE MOMENT: logic changed to use WebSocket for profile updates
     // Handles uploading a new avatar image for the logged-in user.
     fastify.put('/me/avatar', async (request, reply) => {
         // file() method is added to the request by the @fastify/multipart plugin
@@ -150,7 +153,7 @@ export default async function (fastify, opts) {
     }, async (request, reply) => {
         const userId = request.params.id;
         const query = `
-            SELECT id, display_name, email, avatar_url, wins, losses, created_at
+            SELECT id, display_name, avatar_url, wins, losses, created_at
             FROM users
             WHERE id = ?
             `;
@@ -165,7 +168,6 @@ export default async function (fastify, opts) {
             return {
                 id: user.id,
                 displayName: user.display_name,
-                email: user.email,
                 avatarUrl: user.avatar_url,
                 wins: user.wins,
                 losses: user.losses,

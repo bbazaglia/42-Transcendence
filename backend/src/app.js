@@ -8,7 +8,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 import jwtSetup from './plugins/jwtSetup.js';
-import lobby from './lobby.js';
+import lobby from './plugins/lobby.js';
+import sharedSchemas from './schemas/sharedSchemas.js'
 import sqlite from 'fastify-sqlite';
 
 import {
@@ -17,7 +18,7 @@ import {
     createMatchesTableSQL,
     createTournamentsTableSQL,
     createTournamentParticipantsTableSQL
-} from './schema.js';
+} from './schemas/sqlSchemas.js';
 
 import healthRoutes from './routes/health.js';
 import authRoutes from './routes/auth.js';
@@ -33,6 +34,7 @@ async function app(fastify, opts) {
 
     // Register plugins
     await fastify.register(cors, { origin: ["http://localhost:5173", "http://localhost:8443"] });
+    await fastify.register(sharedSchemas);
     await fastify.register(websocket);
     await fastify.register(jwtSetup);
     await fastify.register(lobby);

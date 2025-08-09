@@ -16,6 +16,17 @@ export default async function (fastify, opts) {
                     winner_id: { type: 'integer' },
                     tournament_id: { type: 'integer' } // Optional
                 }
+            },
+            response: {
+                201: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'integer' },
+                        message: { type: 'string' }
+                    }
+                },
+                403: { $ref: 'errorResponse#' },
+                500: { $ref: 'errorResponse#' }
             }
         }
     }, async (request, reply) => {
@@ -68,7 +79,8 @@ export default async function (fastify, opts) {
             return { id: result.lastID, message: 'Match created successfully' };
         } catch (err) {
             fastify.log.error(err);
-            throw new Error('Internal Server Error');
+            reply.code(500);
+            return { error: 'An error occurred while creating the match record.' };
         }
     });
 }

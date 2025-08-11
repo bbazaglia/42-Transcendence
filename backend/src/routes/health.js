@@ -1,5 +1,5 @@
 export default async function (fastify, opts) {
-    // API health check route
+    // ROUTE: API health check route
     fastify.get('/', async (request, reply) => {
         return {
             status: 'ok',

@@ -3,6 +3,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    init: true
     command: npm run dev
     volumes:
       - ./backend/src:/app/src
@@ -18,6 +19,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
+    init: true
     volumes:
       - ./frontend/src:/app/src
       - ./frontend/vite.config.ts:/app/vite.config.ts

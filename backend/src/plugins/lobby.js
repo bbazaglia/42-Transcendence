@@ -18,13 +18,14 @@ const MESSAGE_TYPES = {
     ERROR: 'error'
 };
 
-// Helper function to strip sensitive info and ensure consistent naming.
 function toPublicUser(user) {
     if (!user) return null;
     return {
         id: user.id,
-        displayName: user.display_name || user.displayName, // Handle both snake_case and camelCase
-        avatarUrl: user.avatar_url || user.avatarUrl
+        displayName: user.displayName,
+        avatarUrl: user.avatarUrl,
+        wins: user.wins,
+        losses: user.losses
     };
 }
 
@@ -43,12 +44,17 @@ async function lobby(fastify, opts) {
 
             activeLobby = {
                 host: hostUser,
-                guests: new Map(), // Real players who log in after the Host
                 participants: new Map() // All active entities, including Host and AI
             };
 
             activeLobby.participants.set(hostUser.id, hostUser);
-            activeLobby.participants.set(AI_PLAYER_ID, { id: AI_PLAYER_ID, displayName: 'AI Bot' });
+            activeLobby.participants.set(AI_PLAYER_ID, {
+                id: AI_PLAYER_ID,
+                displayName: 'AI Bot',
+                avatarUrl: '/avatars/ai-avatar.png',
+                wins: 0,
+                losses: 0
+            });
 
             fastify.log.info(`Lobby created by host: ${hostUser.displayName}`);
 
@@ -58,22 +64,51 @@ async function lobby(fastify, opts) {
             return connection.socket.close(1008, 'Authentication failed.');
         }
 
+        function broadcastLobbyState(messageType) {
+            if (!activeLobby) {
+                fastify.log.warn('Attempted to broadcast state for a non-existent lobby.');
+                return;
+            }
+
+            const publicParticipants = Array.from(activeLobby.participants.values()).map(toPublicUser);
+            const payload = {
+                host: toPublicUser(activeLobby.host),
+                participants: publicParticipants
+            };
+            const message = JSON.stringify({ type: messageType, payload });
+
+            // Send back the updated state.
+            if (connection.socket.readyState === 1) { // 1 means WebSocket.OPEN
+                connection.socket.send(message);
+            }
+
+            fastify.log.info(`Broadcasted lobby state with type: ${messageType}`);
+        }
+
         connection.socket.on('message', async (message) => {
             try {
                 const data = JSON.parse(message.toString());
                 switch (data.type) {
                     case MESSAGE_TYPES.GUEST_AUTH: {
                         const { username, password } = data.payload;
-                        const guestUser = await fastify.sqlite.get('SELECT * FROM users WHERE display_name = ?', [username]);
-                        const isPasswordValid = guestUser && await bcrypt.compare(password, guestUser.password_hash);
+
+                        const guestUser = await fastify.prisma.user.findUnique({
+                            where: { displayName: username }
+                        });
+
+                        const isPasswordValid = guestUser && await bcrypt.compare(password, guestUser.passwordHash);
 
                         if (isPasswordValid && activeLobby) {
+                            if (guestUser.id === activeLobby.host.id) {
+                                connection.socket.send(JSON.stringify({ type: MESSAGE_TYPES.GUEST_JOIN_FAILURE, payload: { error: 'Host cannot join as a guest.' } }));
+                                break;
+                            }
+
                             if (activeLobby.participants.has(guestUser.id)) {
                                 connection.socket.send(JSON.stringify({ type: MESSAGE_TYPES.GUEST_JOIN_FAILURE, payload: { error: 'User is already in the lobby.' } }));
                                 break;
                             }
 
-                            activeLobby.guests.set(guestUser.id, guestUser);
                             activeLobby.participants.set(guestUser.id, guestUser);
 
                             broadcastLobbyState(MESSAGE_TYPES.GUEST_JOIN_SUCCESS);
@@ -86,8 +121,7 @@ async function lobby(fastify, opts) {
                     case MESSAGE_TYPES.GUEST_LOGOUT: {
                         const { guestId } = data.payload;
 
-                        if (activeLobby && activeLobby.guests.has(guestId)) {
-                            activeLobby.guests.delete(guestId);
+                        if (activeLobby && guestId !== activeLobby.host.id && guestId !== AI_PLAYER_ID && activeLobby.participants.has(guestId)) {
                             activeLobby.participants.delete(guestId);
 
                             broadcastLobbyState(MESSAGE_TYPES.GUEST_LEAVE_SUCCESS);
@@ -100,22 +134,31 @@ async function lobby(fastify, opts) {
                     case MESSAGE_TYPES.UPDATE_PARTICIPANT_PROFILE: {
                         const { userId, newDisplayName, newAvatarUrl } = data.payload;
 
-                        if (activeLobby && activeLobby.participants.has(userId)) {
+                        if (activeLobby && userId !== AI_PLAYER_ID && activeLobby.participants.has(userId)) {
                             try {
-                                const participant = activeLobby.participants.get(userId);
-
-                                // Update display name if provided
+                                const dataToUpdate = {};
                                 if (newDisplayName) {
-                                    await fastify.sqlite.run('UPDATE users SET display_name = ? WHERE id = ?', [newDisplayName, userId]);
-                                    participant.display_name = newDisplayName;
-                                    participant.displayName = newDisplayName; // Keep both consistent
+                                    dataToUpdate.displayName = newDisplayName;
+                                }
+                                if (newAvatarUrl) {
+                                    dataToUpdate.avatarUrl = newAvatarUrl;
                                 }
 
-                                // Update avatar URL if provided
-                                if (newAvatarUrl) {
-                                    await fastify.sqlite.run('UPDATE users SET avatar_url = ? WHERE id = ?', [newAvatarUrl, userId]);
-                                    participant.avatar_url = newAvatarUrl;
-                                    participant.avatarUrl = newAvatarUrl;
+                                // Only run the update if there's something to change
+                                if (Object.keys(dataToUpdate).length > 0) {
+                                    // Update the user in the DB and get the fresh object back.
+                                    const updatedUser = await fastify.prisma.user.update({
+                                        where: { id: userId },
+                                        data: dataToUpdate
+                                    });
+
+                                    // Update the in-memory state using the definitive data from the DB.
+                                    activeLobby.participants.set(userId, updatedUser);
+
+                                    // Also update the host reference if it was the host who changed.
+                                    if (userId === activeLobby.host.id) {
+                                        activeLobby.host = updatedUser;
+                                    }
                                 }
 
                                 broadcastLobbyState(MESSAGE_TYPES.UPDATE_PROFILE_SUCCESS);

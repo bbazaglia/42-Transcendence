@@ -1,24 +1,17 @@
 import fastifyPlugin from 'fastify-plugin';
-import cors from '@fastify/cors';
-import multipart from '@fastify/multipart';
+import fastifyCors from '@fastify/cors';
+import fastifyMultipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
-import websocket from '@fastify/websocket';
+import fastifyWebsocket from '@fastify/websocket';
+import fastifyCookie from '@fastify/cookie';
 
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+import sharedSchemas from './schemas/sharedSchemas.js'
 import jwtSetup from './plugins/jwtSetup.js';
 import lobby from './plugins/lobby.js';
-import sharedSchemas from './schemas/sharedSchemas.js'
-import sqlite from 'fastify-sqlite';
-
-import {
-    createUserTableSQL,
-    createFriendsTableSQL,
-    createMatchesTableSQL,
-    createTournamentsTableSQL,
-    createTournamentParticipantsTableSQL
-} from './schemas/sqlSchemas.js';
+import prisma from './plugins/prisma.js';
 
 import healthRoutes from './routes/health.js';
 import authRoutes from './routes/auth.js';
@@ -33,25 +26,15 @@ async function app(fastify, opts) {
     const __dirname = path.dirname(__filename);
 
     // Register plugins
-    await fastify.register(cors, { origin: ["http://localhost:5173", "http://localhost:8443"] });
+    await fastify.register(fastifyCors, { origin: ["http://localhost:5173", "http://localhost:8443"] });
     await fastify.register(sharedSchemas);
-    await fastify.register(websocket);
+    await fastify.register(fastifyWebsocket);
+    await fastify.register(fastifyMultipart);
+    await fastify.register(fastifyCookie, { secret: process.env.COOKIE_SECRET });
+    await fastify.register(fastifyStatic, { root: path.join(__dirname, '..', 'public'), prefix: '/', });
     await fastify.register(jwtSetup);
     await fastify.register(lobby);
-    await fastify.register(sqlite, { database: path.join(__dirname, '..', 'data', 'mydb.sqlite') });
-    await fastify.register(multipart);
-    await fastify.register(fastifyStatic, {
-        root: path.join(__dirname, '..', 'public'),
-        prefix: '/',
-    });
-
-    // Initialize databases
-    await fastify.sqlite.exec('PRAGMA foreign_keys = ON;');
-    await fastify.sqlite.exec(createUserTableSQL);
-    await fastify.sqlite.exec(createFriendsTableSQL);
-    await fastify.sqlite.exec(createMatchesTableSQL);
-    await fastify.sqlite.exec(createTournamentsTableSQL);
-    await fastify.sqlite.exec(createTournamentParticipantsTableSQL);
+    await fastify.register(prisma);
 
     // Register routes
     await fastify.register(healthRoutes, { prefix: '/api/health' });

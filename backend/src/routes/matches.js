@@ -2,19 +2,19 @@ export default async function (fastify, opts) {
     // All routes in this file require authentication
     fastify.addHook('preHandler', fastify.authenticate);
 
-    // Creates a new match record after a game is finished.
+    // ROUTE: Creates a new match record after a game is finished.
     fastify.post('/', {
         schema: {
             body: {
                 type: 'object',
-                required: ['player_one_id', 'player_two_id', 'player_one_score', 'player_two_score', 'winner_id'],
+                required: ['playerOneId', 'playerTwoId', 'playerOneScore', 'playerTwoScore', 'winnerId'],
                 properties: {
-                    player_one_id: { type: 'integer' },
-                    player_two_id: { type: 'integer' },
-                    player_one_score: { type: 'integer' },
-                    player_two_score: { type: 'integer' },
-                    winner_id: { type: 'integer' },
-                    tournament_id: { type: 'integer' } // Optional
+                    playerOneId: { type: 'integer' },
+                    playerTwoId: { type: 'integer' },
+                    playerOneScore: { type: 'integer' },
+                    playerTwoScore: { type: 'integer' },
+                    winnerId: { type: 'integer' },
+                    tournamentId: { type: 'integer' } // Optional
                 }
             },
             response: {
@@ -30,6 +30,15 @@ export default async function (fastify, opts) {
             }
         }
     }, async (request, reply) => {
+        const {
+            playerOneId,
+            playerTwoId,
+            playerOneScore,
+            playerTwoScore,
+            winnerId,
+            tournamentId
+        } = request.body;
+
         // The user making the API call must be the host of the active lobby.
         const hostId = request.user.id;
         const lobby = fastify.getLobby();
@@ -40,8 +49,8 @@ export default async function (fastify, opts) {
         }
 
         // Ensure both players are part of the lobby participants
-        const isPlayerOneValid = lobby.participants.has(player_one_id);
-        const isPlayerTwoValid = lobby.participants.has(player_two_id);
+        const isPlayerOneValid = lobby.participants.has(playerOneId);
+        const isPlayerTwoValid = lobby.participants.has(playerTwoId);
 
         if (!isPlayerOneValid || !isPlayerTwoValid) {
             reply.code(403);
@@ -49,34 +58,58 @@ export default async function (fastify, opts) {
         }
 
         // Update the match record in the database
-        const {
-            player_one_id,
-            player_two_id,
-            player_one_score,
-            player_two_score,
-            winner_id,
-            tournament_id
-        } = request.body;
+
 
         const AI_PLAYER_ID = 0;
+
         try {
-            const query = `
-                INSERT INTO matches (player_one_id, player_two_id, player_one_score, player_two_score, winner_id, tournament_id)
-                VALUES (?, ?, ?, ?, ?, ?)
-            `;
-            const result = await fastify.sqlite.run(query, [player_one_id, player_two_id, player_one_score, player_two_score, winner_id, tournament_id]);
+            // Create an array to hold our database operations
+            const operations = [];
 
-            if (winner_id !== AI_PLAYER_ID) {
-                await fastify.sqlite.run('UPDATE users SET wins = wins + 1 WHERE id = ?', [winner_id]);
+            // 1. Add the 'create match' operation
+            operations.push(
+                fastify.prisma.match.create({
+                    data: {
+                        playerOneId,
+                        playerTwoId,
+                        playerOneScore,
+                        playerTwoScore,
+                        winnerId,
+                        tournamentId
+                    }
+                })
+            );
+
+            // 2. Conditionally add the 'update winner' operation
+            if (winnerId !== AI_PLAYER_ID) {
+                operations.push(
+                    fastify.prisma.user.update({
+                        where: { id: winnerId },
+                        data: { wins: { increment: 1 } }
+                    })
+                );
             }
 
-            const loser_id = winner_id === player_one_id ? player_two_id : player_one_id;
-            if (loser_id !== AI_PLAYER_ID) {
-                await fastify.sqlite.run('UPDATE users SET losses = losses + 1 WHERE id = ?', [loser_id]);
+            // 3. Conditionally add the 'update loser' operation
+            const loserId = winnerId === playerOneId ? playerTwoId : playerOneId;
+            if (loserId !== AI_PLAYER_ID) {
+                operations.push(
+                    fastify.prisma.user.update({
+                        where: { id: loserId },
+                        data: { losses: { increment: 1 } }
+                    })
+                );
             }
 
-            reply.code(201)
-            return { id: result.lastID, message: 'Match created successfully' };
+            // Execute all operations in a single, safe transaction
+            const transactionResult = await fastify.prisma.$transaction(operations);
+
+            // The result of the first operation is the newly created match
+            const newMatch = transactionResult[0];
+
+            reply.code(201);
+            return { id: newMatch.id, message: 'Match created successfully' };
+
         } catch (err) {
             fastify.log.error(err);
             reply.code(500);

@@ -1,0 +1,107 @@
+// Use of Prisma extension is recommended for better development experience.
+// https://marketplace.visualstudio.com/items?itemName=Prisma.prisma
+
+// This tells Prisma to generate a JavaScript client
+generator client {
+  provider = "prisma-client-js"
+}
+
+// This sets up your database connection.
+// The database path should be in our .env file and start with 'file:'
+// For example: DATABASE_PATH="file:./dev.db"
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_PATH")
+}
+
+// -----------------------------------------------------------------------------
+// Models - These are the direct translation of our sqlite tables
+// -----------------------------------------------------------------------------
+
+model User {
+  id             Int      @id @default(autoincrement())
+  displayName    String   @unique @map("display_name")
+  email          String   @unique
+  passwordHash   String?  @map("password_hash")
+  avatarUrl      String   @default("/avatars/default-avatar.png") @map("avatar_url")
+  wins           Int      @default(0)
+  losses         Int      @default(0)
+  googleId       String?  @map("google_id")
+  twoFaSecret    String?  @map("two_fa_secret")
+  isTwoFaEnabled Boolean  @default(false) @map("is_two_fa_enabled")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  // --- Prisma's way of defining relationships ---
+  friendsAsUserOne Friend[] @relation("UserOneFriends")
+  friendsAsUserTwo Friend[] @relation("UserTwoFriends")
+  friendActions    Friend[] @relation("ActionUser")
+
+  matchesAsPlayerOne Match[] @relation("PlayerOneMatches")
+  matchesAsPlayerTwo Match[] @relation("PlayerTwoMatches")
+  matchesWon         Match[] @relation("Winner")
+
+  tournaments TournamentParticipant[]
+
+  @@map("users") // Maps this model to the 'users' table in SQL
+}
+
+model Friend {
+  id           Int    @id @default(autoincrement())
+  userOneId    Int    @map("user_one_id")
+  userTwoId    Int    @map("user_two_id")
+  status       String @default("pending")
+  actionUserId Int    @map("action_user_id")
+
+  // --- Prisma's way of defining foreign keys ---
+  userOne    User @relation("UserOneFriends", fields: [userOneId], references: [id])
+  userTwo    User @relation("UserTwoFriends", fields: [userTwoId], references: [id])
+  actionUser User @relation("ActionUser", fields: [actionUserId], references: [id])
+
+  @@unique([userOneId, userTwoId]) // Replaces the UNIQUE constraint
+  @@map("friends")
+}
+
+model Match {
+  id             Int      @id @default(autoincrement())
+  playerOneId    Int      @map("player_one_id")
+  playerTwoId    Int      @map("player_two_id")
+  playerOneScore Int      @map("player_one_score")
+  playerTwoScore Int      @map("player_two_score")
+  winnerId       Int      @map("winner_id")
+  tournamentId   Int?     @map("tournament_id")
+  playedAt       DateTime @default(now()) @map("played_at")
+
+  // --- Foreign key relationships ---
+  playerOne  User        @relation("PlayerOneMatches", fields: [playerOneId], references: [id])
+  playerTwo  User        @relation("PlayerTwoMatches", fields: [playerTwoId], references: [id])
+  winner     User        @relation("Winner", fields: [winnerId], references: [id])
+  tournament Tournament? @relation(fields: [tournamentId], references: [id])
+
+  @@map("matches")
+}
+
+model Tournament {
+  id        Int      @id @default(autoincrement())
+  name      String
+  status    String   @default("pending")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // --- Foreign key and back-relation ---
+  participants TournamentParticipant[]
+  matches      Match[]
+
+  @@map("tournaments")
+}
+
+model TournamentParticipant {
+  id           Int @id @default(autoincrement())
+  tournamentId Int @map("tournament_id")
+  userId       Int @map("user_id")
+
+  // --- Foreign key relationships ---
+  tournament Tournament @relation(fields: [tournamentId], references: [id])
+  user       User       @relation(fields: [userId], references: [id])
+
+  @@unique([tournamentId, userId]) // Replaces the UNIQUE constraint
+  @@map("tournament_participants")
+}

@@ -3,7 +3,11 @@ import jwt from '@fastify/jwt';
 
 export default fp(async function (fastify, opts) {
     fastify.register(jwt, {
-        secret: process.env.JWT_SECRET
+        secret: process.env.JWT_SECRET,
+        cookie: {
+            cookieName: 'token',
+            signed: false // JWT is already signed, we don't need to sign the cookie also
+        }
     });
 
     // Accessible through fastify.authenticate

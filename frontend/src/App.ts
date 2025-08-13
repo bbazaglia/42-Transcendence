@@ -235,7 +235,7 @@ export class App {
                       </button>
                       <button id="back-main-btn" 
                               class="px-6 py-3 bg-gradient-to-r from-purple-600 to-cyan-600 text-white font-bold rounded-lg shadow-lg hover:shadow-purple-500/25 transition-all duration-300 transform hover:scale-105">
-                        Back to Main
+                        Back to Home
                       </button>
                     </div>
                   </div>

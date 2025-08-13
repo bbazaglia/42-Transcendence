@@ -32,9 +32,9 @@ model User {
   createdAt      DateTime @default(now()) @map("created_at")
 
   // --- Prisma's way of defining relationships ---
-  friendsAsUserOne Friend[] @relation("UserOneFriends")
-  friendsAsUserTwo Friend[] @relation("UserTwoFriends")
-  friendActions    Friend[] @relation("ActionUser")
+  friendsAsUserOne Friendship[] @relation("UserOneFriends")
+  friendsAsUserTwo Friendship[] @relation("UserTwoFriends")
+  friendActions    Friendship[] @relation("ActionUser")
 
   matchesAsPlayerOne Match[] @relation("PlayerOneMatches")
   matchesAsPlayerTwo Match[] @relation("PlayerTwoMatches")
@@ -45,7 +45,7 @@ model User {
   @@map("users") // Maps this model to the 'users' table in SQL
 }
 
-model Friend {
+model Friendship {
   id           Int    @id @default(autoincrement())
   userOneId    Int    @map("user_one_id")
   userTwoId    Int    @map("user_two_id")

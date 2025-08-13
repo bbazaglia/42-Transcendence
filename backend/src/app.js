@@ -35,9 +35,9 @@ async function app(fastify, opts) {
 
     // Register routes
     await fastify.register(authRoutes, { prefix: '/api/auth' });
+    await fastify.register(lobbyRoutes, { prefix: '/api/lobby' });
     await fastify.register(friendsRoutes, { prefix: '/api/friends' });
     await fastify.register(healthRoutes, { prefix: '/api/health' });
-    await fastify.register(lobbyRoutes, { prefix: '/api/lobby' });
     await fastify.register(matchesRoutes, { prefix: '/api/matches' });
     await fastify.register(tournamentsRoutes, { prefix: '/api/tournaments' });
     await fastify.register(usersRoutes, { prefix: '/api/users' });

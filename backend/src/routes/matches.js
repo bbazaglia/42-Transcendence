@@ -1,3 +1,5 @@
+const AI_PLAYER_ID = 0;
+
 export default async function (fastify, opts) {
     // All routes in this file require authentication
     fastify.addHook('preHandler', fastify.authenticate);
@@ -58,10 +60,6 @@ export default async function (fastify, opts) {
         }
 
         // Update the match record in the database
-
-
-        const AI_PLAYER_ID = 0;
-
         try {
             // Create an array to hold our database operations
             const operations = [];

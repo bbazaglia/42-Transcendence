@@ -22,7 +22,6 @@ async function getFriendsForUser(prisma, userId) {
 export default async function (fastify, opts) {
     // All routes in this file require authentication
     fastify.addHook('preHandler', fastify.authenticate);
-    fastify.addHook('preHandler', fastify.lobbyAuth);
 
     // ROUTE: Gets a list of the current user's friends and their status.
     fastify.get('/:id', {

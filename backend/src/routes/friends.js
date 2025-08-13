@@ -35,7 +35,7 @@ export default async function (fastify, opts) {
                 }
             },
             response: {
-                200: { type: 'array', items: { $ref: 'PublicUser#' } },
+                200: { type: 'array', items: { $ref: 'publicUser#' } },
                 500: { $ref: 'errorResponse#' }
             }
         }
@@ -64,7 +64,7 @@ export default async function (fastify, opts) {
                 }
             },
             response: {
-                200: { type: 'array', items: { $ref: 'PublicUser#' } },
+                200: { type: 'array', items: { $ref: 'publicUser#' } },
                 400: { $ref: 'errorResponse#' },
                 403: { $ref: 'errorResponse#' },
                 409: { $ref: 'errorResponse#' },
@@ -122,7 +122,7 @@ export default async function (fastify, opts) {
                 }
             },
             response: {
-                200: { type: 'array', items: { $ref: 'PublicUser#' } },
+                200: { type: 'array', items: { $ref: 'publicUser#' } },
                 403: { $ref: 'errorResponse#' },
                 404: { $ref: 'errorResponse#' },
                 500: { $ref: 'errorResponse#' }

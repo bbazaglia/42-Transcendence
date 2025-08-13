@@ -3,6 +3,7 @@ const AI_PLAYER_ID = 0;
 export default async function (fastify, opts) {
     // All routes in this file require authentication
     fastify.addHook('preHandler', fastify.authenticate);
+    fastify.addHook('preHandler', fastify.lobbyAuth);
 
     // ROUTE: Creates a new match record after a game is finished.
     fastify.post('/', {
@@ -41,14 +42,7 @@ export default async function (fastify, opts) {
             tournamentId
         } = request.body;
 
-        // The user making the API call must be the host of the active lobby.
-        const hostId = request.user.id;
         const lobby = fastify.getLobby();
-
-        if (!lobby || lobby.host.id !== hostId) {
-            reply.code(403);
-            return { error: 'You are not the host of the active lobby.' };
-        }
 
         // Ensure both players are part of the lobby participants
         const isPlayerOneValid = lobby.participants.has(playerOneId);

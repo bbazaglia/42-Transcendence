@@ -1,3 +1,4 @@
+import fp from 'fastify-plugin';
 import bcrypt from 'bcrypt';
 
 let activeLobby = null;
@@ -28,7 +29,8 @@ async function lobbyAuth(request, reply) {
     }
 }
 
-export default async function (fastify, opts) {
+// We're using fastify-plugin to break encapsulation and allow this plugin to be used by the parent scope.
+export default fp(async function (fastify, opts) {
     fastify.decorate('getLobby', () => activeLobby);
     fastify.decorate('lobbyAuth', lobbyAuth);
 
@@ -217,4 +219,4 @@ export default async function (fastify, opts) {
             participants: Array.from(activeLobby.participants.values()).map(toPublicUser)
         };
     });
-}
+})

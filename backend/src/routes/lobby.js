@@ -2,7 +2,7 @@ import fp from 'fastify-plugin';
 import bcrypt from 'bcrypt';
 
 let activeLobby = null;
-const AI_PLAYER_ID = 0;
+export const AI_PLAYER_ID = 0;
 
 function toPublicUser(user) {
     if (!user) return null;

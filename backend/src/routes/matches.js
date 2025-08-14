@@ -1,6 +1,5 @@
 import { TournamentStatus } from '@prisma/client'
-
-const AI_PLAYER_ID = 0;
+import { AI_PLAYER_ID } from './lobby.js';
 
 export default async function (fastify, opts) {
     // All routes in this file require authentication

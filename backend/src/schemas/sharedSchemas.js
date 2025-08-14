@@ -51,6 +51,22 @@ async function sharedSchemas(fastify, opts) {
             playedAt: { type: 'string', format: 'date-time' }
         }
     });
+
+    // The schema for a tournament object.
+    fastify.addSchema({
+        $id: 'tournamentDetail',
+        type: 'object',
+        properties: {
+            id: { type: 'integer' },
+            name: { type: 'string' },
+            status: { type: 'string', enum: ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'] },
+            maxParticipants: { type: 'integer' },
+            winner: { nullable: true, $ref: 'publicUser#' },
+            createdAt: { type: 'string', format: 'date-time' },
+            participants: { type: 'array', items: { $ref: 'publicUser#' } },
+            matches: { type: 'array', items: { $ref: 'tournamentMatch#' } }
+        }
+    });
 }
 
 export default fp(sharedSchemas);

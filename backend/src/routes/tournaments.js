@@ -1,3 +1,5 @@
+import { TournamentStatus } from '@prisma/client';
+
 export default async function (fastify, opts) {
     // All routes in this file require authentication
     fastify.addHook('preHandler', fastify.authenticate);
@@ -8,17 +10,7 @@ export default async function (fastify, opts) {
             response: {
                 200: {
                     type: 'array',
-                    items: {
-                        type: 'object',
-                        properties: {
-                            id: { type: 'integer' },
-                            name: { type: 'string' },
-                            status: { type: 'string', enum: ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'] },
-                            winnerId: { type: 'integer', nullable: true },
-                            maxParticipants: { type: 'integer' },
-                            createdAt: { type: 'string', format: 'date-time' }
-                        }
-                    }
+                    $ref: 'tournamentDetail#'
                 }
             }
         }
@@ -54,21 +46,9 @@ export default async function (fastify, opts) {
                 required: ['id']
             },
             response: {
-                200: {
-                    type: 'object',
-                    properties: {
-                        id: { type: 'integer' },
-                        name: { type: 'string' },
-                        status: { type: 'string', enum: ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'] },
-                        maxParticipants: { type: 'integer' },
-                        winner: { nullable: true, $ref: 'publicUser#' },
-                        createdAt: { type: 'string', format: 'date-time' },
-                        participants: { type: 'array', items: { $ref: 'publicUser#' } },
-                        matches: { type: 'array', items: { $ref: 'tournamentMatch#' } }
-                    }
-                },
-                404: { $id: 'errorResponse#' },
-                500: { $id: 'errorResponse#' }
+                200: { $ref: 'tournamentDetail#' },
+                404: { $ref: 'errorResponse#' },
+                500: { $ref: 'errorResponse#' }
             }
         }
     }, async (request, reply) => {
@@ -92,7 +72,8 @@ export default async function (fastify, opts) {
                             user: {
                                 select: {
                                     id: true,
-                                    displayName: true
+                                    displayName: true,
+                                    avatarUrl: true
                                 }
                             }
                         }
@@ -107,25 +88,10 @@ export default async function (fastify, opts) {
                 return { error: 'Tournament not found' };
             }
 
-            // Map participants to match your response schema
-            const participants = tournament.participants.map(p => ({
-                userId: p.user.id,
-                displayName: p.user.displayName
-            }));
+            // Map participants to match your response schema because we only need user details
+            tournament.participants = tournament.participants.map(p => p.user);
 
-            // Build the response object
-            const response = {
-                id: tournament.id,
-                name: tournament.name,
-                status: tournament.status,
-                maxParticipants: tournament.maxParticipants,
-                createdAt: tournament.createdAt,
-                winner: tournament.winner,
-                participants: participants,
-                matches: tournament.matches
-            };
-
-            return response;
+            return tournament;
         } catch (error) {
             fastify.log.error(error, `Failed to fetch tournament with id ${tournamentId}`);
             reply.code(500);
@@ -134,25 +100,144 @@ export default async function (fastify, opts) {
     });
 
     // ROUTE: Allows a user to create a new tournament.
-    fastify.post('/', async (request, reply) => {
-        // Logic to create a new tournament
-        // This should accept tournament details like name, description, start date, etc.
-        return { message: 'Tournament created successfully' };
+    fastify.post('/', {
+        schema: {
+            body: {
+                type: 'object',
+                required: ['name', 'maxParticipants'],
+                properties: {
+                    name: { type: 'string', minLength: 3, maxLength: 100 },
+                    maxParticipants: { type: 'integer', minimum: 2, maximum: 16 }
+                }
+            },
+            response: {
+                201: { $ref: 'tournamentDetail#' },
+                400: { $ref: 'errorResponse#' },
+                500: { $ref: 'errorResponse#' }
+            }
+        }
+    }, async (request, reply) => {
+        const { name, maxParticipants } = request.body;
+
+        try {
+            const newTournament = await fastify.prisma.tournament.create({
+                data: {
+                    name,
+                    maxParticipants,
+                }
+            });
+
+            reply.code(201);
+            return { newTournament };
+        } catch (error) {
+            fastify.log.error(error, 'Failed to create tournament');
+            reply.code(500);
+            return { error: 'An unexpected error occurred while creating the tournament.' };
+        }
     });
 
     // ROUTE: Allows a user to join an existing tournament.
-    fastify.post('/:id/join', async (request, reply) => {
+    fastify.post('/:id/join', {
+        schema: {
+            params: {
+                type: 'object',
+                properties: {
+                    id: { type: 'integer' }
+                },
+                required: ['id']
+            },
+            body: {
+                type: 'object',
+                properties: {
+                    userId: { type: 'integer' }
+                },
+                required: ['userId']
+            },
+            response: {
+                200: { $ref: 'tournamentDetail#' },
+                400: { $ref: 'errorResponse#' },
+                403: { $ref: 'errorResponse#' },
+                404: { $ref: 'errorResponse#' },
+                500: { $ref: 'errorResponse#' }
+            },
+            preHandler: [fastify.lobbyAuth]
+        }
+    }, async (request, reply) => {
         const tournamentId = request.params.id;
-        // Logic to join a tournament by ID
-        // This should add the user to the specified tournament in the database
-        return { message: `User joined tournament with ID ${tournamentId} successfully` };
+        const { userId } = request.body;
+        const lobby = fastify.getLobby();
+
+        // Check if user is authenticated
+        if (lobby && !lobby.participants.has(userId)) {
+            reply.code(403);
+            return { error: 'User must be logged in to join a tournament.' };
+        }
+
+        try {
+            // Use a transaction to ensure data integrity
+            const updatedTournament = await fastify.prisma.$transaction(async (prisma) => {
+                // Fetch the tournament and its participants in a single query
+                const tournament = await fastify.prisma.tournament.findUnique({
+                    where: { id: tournamentId },
+                    include: { participants: true }
+                });
+
+                // Check if tournament exists and is open for joining
+                if (!tournament || tournament.status !== TournamentStatus.PENDING) {
+                    reply.code(404);
+                    return { error: 'Tournament not found or is not open for joining.' };
+                }
+
+                // Check if the tournament is full
+                if (tournament.participants.length >= tournament.maxParticipants) {
+                    reply.code(403);
+                    return { error: 'Tournament is full. You cannot join at this time.' };
+                }
+
+                // Check if the user is already in the tournament
+                if (tournament.participants.some(p => p.userId === userId)) {
+                    reply.code(400);
+                    return { error: 'You are already participating in this tournament.' };
+                }
+
+                // Add the user to the tournament
+                await prisma.tournamentParticipant.create({
+                    data: {
+                        userId,
+                        tournamentId
+                    }
+                });
+
+                // Fetch the updated tournament with all necessary details for the response
+                return prisma.tournament.findUnique({
+                    where: { id: tournamentId },
+                    include: {
+                        winner: { select: { id: true, displayName: true, avatarUrl: true } },
+                        participants: { include: { user: { select: { id: true, displayName: true, avatarUrl: true } } } },
+                        matches: true
+                    }
+                });
+            });
+
+            return updatedTournament;
+        } catch (error) {
+            fastify.log.error(error, 'Failed to join tournament');
+            reply.code(500);
+            return { error: 'An unexpected error occurred while joining the tournament.' };
+        }
     });
 
-    // ROUTE: Records the outcome of a tournament match, which would trigger the backend matchmaking logic for the next round.
-    fastify.post('/:id/matches', async (request, reply) => {
+    // ROUTE: Starts the tournament when the required number of participants have joined.
+    fastify.patch('/:id/start', {
+
+    }, async (request, reply) => {
         const tournamentId = request.params.id;
-        // Logic to record a match outcome in a tournament
-        // This should accept match details like winner ID, loser ID, score, etc.
-        return { message: `Match recorded for tournament with ID ${tournamentId}` };
+    });
+
+    // ROUTE: Cancels a tournament, either by the creator or automatically if conditions are not met.
+    fastify.delete('/:id/cancel', {
+
+    }, async (request, reply) => {
+        const tournamentId = request.params.id;
     });
 }

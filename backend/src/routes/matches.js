@@ -1,3 +1,5 @@
+import { TournamentStatus } from '@prisma/client'
+
 const AI_PLAYER_ID = 0;
 
 export default async function (fastify, opts) {
@@ -55,12 +57,35 @@ export default async function (fastify, opts) {
 
         // Update the match record in the database
         try {
-            // Create an array to hold our database operations
-            const operations = [];
 
-            // 1. Add the 'create match' operation
-            operations.push(
-                fastify.prisma.match.create({
+            if (tournamentId) {
+                // Verify the tournament is in progress.
+                const tournament = await fastify.prisma.tournament.findUnique({
+                    where: { id: tournamentId },
+                    include: {
+                        participants: {
+                            select: { userId: true }
+                        }
+                    }
+                });
+
+                // Check if tournament exists and is in progress
+                if (!tournament || tournament.status !== TournamentStatus.IN_PROGRESS) {
+                    reply.code(403);
+                    return { error: 'Match cannot be recorded for a tournament that is not in progress.' };
+                }
+
+                const participantIds = new Set(tournament.participants.map(p => p.userId));
+                if (!participantIds.has(playerOneId) || !participantIds.has(playerTwoId)) {
+                    reply.code(403);
+                    return { error: 'Both players must be participants in the tournament to record a match.' };
+                }
+            }
+
+            // Execute all operations in a single, safe transaction
+            const transactionResult = await fastify.prisma.$transaction(async (prisma) => {
+                // Create the match record
+                const newMatch = await prisma.match.create({
                     data: {
                         playerOneId,
                         playerTwoId,
@@ -69,38 +94,31 @@ export default async function (fastify, opts) {
                         winnerId,
                         tournamentId
                     }
-                })
-            );
+                });
 
-            // 2. Conditionally add the 'update winner' operation
-            if (winnerId !== AI_PLAYER_ID) {
-                operations.push(
-                    fastify.prisma.user.update({
+                const loserId = winnerId === playerOneId ? playerTwoId : playerOneId;
+
+                // Update winner stats
+                if (winnerId !== AI_PLAYER_ID) {
+                    await prisma.user.update({
                         where: { id: winnerId },
                         data: { wins: { increment: 1 } }
-                    })
-                );
-            }
+                    });
+                }
 
-            // 3. Conditionally add the 'update loser' operation
-            const loserId = winnerId === playerOneId ? playerTwoId : playerOneId;
-            if (loserId !== AI_PLAYER_ID) {
-                operations.push(
-                    fastify.prisma.user.update({
+                // Update loser stats
+                if (loserId !== AI_PLAYER_ID) {
+                    await prisma.user.update({
                         where: { id: loserId },
                         data: { losses: { increment: 1 } }
-                    })
-                );
-            }
+                    });
+                }
 
-            // Execute all operations in a single, safe transaction
-            const transactionResult = await fastify.prisma.$transaction(operations);
-
-            // The result of the first operation is the newly created match
-            const newMatch = transactionResult[0];
+                return newMatch;
+            });
 
             reply.code(201);
-            return { id: newMatch.id, message: 'Match created successfully' };
+            return { id: transactionResult.id, message: 'Match created successfully' };
 
         } catch (err) {
             fastify.log.error(err);

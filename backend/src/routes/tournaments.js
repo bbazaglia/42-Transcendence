@@ -10,7 +10,16 @@ export default async function (fastify, opts) {
             response: {
                 200: {
                     type: 'array',
-                    $ref: 'tournamentDetail#'
+                    items: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'integer' },
+                            name: { type: 'string' },
+                            status: { type: 'string' },
+                            maxParticipants: { type: 'integer' },
+                            createdAt: { type: 'string', format: 'date-time' }
+                        }
+                    },
                 }
             }
         }
@@ -24,6 +33,9 @@ export default async function (fastify, opts) {
                     winnerId: true,
                     maxParticipants: true,
                     createdAt: true
+                },
+                orderBy: {
+                    createdAt: 'desc'
                 }
             });
 
@@ -124,11 +136,16 @@ export default async function (fastify, opts) {
                 data: {
                     name,
                     maxParticipants,
+                },
+                include: {
+                    winner: true,       // Will be null
+                    participants: true, // Will be an empty array
+                    matches: true       // Will be an empty array
                 }
             });
 
             reply.code(201);
-            return { newTournament };
+            return newTournament;
         } catch (error) {
             fastify.log.error(error, 'Failed to create tournament');
             reply.code(500);
@@ -168,7 +185,7 @@ export default async function (fastify, opts) {
         const lobby = fastify.getLobby();
 
         // Check if user is authenticated
-        if (lobby && !lobby.participants.has(userId)) {
+        if (!lobby.participants.has(userId)) {
             reply.code(403);
             return { error: 'User must be logged in to join a tournament.' };
         }
@@ -177,7 +194,7 @@ export default async function (fastify, opts) {
             // Use a transaction to ensure data integrity
             const updatedTournament = await fastify.prisma.$transaction(async (prisma) => {
                 // Fetch the tournament and its participants in a single query
-                const tournament = await fastify.prisma.tournament.findUnique({
+                const tournament = await prisma.tournament.findUnique({
                     where: { id: tournamentId },
                     include: { participants: true }
                 });
@@ -212,12 +229,16 @@ export default async function (fastify, opts) {
                 return prisma.tournament.findUnique({
                     where: { id: tournamentId },
                     include: {
-                        winner: { select: { id: true, displayName: true, avatarUrl: true } },
-                        participants: { include: { user: { select: { id: true, displayName: true, avatarUrl: true } } } },
+                        winner: true,
+                        participants: { include: { user: true } },
                         matches: true
                     }
                 });
             });
+
+            if (updatedTournament) {
+                updatedTournament.participants = updatedTournament.participants.map(p => p.user);
+            }
 
             return updatedTournament;
         } catch (error) {

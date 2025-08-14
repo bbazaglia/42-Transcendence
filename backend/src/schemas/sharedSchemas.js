@@ -35,6 +35,22 @@ async function sharedSchemas(fastify, opts) {
             }
         }
     });
+
+    // The schema for a single match within a tournament.
+    fastify.addSchema({
+        $id: 'tournamentMatch',
+        type: 'object',
+        properties: {
+            id: { type: 'integer' },
+            playerOneId: { type: 'integer' },
+            playerTwoId: { type: 'integer' },
+            playerOneScore: { type: 'integer' },
+            playerTwoScore: { type: 'integer' },
+            winnerId: { type: 'integer', nullable: true },
+            tournamentId: { type: 'integer' },
+            playedAt: { type: 'string', format: 'date-time' }
+        }
+    });
 }
 
 export default fp(sharedSchemas);

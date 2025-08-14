@@ -1,3 +1,5 @@
+import { FriendshipStatus } from '@prisma/client';
+
 async function getFriendshipsForUser(prisma, userId, status, onlineUserIds) {
     const whereClause = {
         status,
@@ -8,7 +10,7 @@ async function getFriendshipsForUser(prisma, userId, status, onlineUserIds) {
     };
 
     // Filter for only received requests if we're looking for pending requests
-    if (status === 'pending') {
+    if (status === FriendshipStatus.PENDING) {
         whereClause.NOT = {
             actionUserId: userId
         };
@@ -58,7 +60,7 @@ export default async function (fastify, opts) {
         const onlineUserIds = new Set(fastify.getLobby().participants.keys());
 
         try {
-            const friends = await getFriendshipsForUser(fastify.prisma, userId, 'accepted', onlineUserIds);
+            const friends = await getFriendshipsForUser(fastify.prisma, userId, FriendshipStatus.ACCEPTED, onlineUserIds);
             return friends;
         } catch (error) {
             fastify.log.error(error, `Error fetching friends for user ${userId}`);
@@ -90,7 +92,7 @@ export default async function (fastify, opts) {
         }
 
         try {
-            const requests = await getFriendshipsForUser(fastify.prisma, userId, 'pending', onlineUserIds);
+            const requests = await getFriendshipsForUser(fastify.prisma, userId, FriendshipStatus.PENDING, onlineUserIds);
             return requests;
         } catch (error) {
             fastify.log.error(error, `Error fetching pending requests for user ${userId}`);
@@ -140,7 +142,7 @@ export default async function (fastify, opts) {
                 data: {
                     userOneId, // Always the smaller ID
                     userTwoId,  // Always the larger ID
-                    status: 'pending',
+                    status: FriendshipStatus.PENDING,
                     actionUserId: actorId // The user initiating the friendship
                 }
             });
@@ -193,15 +195,15 @@ export default async function (fastify, opts) {
             await fastify.prisma.friendship.update({
                 where: {
                     userOneId_userTwoId: { userOneId, userTwoId },
-                    status: 'pending',
+                    status: FriendshipStatus.PENDING,
                     actionUserId: senderId
                 },
                 data: {
-                    status: 'accepted'
+                    status: FriendshipStatus.ACCEPTED
                 }
             });
 
-            return await getFriendshipsForUser(fastify.prisma, actorId, 'accepted', onlineUserIds);
+            return await getFriendshipsForUser(fastify.prisma, actorId, FriendshipStatus.ACCEPTED, onlineUserIds);
 
         } catch (error) {
             // If the `where` clause fails to find a match, Prisma throws P2025.
@@ -254,7 +256,7 @@ export default async function (fastify, opts) {
                 }
             });
 
-            const friends = await getFriendshipsForUser(fastify.prisma, actorId, 'accepted', onlineUserIds);
+            const friends = await getFriendshipsForUser(fastify.prisma, actorId, FriendshipStatus.ACCEPTED, onlineUserIds);
             return friends;
         } catch (error) {
             // If no friendship exists, Prisma will throw an error.

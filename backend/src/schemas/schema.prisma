@@ -36,21 +36,21 @@ model User {
   friendsAsUserTwo Friendship[] @relation("UserTwoFriends")
   friendActions    Friendship[] @relation("ActionUser")
 
-  matchesAsPlayerOne Match[] @relation("PlayerOneMatches")
-  matchesAsPlayerTwo Match[] @relation("PlayerTwoMatches")
-  matchesWon         Match[] @relation("Winner")
-
-  tournaments TournamentParticipant[]
+  matchesAsPlayerOne    Match[]                 @relation("PlayerOneMatches")
+  matchesAsPlayerTwo    Match[]                 @relation("PlayerTwoMatches")
+  matchesWon            Match[]                 @relation("Winner")
+  TournamentParticipant TournamentParticipant[]
+  tournamentsWon        Tournament[]            @relation("TournamentWinner")
 
   @@map("users") // Maps this model to the 'users' table in SQL
 }
 
 model Friendship {
-  id           Int    @id @default(autoincrement())
-  userOneId    Int    @map("user_one_id")
-  userTwoId    Int    @map("user_two_id")
-  status       String @default("pending")
-  actionUserId Int    @map("action_user_id")
+  id           Int              @id @default(autoincrement())
+  userOneId    Int              @map("user_one_id")
+  userTwoId    Int              @map("user_two_id")
+  status       FriendshipStatus @default(PENDING)
+  actionUserId Int              @map("action_user_id")
 
   // --- Prisma's way of defining foreign keys ---
   userOne    User @relation("UserOneFriends", fields: [userOneId], references: [id])
@@ -81,14 +81,17 @@ model Match {
 }
 
 model Tournament {
-  id        Int      @id @default(autoincrement())
-  name      String
-  status    String   @default("pending")
-  createdAt DateTime @default(now()) @map("created_at")
+  id              Int              @id @default(autoincrement())
+  name            String
+  status          TournamentStatus @default(PENDING)
+  maxParticipants Int              @map("max_participants")
+  winnerId        Int?             @map("winner_id")
+  createdAt       DateTime         @default(now()) @map("created_at")
 
   // --- Foreign key and back-relation ---
   participants TournamentParticipant[]
   matches      Match[]
+  winner       User?                   @relation("TournamentWinner", fields: [winnerId], references: [id])
 
   @@map("tournaments")
 }
@@ -104,4 +107,16 @@ model TournamentParticipant {
 
   @@unique([tournamentId, userId]) // Replaces the UNIQUE constraint
   @@map("tournament_participants")
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+}
+
+enum TournamentStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
 }

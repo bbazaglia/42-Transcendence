@@ -1,41 +1,22 @@
-import fp from 'fastify-plugin';
 import bcrypt from 'bcrypt';
 
-let activeLobby = null;
-export const AI_PLAYER_ID = 0;
-
-function toPublicUser(user) {
-    if (!user) return null;
-    return {
-        id: user.id,
-        displayName: user.displayName,
-        avatarUrl: user.avatarUrl,
-        wins: user.wins,
-        losses: user.losses
-    };
-}
-
-async function lobbyAuth(request, reply) {
-    const lobby = request.server.getLobby();
-
-    if (!lobby) {
-        reply.code(403);
-        return { error: 'No active lobby session.' };
+export default async function (fastify, opts) {
+    // Ensure decorators plugin is registered before routes (avoid soft dependency).
+    if (
+        typeof fastify.hasDecorator !== 'function' ||
+        !fastify.hasDecorator('getLobby') ||
+        !fastify.hasDecorator('lobbyAuth') ||
+        !fastify.hasDecorator('AI_PLAYER_ID') ||
+        !fastify.hasDecorator('toPublicUser')
+    ) {
+        throw new Error('lobbyPlugin must be registered before lobby routes');
     }
-
-    if (lobby.host.id !== request.user.id) {
-        reply.code(403);
-        return { error: 'You are not the host of the active lobby.' };
-    }
-}
-
-// We're using fastify-plugin to break encapsulation and allow this plugin to be used by the parent scope.
-export default fp(async function (fastify, opts) {
-    fastify.decorate('getLobby', () => activeLobby);
-    fastify.decorate('lobbyAuth', lobbyAuth);
 
     // All lobby management routes require the host to be authenticated.
     fastify.addHook('preHandler', fastify.authenticate);
+
+    const toPublicUser = fastify.toPublicUser;
+    const AI_PLAYER_ID = fastify.AI_PLAYER_ID;
 
     // ROUTE: Creates a new lobby session.
     fastify.post('/create', {
@@ -219,4 +200,4 @@ export default fp(async function (fastify, opts) {
             participants: Array.from(activeLobby.participants.values()).map(toPublicUser)
         };
     });
-})
+}

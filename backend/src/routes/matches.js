@@ -1,10 +1,11 @@
 import { TournamentStatus } from '@prisma/client'
-import { AI_PLAYER_ID } from './lobby.js';
 
 export default async function (fastify, opts) {
     // All routes in this file require authentication
     fastify.addHook('preHandler', fastify.authenticate);
     fastify.addHook('preHandler', fastify.lobbyAuth);
+
+    const AI_PLAYER_ID = fastify.AI_PLAYER_ID;
 
     // ROUTE: Creates a new match record after a game is finished.
     fastify.post('/', {

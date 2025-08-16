@@ -9,6 +9,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 import sharedSchemas from './schemas/sharedSchemas.js'
+import lobbySetup from './plugins/lobbySetup.js';
 import jwtSetup from './plugins/jwtSetup.js';
 import prisma from './plugins/prisma.js';
 
@@ -32,6 +33,7 @@ async function app(fastify, opts) {
     await fastify.register(fastifySensible, { sharedSchemaId: 'HttpError' });
     await fastify.register(fastifyStatic, { root: path.join(__dirname, '..', 'public'), prefix: '/', });
     await fastify.register(sharedSchemas);
+    await fastify.register(lobbySetup);
     await fastify.register(jwtSetup);
     await fastify.register(prisma);
 

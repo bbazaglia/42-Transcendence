@@ -7,31 +7,21 @@ export default async function (fastify, opts) {
         schema: {
             params: {
                 type: 'object',
-                required: ['id'],
                 properties: {
                     id: { type: 'integer' }
-                }
+                },
+                required: ['id']
             }
         },
         response: {
-            200: {
-                type: 'object',
-                properties: {
-                    id: { type: 'integer' },
-                    displayName: { type: 'string' },
-                    avatarUrl: { type: 'string', format: 'uri' },
-                    wins: { type: 'integer' },
-                    losses: { type: 'integer' },
-                    createdAt: { type: 'string', format: 'date-time' }
-                }
-            },
-            404: { $ref: 'errorResponse#' },
-            500: { $ref: 'errorResponse#' }
+            200: { $ref: 'publicUser#' },
+            404: { $ref: 'httpError#' },
+            500: { $ref: 'httpError#' }
         }
     }, async (request, reply) => {
-        const userId = request.params.id;
-
         try {
+            const userId = request.params.id;
+
             const user = await fastify.prisma.user.findUnique({
                 where: { id: userId },
                 // Use 'select' to pick only the public fields we need and avoid exposing sensitive data
@@ -46,16 +36,16 @@ export default async function (fastify, opts) {
             });
 
             if (!user) {
-                reply.code(404);
-                return { error: 'User not found' };
+                throw fastify.httpErrors.notFound(`User ${userId} not found`);
             }
 
             return user;
-
-        } catch (err) {
-            fastify.log.error(err);
-            reply.code(500);
-            return { error: 'An unexpected error occurred while fetching the user profile.' };
+        } catch (error) {
+            fastify.log.error(error, `Error fetching user profile for ID ${request.params.id}`);
+            if (error && error.statusCode) {
+                return reply.send(error);
+            }
+            return reply.internalServerError('An unexpected error occurred while fetching the user profile.');
         }
     });
 
@@ -64,34 +54,20 @@ export default async function (fastify, opts) {
         schema: {
             params: {
                 type: 'object',
-                required: ['id'],
                 properties: {
                     id: { type: 'integer' }
-                }
+                },
+                required: ['id']
             }
         },
         response: {
-            200: {
-                type: 'array',
-                items: {
-                    type: 'object',
-                    properties: {
-                        id: { type: 'integer' },
-                        playerOneId: { type: 'integer' },
-                        playerTwoId: { type: 'integer' },
-                        playerOneScore: { type: 'integer' },
-                        playerTwoScore: { type: 'integer' },
-                        winnerId: { type: 'integer' },
-                        playedAt: { type: 'string', format: 'date-time' }
-                    }
-                }
-            },
-            500: { $ref: 'errorResponse#' }
+            200: { type: 'array', items: { $ref: 'matchDetail#' } },
+            500: { $ref: 'httpError#' }
         }
     }, async (request, reply) => {
-        const userId = request.params.id;
-        
         try {
+            const userId = request.params.id;
+
             const matches = await fastify.prisma.match.findMany({
                 where: {
                     OR: [
@@ -106,11 +82,12 @@ export default async function (fastify, opts) {
             });
 
             return matches;
-
-        } catch (err) {
-            fastify.log.error(err);
-            reply.code(500);
-            return { error: 'An unexpected error occurred while fetching match history.' };
+        } catch (error) {
+            fastify.log.error(error, `Error fetching match history for user ID ${request.params.id}`);
+            if (error && error.statusCode) {
+                return reply.send(error);
+            }
+            return reply.internalServerError('An unexpected error occurred while fetching match history.');
         }
     });
 }

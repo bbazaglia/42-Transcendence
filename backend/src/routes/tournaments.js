@@ -16,11 +16,13 @@ export default async function (fastify, opts) {
                             id: { type: 'integer' },
                             name: { type: 'string' },
                             status: { type: 'string' },
+                            winnerId: { type: ['integer', 'null'] },
                             maxParticipants: { type: 'integer' },
                             createdAt: { type: 'string', format: 'date-time' }
                         }
                     },
-                }
+                },
+                500: { $ref: 'HttpError#' }
             }
         }
     }, async (request, reply) => {
@@ -41,9 +43,8 @@ export default async function (fastify, opts) {
 
             return tournaments;
         } catch (error) {
-            fastify.log.error(error);
-            reply.code(500)
-            return { error: 'Failed to fetch tournaments' };
+            fastify.log.error(error, 'Failed to fetch tournaments');
+            return reply.internalServerError('An unexpected error occured when trying to fetch tournaments');
         }
     });
 
@@ -59,8 +60,8 @@ export default async function (fastify, opts) {
             },
             response: {
                 200: { $ref: 'tournamentDetail#' },
-                404: { $ref: 'errorResponse#' },
-                500: { $ref: 'errorResponse#' }
+                404: { $ref: 'HttpError#' },
+                500: { $ref: 'HttpError#' }
             }
         }
     }, async (request, reply) => {
@@ -96,18 +97,19 @@ export default async function (fastify, opts) {
             });
 
             if (!tournament) {
-                reply.code(404);
-                return { error: 'Tournament not found' };
+                throw fastify.httpErrors.notFound('Tournament not found');
             }
 
-            // Map participants to match your response schema because we only need user details
+            // Map participants to include only user details
             tournament.participants = tournament.participants.map(p => p.user);
 
             return tournament;
         } catch (error) {
             fastify.log.error(error, `Failed to fetch tournament with id ${tournamentId}`);
-            reply.code(500);
-            return { error: 'An unexpected error occurred while fetching the tournament.' };
+            if (error && error.statusCode) {
+                return reply.send(error);
+            }
+            return reply.internalServerError('An unexpected error occurred while fetching the tournament.');
         }
     });
 
@@ -124,8 +126,7 @@ export default async function (fastify, opts) {
             },
             response: {
                 201: { $ref: 'tournamentDetail#' },
-                400: { $ref: 'errorResponse#' },
-                500: { $ref: 'errorResponse#' }
+                500: { $ref: 'HttpError#' }
             }
         }
     }, async (request, reply) => {
@@ -148,8 +149,7 @@ export default async function (fastify, opts) {
             return newTournament;
         } catch (error) {
             fastify.log.error(error, 'Failed to create tournament');
-            reply.code(500);
-            return { error: 'An unexpected error occurred while creating the tournament.' };
+            return reply.internalServerError('An unexpected error occurred while creating the tournament.');
         }
     });
 
@@ -172,9 +172,9 @@ export default async function (fastify, opts) {
             },
             response: {
                 200: { $ref: 'tournamentDetail#' },
-                400: { $ref: 'HttpError#' },
                 403: { $ref: 'HttpError#' },
                 404: { $ref: 'HttpError#' },
+                409: { $ref: 'HttpError#' },
                 500: { $ref: 'HttpError#' }
             },
             preHandler: [fastify.lobbyAuth]
@@ -184,12 +184,12 @@ export default async function (fastify, opts) {
         const { userId } = request.body;
         const lobby = fastify.getLobby();
 
-        // Check if user is authenticated
-        if (!lobby.participants.has(userId)) {
-            return reply.forbidden('User must be logged in to join a tournament.');
-        }
-
         try {
+            // Check if user is authenticated
+            if (!lobby.participants.has(userId)) {
+                throw reply.forbidden('User must be logged in to join a tournament.');
+            }
+
             // Use a transaction to ensure data integrity
             const updatedTournament = await fastify.prisma.$transaction(async (prisma) => {
                 // Fetch the tournament and its participants in a single query
@@ -211,7 +211,7 @@ export default async function (fastify, opts) {
                 }
 
                 if (t.participants.some(p => p.userId === userId)) {
-                    throw fastify.httpErrors.badRequest('You are already participating in this tournament.');
+                    throw fastify.httpErrors.conflict('You are already participating in this tournament.');
                 }
 
                 // Add the user to the tournament
@@ -275,11 +275,11 @@ export default async function (fastify, opts) {
                 where: { tournamentId },
                 select: { userId: true }
             });
-            
+
             const lobby = fastify.getLobby();
             for (const participant of tournamentParticipants) {
                 if (!lobby.participants.has(participant.userId)) {
-                    return reply.forbidden('All tournament participants must be present in the lobby to start the tournament.');
+                    throw reply.forbidden('All tournament participants must be present in the lobby to start the tournament.');
                 }
             }
 

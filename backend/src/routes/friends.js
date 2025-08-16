@@ -48,8 +48,8 @@ export default async function (fastify, opts) {
         schema: {
             params: {
                 type: 'object',
-                required: ['id'],
-                properties: { id: { type: 'integer' } }
+                properties: { id: { type: 'integer' } },
+                required: ['id']
             },
             response: {
                 200: { type: 'array', items: { $ref: 'publicUser#' } },
@@ -76,8 +76,8 @@ export default async function (fastify, opts) {
         schema: {
             params: {
                 type: 'object',
-                required: ['id'],
-                properties: { id: { type: 'integer' } }
+                properties: { id: { type: 'integer' } },
+                required: ['id']
             },
             response: {
                 200: { type: 'array', items: { $ref: 'publicUser#' } },
@@ -110,11 +110,11 @@ export default async function (fastify, opts) {
         schema: {
             body: {
                 type: 'object',
-                required: ['actorId', 'friendId'],
                 properties: {
                     actorId: { type: 'integer' },
                     friendId: { type: 'integer' }
-                }
+                },
+                required: ['actorId', 'friendId']
             },
             response: {
                 201: {
@@ -184,11 +184,11 @@ export default async function (fastify, opts) {
         schema: {
             body: {
                 type: 'object',
-                required: ['actorId', 'senderId'],
                 properties: {
                     actorId: { type: 'integer' }, // The user ACCEPTING the request
                     senderId: { type: 'integer' } // The user who SENT the request
-                }
+                },
+                required: ['actorId', 'senderId']
             },
             response: {
                 200: { type: 'array', items: { $ref: 'publicUser#' } },
@@ -221,7 +221,6 @@ export default async function (fastify, opts) {
             });
 
             return await getFriendsForUser(fastify.prisma, actorId, FriendshipStatus.ACCEPTED, onlineUserIds);
-
         } catch (error) {
             fastify.log.error(error, 'Error accepting friendship for user', actorId);
             // If the `where` clause fails to find a match, Prisma throws P2025.
@@ -240,11 +239,11 @@ export default async function (fastify, opts) {
         schema: {
             body: {
                 type: 'object',
-                required: ['actorId', 'friendIdToRemove'],
                 properties: {
                     actorId: { type: 'integer' },          // The user INITIATING the removal
                     friendIdToRemove: { type: 'integer' } // The friend being removed
-                }
+                },
+                required: ['actorId', 'friendIdToRemove']
             },
             response: {
                 200: { type: 'array', items: { $ref: 'publicUser#' } },

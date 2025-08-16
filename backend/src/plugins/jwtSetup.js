@@ -16,9 +16,9 @@ export default fp(async function (fastify, opts) {
             // This verifies the token from the Authorization header.
             // If valid, it attaches the decoded user info to `request.user`.
             await request.jwtVerify();
-        } catch (err) {
+        } catch (error) {
             // If the token is missing or invalid, send a 401 Unauthorized error.
-            reply.code(401).send({ message: 'Unauthorized' });
+            return reply.unauthorized('The host must be authenticated to access this resource.');
         }
     });
 });

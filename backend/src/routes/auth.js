@@ -4,12 +4,12 @@ export default async function (fastify, opts) {
         schema: {
             body: {
                 type: 'object',
-                required: ['displayName', 'email', 'password'],
                 properties: {
                     displayName: { type: 'string', minLength: 3, maxLength: 20 },
                     email: { type: 'string', format: 'email', maxLength: 100 },
                     password: { type: 'string', minLength: 6, maxLength: 100 }
-                }
+                },
+                required: ['displayName', 'email', 'password']
             },
             response: {
                 201: { $ref: 'publicUser#' },
@@ -73,11 +73,11 @@ export default async function (fastify, opts) {
         schema: {
             body: {
                 type: 'object',
-                required: ['email', 'password'],
                 properties: {
                     email: { type: 'string', format: 'email', maxLength: 100 },
                     password: { type: 'string', minLength: 6, maxLength: 100 }
-                }
+                },
+                required: ['email', 'password']
             },
             response: {
                 200: { $ref: 'publicUser#' },

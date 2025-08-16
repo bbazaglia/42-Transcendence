@@ -23,7 +23,10 @@ export default fp(async function (fastify, opts) {
     }
 
     function toPublicUser(user) {
-        if (!user) return null;
+        if (!user) {
+            return null;
+        }
+
         return {
             id: user.id,
             displayName: user.displayName,

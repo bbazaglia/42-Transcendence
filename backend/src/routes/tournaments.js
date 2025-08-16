@@ -115,11 +115,11 @@ export default async function (fastify, opts) {
         schema: {
             body: {
                 type: 'object',
-                required: ['name', 'maxParticipants'],
                 properties: {
                     name: { type: 'string', minLength: 3, maxLength: 100 },
                     maxParticipants: { type: 'integer', minimum: 2, maximum: 16 }
-                }
+                },
+                required: ['name', 'maxParticipants']
             },
             response: {
                 201: { $ref: 'tournamentDetail#' },
@@ -362,10 +362,10 @@ export default async function (fastify, opts) {
             // Map participants to inclde only user details
             tournament.participants = tournament.participants.map(p => p.user);
             return tournament;
-        } catch (err) {
-            fastify.log.error(err, 'Failed to start tournament');
-            if (err && err.statusCode) {
-                return reply.send(err);
+        } catch (error) {
+            fastify.log.error(error, 'Failed to start tournament');
+            if (error && error.statusCode) {
+                return reply.send(error);
             }
             return reply.internalServerError('An unexpected error occurred while starting the tournament.');
         }

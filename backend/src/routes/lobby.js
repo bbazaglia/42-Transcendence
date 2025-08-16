@@ -78,8 +78,10 @@ export default async function (fastify, opts) {
         preHandler: [fastify.lobbyAuth]
     }, async (request, reply) => {
         const lobby = fastify.getLobby();
+
         fastify.log.info(`Lobby deleted by host: ${lobby.host.displayName}`);
         fastify.setLobby(null);
+
         return reply.code(204).send(); // No Content
     });
 
@@ -88,11 +90,11 @@ export default async function (fastify, opts) {
         schema: {
             body: {
                 type: 'object',
-                required: ['displayName', 'password'],
                 properties: {
                     displayName: { type: 'string' },
                     password: { type: 'string' }
-                }
+                },
+                required: ['displayName', 'password']
             },
             response: {
                 200: { $ref: 'lobbyState#' },
@@ -139,10 +141,10 @@ export default async function (fastify, opts) {
         schema: {
             body: {
                 type: 'object',
-                required: ['userId'],
                 properties: {
                     userId: { type: 'integer' }
-                }
+                },
+                required: ['userId']
             },
             response: {
                 200: { $ref: 'lobbyState#' },
@@ -160,7 +162,7 @@ export default async function (fastify, opts) {
             }
 
             lobby.participants.delete(userId);
-            fastify.setLobby(lobby); // Update the lobby state
+            fastify.setLobby(lobby);
 
             // Return the new state.
             return {
@@ -181,10 +183,10 @@ export default async function (fastify, opts) {
         schema: {
             params: {
                 type: 'object',
-                required: ['id'],
                 properties: {
                     id: { type: 'integer' }
-                }
+                },
+                required: ['id']
             },
             body: {
                 type: 'object',
@@ -223,7 +225,7 @@ export default async function (fastify, opts) {
             if (userId === lobby.host.id) {
                 lobby.host = updatedUser;
             }
-            fastify.setLobby(lobby); // Update the lobby state
+            fastify.setLobby(lobby);
 
             // Return the new state.
             return {

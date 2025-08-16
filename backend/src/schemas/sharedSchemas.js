@@ -1,15 +1,6 @@
 import fp from 'fastify-plugin';
 
 async function sharedSchemas(fastify, opts) {
-    // The schema for a generic error response.
-    fastify.addSchema({
-        $id: 'errorResponse',
-        type: 'object',
-        properties: {
-            error: { type: 'string' }
-        }
-    });
-
     // The schema for a user object that is safe to send to the client.
     fastify.addSchema({
         $id: 'publicUser',
@@ -22,7 +13,8 @@ async function sharedSchemas(fastify, opts) {
             losses: { type: 'integer' },
             createdAt: { type: 'string', format: 'date-time' },
             isOnline: { type: 'boolean' }
-        }
+        },
+        required: ['id', 'displayName', 'avatarUrl', 'wins', 'losses', 'createdAt']
     });
 
     // The schema for the entire lobby state object.
@@ -35,23 +27,25 @@ async function sharedSchemas(fastify, opts) {
                 type: 'array',
                 items: { $ref: 'publicUser#' }
             }
-        }
+        },
+        required: ['host', 'participants']
     });
 
     // The schema for a single match within a tournament.
     fastify.addSchema({
-        $id: 'tournamentMatch',
+        $id: 'matchDetail',
         type: 'object',
         properties: {
             id: { type: 'integer' },
-            playerOneId: { type: 'integer' },
-            playerTwoId: { type: 'integer' },
+            playerOne: { $ref: 'publicUser#' },
+            playerTwo: { $ref: 'publicUser#' },
+            winner: { $ref: 'publicUser#' },
             playerOneScore: { type: 'integer' },
             playerTwoScore: { type: 'integer' },
-            winnerId: { type: 'integer', nullable: true },
-            tournamentId: { type: 'integer' },
+            tournamentId: { type: 'integer', nullable: true },
             playedAt: { type: 'string', format: 'date-time' }
-        }
+        },
+        required: ['id', 'playerOne', 'playerTwo', 'winner', 'playerOneScore', 'playerTwoScore', 'playedAt']
     });
 
     // The schema for a tournament object.
@@ -63,11 +57,12 @@ async function sharedSchemas(fastify, opts) {
             name: { type: 'string' },
             status: { type: 'string', enum: ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'] },
             maxParticipants: { type: 'integer' },
-            winner: { nullable: true, $ref: 'publicUser#' },
+            winner: { $ref: 'publicUser#', nullable: true },
             participants: { type: 'array', items: { $ref: 'publicUser#' } },
-            matches: { type: 'array', items: { $ref: 'tournamentMatch#' } },
+            matches: { type: 'array', items: { $ref: 'matchDetail#' } },
             createdAt: { type: 'string', format: 'date-time' }
-        }
+        },
+        required: ['id', 'name', 'status', 'maxParticipants', 'participants', 'matches', 'createdAt']
     });
 }
 

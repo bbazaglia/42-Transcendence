@@ -12,7 +12,6 @@ export default async function (fastify, opts) {
         schema: {
             body: {
                 type: 'object',
-                required: ['playerOneId', 'playerTwoId', 'playerOneScore', 'playerTwoScore', 'winnerId'],
                 properties: {
                     playerOneId: { type: 'integer' },
                     playerTwoId: { type: 'integer' },
@@ -20,7 +19,8 @@ export default async function (fastify, opts) {
                     playerTwoScore: { type: 'integer' },
                     winnerId: { type: 'integer' },
                     tournamentId: { type: 'integer' } // Optional
-                }
+                },
+                required: ['playerOneId', 'playerTwoId', 'playerOneScore', 'playerTwoScore', 'winnerId']
             },
             response: {
                 201: { $ref: 'matchDetail#' },

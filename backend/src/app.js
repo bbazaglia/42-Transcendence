@@ -1,8 +1,9 @@
-import fastifyPlugin from 'fastify-plugin';
+import fastifyCookie from '@fastify/cookie';
 import fastifyCors from '@fastify/cors';
 import fastifyMultipart from '@fastify/multipart';
+import fastifyPlugin from 'fastify-plugin';
+import fastifySensible from '@fastify/sensible';
 import fastifyStatic from '@fastify/static';
-import fastifyCookie from '@fastify/cookie';
 
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -26,10 +27,11 @@ async function app(fastify, opts) {
 
     // Register plugins
     await fastify.register(fastifyCors, { origin: ["http://localhost:5173", "http://localhost:8443"] });
-    await fastify.register(sharedSchemas);
-    await fastify.register(fastifyMultipart);
     await fastify.register(fastifyCookie, { secret: process.env.COOKIE_SECRET });
+    await fastify.register(fastifyMultipart);
+    await fastify.register(fastifySensible, { sharedSchemaId: 'HttpError' });
     await fastify.register(fastifyStatic, { root: path.join(__dirname, '..', 'public'), prefix: '/', });
+    await fastify.register(sharedSchemas);
     await fastify.register(jwtSetup);
     await fastify.register(prisma);
 

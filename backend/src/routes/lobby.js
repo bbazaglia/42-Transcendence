@@ -5,6 +5,7 @@ export default async function (fastify, opts) {
     if (
         typeof fastify.hasDecorator !== 'function' ||
         !fastify.hasDecorator('getLobby') ||
+        !fastify.hasDecorator('setLobby') ||
         !fastify.hasDecorator('lobbyAuth') ||
         !fastify.hasDecorator('AI_PLAYER_ID') ||
         !fastify.hasDecorator('toPublicUser')
@@ -23,38 +24,47 @@ export default async function (fastify, opts) {
         schema: {
             response: {
                 201: { $ref: 'lobbyState#' },
-                409: { $ref: 'errorResponse#' }
+                409: { $ref: 'httpError#' }
             }
         }
     }, async (request, reply) => {
-        if (activeLobby) {
-            reply.code(409); // Conflict
-            return { error: 'A lobby is already in session.' };
+        try {
+            const lobby = fastify.getLobby();
+            if (lobby) {
+                throw fastify.httpErrors.conflict('A lobby is already in session.');
+            }
+
+            const hostUser = request.user;
+            const newLobby = {
+                host: hostUser,
+                participants: new Map()
+            };
+
+            newLobby.participants.set(hostUser.id, hostUser);
+            newLobby.participants.set(AI_PLAYER_ID, {
+                id: AI_PLAYER_ID,
+                displayName: 'AI Bot',
+                avatarUrl: '/avatars/ai-avatar.png',
+                wins: 0,
+                losses: 0
+            });
+
+            fastify.setLobby(newLobby);
+            fastify.log.info(`Lobby created by host: ${hostUser.displayName}`);
+
+            // Return the initial state.
+            reply.code(201);
+            return {
+                host: toPublicUser(hostUser),
+                participants: Array.from(newLobby.participants.values()).map(toPublicUser)
+            };
+        } catch (error) {
+            fastify.log.error(error, 'Error creating lobby');
+            if (error && error.statusCode) {
+                return reply.send(error);
+            }
+            return reply.internalServerError('An unexpected error occurred while creating the lobby.');
         }
-
-        const hostUser = request.user;
-        activeLobby = {
-            host: hostUser,
-            participants: new Map()
-        };
-
-        activeLobby.participants.set(hostUser.id, hostUser);
-        activeLobby.participants.set(AI_PLAYER_ID, {
-            id: AI_PLAYER_ID,
-            displayName: 'AI Bot',
-            avatarUrl: '/avatars/ai-avatar.png',
-            wins: 0,
-            losses: 0
-        });
-
-        fastify.log.info(`Lobby created by host: ${hostUser.displayName}`);
-
-        // Return the initial state.
-        reply.code(201);
-        return {
-            host: toPublicUser(hostUser),
-            participants: Array.from(activeLobby.participants.values()).map(toPublicUser)
-        };
     });
 
     // ROUTE: Deletes the current lobby session.
@@ -62,15 +72,15 @@ export default async function (fastify, opts) {
         schema: {
             response: {
                 204: { type: 'null' },
-                403: { $ref: 'errorResponse#' }
+                403: { $ref: 'httpError#' }
             }
         },
         preHandler: [fastify.lobbyAuth]
     }, async (request, reply) => {
-        fastify.log.info(`Lobby deleted by host: ${activeLobby.host.displayName}`);
-        activeLobby = null;
-        reply.code(204); // No Content
-        return;
+        const lobby = fastify.getLobby();
+        fastify.log.info(`Lobby deleted by host: ${lobby.host.displayName}`);
+        fastify.setLobby(null);
+        return reply.code(204).send(); // No Content
     });
 
     // ROUTE: A guest joins the lobby.
@@ -86,32 +96,42 @@ export default async function (fastify, opts) {
             },
             response: {
                 200: { $ref: 'lobbyState#' },
-                401: { $ref: 'errorResponse#' },
-                409: { $ref: 'errorResponse#' }
+                401: { $ref: 'httpError#' },
+                409: { $ref: 'httpError#' }
             }
         },
         preHandler: [fastify.lobbyAuth]
     }, async (request, reply) => {
-        const { displayName, password } = request.body;
-        const guestUser = await fastify.prisma.user.findUnique({ where: { displayName } });
-        const isPasswordValid = guestUser && await bcrypt.compare(password, guestUser.passwordHash);
+        try {
+            const { displayName, password } = request.body;
 
-        if (!isPasswordValid) {
-            reply.code(401);
-            return { error: 'Invalid credentials.' };
+            const lobby = fastify.getLobby();
+            const guestUser = await fastify.prisma.user.findUnique({ where: { displayName } });
+            const isPasswordValid = guestUser && await bcrypt.compare(password, guestUser.passwordHash);
+
+            if (!isPasswordValid) {
+                throw fastify.httpErrors.unauthorized('Invalid credentials.');
+            }
+
+            if (guestUser.id === lobby.host.id || lobby.participants.has(guestUser.id)) {
+                throw fastify.httpErrors.conflict('User is already in the lobby.');
+            }
+
+            lobby.participants.set(guestUser.id, guestUser);
+            fastify.setLobby(lobby); // Update the lobby state
+
+            // Return the new state.
+            return {
+                host: toPublicUser(lobby.host),
+                participants: Array.from(lobby.participants.values()).map(toPublicUser)
+            };
+        } catch (error) {
+            fastify.log.error(error, 'Error joining lobby');
+            if (error && error.statusCode) {
+                return reply.send(error);
+            }
+            return reply.internalServerError('An unexpected error occurred while joining the lobby.');
         }
-        if (guestUser.id === activeLobby.host.id || activeLobby.participants.has(guestUser.id)) {
-            reply.code(409);
-            return { error: 'User is already in the lobby.' };
-        }
-
-        activeLobby.participants.set(guestUser.id, guestUser);
-
-        // Return the new state.
-        return {
-            host: toPublicUser(activeLobby.host),
-            participants: Array.from(activeLobby.participants.values()).map(toPublicUser)
-        };
     });
 
     // ROUTE: A participant leaves the lobby.
@@ -126,24 +146,34 @@ export default async function (fastify, opts) {
             },
             response: {
                 200: { $ref: 'lobbyState#' },
-                400: { $ref: 'errorResponse#' }
+                400: { $ref: 'httpError#' }
             }
         },
         preHandler: [fastify.lobbyAuth]
     }, async (request, reply) => {
-        const { userId } = request.body;
-        if (userId === activeLobby.host.id || userId === AI_PLAYER_ID || !activeLobby.participants.has(userId)) {
-            reply.code(400);
-            return { error: 'Participant cannot be removed.' };
+        try {
+            const { userId } = request.body;
+
+            const lobby = fastify.getLobby();
+            if (userId === lobby.host.id || userId === AI_PLAYER_ID || !lobby.participants.has(userId)) {
+                throw fastify.httpErrors.badRequest('Participant cannot be removed.');
+            }
+
+            lobby.participants.delete(userId);
+            fastify.setLobby(lobby); // Update the lobby state
+
+            // Return the new state.
+            return {
+                host: toPublicUser(lobby.host),
+                participants: Array.from(lobby.participants.values()).map(toPublicUser)
+            };
+        } catch (error) {
+            fastify.log.error(error, 'Error leaving lobby');
+            if (error && error.statusCode) {
+                return reply.send(error);
+            }
+            return reply.internalServerError('An unexpected error occurred while leaving the lobby.');
         }
-
-        activeLobby.participants.delete(userId);
-
-        // Return the new state.
-        return {
-            host: toPublicUser(activeLobby.host),
-            participants: Array.from(activeLobby.participants.values()).map(toPublicUser)
-        };
     });
 
     // ROUTE: Updates a participant's profile.
@@ -165,39 +195,47 @@ export default async function (fastify, opts) {
             },
             response: {
                 200: { $ref: 'lobbyState#' },
-                400: { $ref: 'errorResponse#' },
-                404: { $ref: 'errorResponse#' }
+                400: { $ref: 'httpError#' },
+                404: { $ref: 'httpError#' }
             }
         },
         preHandler: [fastify.lobbyAuth]
     }, async (request, reply) => {
-        const userId = request.params.id;
-        if (userId === AI_PLAYER_ID || !activeLobby.participants.has(userId)) {
-            reply.code(404);
-            return { error: 'Participant not found or cannot be updated.' };
+        try {
+            const userId = request.params.id;
+            const lobby = fastify.getLobby();
+            if (userId === AI_PLAYER_ID || !lobby.participants.has(userId)) {
+                throw fastify.httpErrors.notFound('Participant not found or cannot be updated.');
+            }
+
+            const { displayName, avatarUrl } = request.body;
+
+            if (displayName === undefined && avatarUrl === undefined) {
+                throw fastify.httpErrors.badRequest('Request body must contain at least one field to update (displayName or avatarUrl).');
+            }
+
+            const updatedUser = await fastify.prisma.user.update({
+                where: { id: userId },
+                data: { displayName, avatarUrl } // Prisma handles undefined fields
+            });
+
+            lobby.participants.set(userId, updatedUser);
+            if (userId === lobby.host.id) {
+                lobby.host = updatedUser;
+            }
+            fastify.setLobby(lobby); // Update the lobby state
+
+            // Return the new state.
+            return {
+                host: toPublicUser(lobby.host),
+                participants: Array.from(lobby.participants.values()).map(toPublicUser)
+            };
+        } catch (error) {
+            fastify.log.error(error, `Error updating participant profile ${request.params.id}`);
+            if (error && error.statusCode) {
+                return reply.send(error);
+            }
+            return reply.internalServerError('An unexpected error occurred while updating participant profile.');
         }
-
-        const { displayName, avatarUrl } = request.body;
-
-        if (displayName === undefined && avatarUrl === undefined) {
-            reply.code(400);
-            return { error: 'Request body must contain at least one field to update (displayName or avatarUrl).' };
-        }
-
-        const updatedUser = await fastify.prisma.user.update({
-            where: { id: userId },
-            data: { displayName, avatarUrl } // Prisma handles undefined fields
-        });
-
-        activeLobby.participants.set(userId, updatedUser);
-        if (userId === activeLobby.host.id) {
-            activeLobby.host = updatedUser;
-        }
-
-        // Return the new state.
-        return {
-            host: toPublicUser(activeLobby.host),
-            participants: Array.from(activeLobby.participants.values()).map(toPublicUser)
-        };
     });
 }

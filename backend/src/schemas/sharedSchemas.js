@@ -19,7 +19,9 @@ async function sharedSchemas(fastify, opts) {
             displayName: { type: 'string' },
             avatarUrl: { type: 'string', format: 'uri-reference' },
             wins: { type: 'integer' },
-            losses: { type: 'integer' }
+            losses: { type: 'integer' },
+            createdAt: { type: 'string', format: 'date-time' },
+            isOnline: { type: 'boolean' }
         }
     });
 
@@ -62,9 +64,9 @@ async function sharedSchemas(fastify, opts) {
             status: { type: 'string', enum: ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'] },
             maxParticipants: { type: 'integer' },
             winner: { nullable: true, $ref: 'publicUser#' },
-            createdAt: { type: 'string', format: 'date-time' },
             participants: { type: 'array', items: { $ref: 'publicUser#' } },
-            matches: { type: 'array', items: { $ref: 'tournamentMatch#' } }
+            matches: { type: 'array', items: { $ref: 'tournamentMatch#' } },
+            createdAt: { type: 'string', format: 'date-time' }
         }
     });
 }

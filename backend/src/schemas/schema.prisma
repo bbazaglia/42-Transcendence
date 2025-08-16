@@ -51,6 +51,7 @@ model Friendship {
     userTwoId    Int              @map("user_two_id")
     status       FriendshipStatus @default(PENDING)
     actionUserId Int              @map("action_user_id")
+    createdAt    DateTime         @default(now()) @map("created_at")
 
     // --- Prisma's way of defining foreign keys ---
     userOne    User @relation("UserOneFriends", fields: [userOneId], references: [id])

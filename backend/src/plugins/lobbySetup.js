@@ -25,7 +25,8 @@ export default fp(async function (fastify, opts) {
             displayName: user.displayName,
             avatarUrl: user.avatarUrl,
             wins: user.wins,
-            losses: user.losses
+            losses: user.losses,
+            createdAt: user.createdAt.toISOString()
         };
     }
 

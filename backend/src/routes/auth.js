@@ -12,15 +12,9 @@ export default async function (fastify, opts) {
                 }
             },
             response: {
-                201: {
-                    type: 'object',
-                    properties: {
-                        message: { type: 'string' },
-                        userId: { type: 'integer' }
-                    }
-                },
-                409: { $ref: 'errorResponse#' },
-                500: { $ref: 'errorResponse#' }
+                201: { $ref: 'publicUser#' },
+                409: { $ref: 'httpError#' },
+                500: { $ref: 'httpError#' }
             }
         }
     }, async (request, reply) => {
@@ -38,8 +32,7 @@ export default async function (fastify, opts) {
             });
 
             if (existingUserByDisplayName) {
-                reply.code(409);
-                return { error: 'Display name is already in use.' };
+                throw reply.conflict('Display name is already in use.');
             }
 
             const existingUserByEmail = await fastify.prisma.user.findUnique({
@@ -48,8 +41,7 @@ export default async function (fastify, opts) {
             });
 
             if (existingUserByEmail) {
-                reply.code(409);
-                return { error: 'An account with this email already exists.' };
+                throw reply.conflict('An account with this email already exists.');
             }
 
             // Hash the password before storing it
@@ -65,16 +57,18 @@ export default async function (fastify, opts) {
             });
 
             reply.code(201);
-            return { message: 'User registered successfully.', userId: newUser.id };
+            return fastify.toPublicUser(newUser);
 
-        } catch (err) {
-            fastify.log.error(err, 'Registration failed');
-            reply.code(500);
-            return { error: 'An unexpected error occurred during registration.' };
+        } catch (error) {
+            fastify.log.error(error, 'Registration failed');
+            if (error && error.staturCode){
+                return reply.send(error);
+            }
+            return reply.internalServerError('An unexpected error occurred during registration.');
         }
     });
 
-    // ROUTE: Logs in a user and returns a JWT token.
+    // ROUTE: Logs in the host user and returns a JWT token.
     fastify.post('/login', {
         schema: {
             body: {
@@ -86,24 +80,9 @@ export default async function (fastify, opts) {
                 }
             },
             response: {
-                200: {
-                    type: 'object',
-                    properties: {
-                        user: {
-                            type: 'object',
-                            properties: {
-                                id: { type: 'integer' },
-                                displayName: { type: 'string' },
-                                avatarUrl: { type: 'string', format: 'uri' },
-                                wins: { type: 'integer' },
-                                losses: { type: 'integer' },
-                                createdAt: { type: 'string', format: 'date-time' }
-                            }
-                        }
-                    }
-                },
-                401: { $ref: 'errorResponse#' },
-                500: { $ref: 'errorResponse#' }
+                200: { $ref: 'publicUser#' },
+                401: { $ref: 'httpError#' },
+                500: { $ref: 'httpError#' }
             }
         }
     }, async (request, reply) => {
@@ -119,8 +98,7 @@ export default async function (fastify, opts) {
             const isPasswordValid = user && await bcrypt.compare(password, user.passwordHash);
 
             if (!isPasswordValid) {
-                reply.code(401); // 401 Unauthorized
-                return { error: 'Invalid email or password.' };
+                throw reply.unauthorized('Invalid email or password.');
             }
 
             // Create the JWT payload and sign the token.
@@ -135,22 +113,14 @@ export default async function (fastify, opts) {
                 maxAge: 60 * 60 * 24 * 7
             });
 
-            // Return the token and the public user object.
-            const publicUser = {
-                id: user.id,
-                displayName: user.displayName,
-                avatarUrl: user.avatarUrl,
-                wins: user.wins,
-                losses: user.losses,
-                createdAt: user.createdAt
-            };
+            return fastify.toPublicUser(user);
 
-            return { user: publicUser };
-
-        } catch (err) {
-            fastify.log.error(err, 'Login failed');
-            reply.code(500);
-            return { error: 'An unexpected error occurred during login.' };
+        } catch (error) {
+            fastify.log.error(error, 'Login failed');
+            if (error && error.statusCode) {
+                return reply.send(error);
+            }
+            return reply.internalServerError('An unexpected error occurred during login.');
         }
     });
 
@@ -162,14 +132,12 @@ export default async function (fastify, opts) {
     // ROUTE: The route Google redirects back to after a user authorizes the app.
     fastify.get('/googles/callback', async (request, reply) => {
         // Google OAuth callback logic
-    }
-    );
+    });
 
     // ROUTE: Generates a new secret and QR code for setting up 2FA.
     fastify.post('/2fa/generate', async (request, reply) => {
         // Generate 2FA secret and QR code logic
-    }
-    );
+    });
 
     // ROUTE: Verifies a 2FA code and enables it for a user.
     fastify.post('/2fa/verify', async (request, reply) => {

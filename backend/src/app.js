@@ -30,7 +30,7 @@ async function app(fastify, opts) {
     await fastify.register(fastifyCors, { origin: ["http://localhost:5173", "http://localhost:8443"] });
     await fastify.register(fastifyCookie, { secret: process.env.COOKIE_SECRET });
     await fastify.register(fastifyMultipart);
-    await fastify.register(fastifySensible, { sharedSchemaId: 'HttpError' });
+    await fastify.register(fastifySensible, { sharedSchemaId: 'httpError' });
     await fastify.register(fastifyStatic, { root: path.join(__dirname, '..', 'public'), prefix: '/', });
     await fastify.register(sharedSchemas);
     await fastify.register(lobbySetup);

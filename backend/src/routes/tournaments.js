@@ -22,7 +22,7 @@ export default async function (fastify, opts) {
                         }
                     },
                 },
-                500: { $ref: 'HttpError#' }
+                500: { $ref: 'httpError#' }
             }
         }
     }, async (request, reply) => {
@@ -60,8 +60,8 @@ export default async function (fastify, opts) {
             },
             response: {
                 200: { $ref: 'tournamentDetail#' },
-                404: { $ref: 'HttpError#' },
-                500: { $ref: 'HttpError#' }
+                404: { $ref: 'httpError#' },
+                500: { $ref: 'httpError#' }
             }
         }
     }, async (request, reply) => {
@@ -126,7 +126,7 @@ export default async function (fastify, opts) {
             },
             response: {
                 201: { $ref: 'tournamentDetail#' },
-                500: { $ref: 'HttpError#' }
+                500: { $ref: 'httpError#' }
             }
         }
     }, async (request, reply) => {
@@ -172,10 +172,10 @@ export default async function (fastify, opts) {
             },
             response: {
                 200: { $ref: 'tournamentDetail#' },
-                403: { $ref: 'HttpError#' },
-                404: { $ref: 'HttpError#' },
-                409: { $ref: 'HttpError#' },
-                500: { $ref: 'HttpError#' }
+                403: { $ref: 'httpError#' },
+                404: { $ref: 'httpError#' },
+                409: { $ref: 'httpError#' },
+                500: { $ref: 'httpError#' }
             },
             preHandler: [fastify.lobbyAuth]
         }
@@ -259,9 +259,9 @@ export default async function (fastify, opts) {
             },
             response: {
                 200: { $ref: 'tournamentDetail#' },
-                403: { $ref: 'HttpError#' },
-                404: { $ref: 'HttpError#' },
-                500: { $ref: 'HttpError#' }
+                403: { $ref: 'httpError#' },
+                404: { $ref: 'httpError#' },
+                500: { $ref: 'httpError#' }
             },
             preHandler: [fastify.lobbyAuth]
         }

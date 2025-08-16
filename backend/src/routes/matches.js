@@ -85,8 +85,8 @@ export default async function (fastify, opts) {
                     },
                     select: {
                         id: true,
-                        playerOneId: true,
-                        playerTwoId: true,
+                        playerOne: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
+                        playerTwo: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
                         winner: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
                         playerOneScore: true,
                         playerTwoScore: true,

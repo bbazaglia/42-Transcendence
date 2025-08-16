@@ -25,7 +25,17 @@ export default async function (fastify, opts) {
                     maxParticipants: true,
                     winner: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
                     participants: { select: { user: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } } } },
-                    matches: true,
+                    matches: {
+                        select: {
+                            id: true,
+                            playerOneScore: true,
+                            playerTwoScore: true,
+                            playedAt: true,
+                            playerOne: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
+                            playerTwo: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
+                            winner: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } }
+                        }
+                    },
                     createdAt: true
                 },
                 orderBy: {
@@ -69,7 +79,17 @@ export default async function (fastify, opts) {
                     maxParticipants: true,
                     winner: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
                     participants: { select: { user: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } } } },
-                    matches: true,
+                    matches: {
+                        select: {
+                            id: true,
+                            playerOneScore: true,
+                            playerTwoScore: true,
+                            playedAt: true,
+                            playerOne: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
+                            playerTwo: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
+                            winner: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } }
+                        }
+                    },
                     createdAt: true
                 }
             });
@@ -224,7 +244,17 @@ export default async function (fastify, opts) {
                         maxParticipants: true,
                         winner: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
                         participants: { select: { user: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } } } },
-                        matches: true,
+                        matches: {
+                            select: {
+                                id: true,
+                                playerOneScore: true,
+                                playerTwoScore: true,
+                                playedAt: true,
+                                playerOne: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
+                                playerTwo: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
+                                winner: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } }
+                            }
+                        },
                         createdAt: true
                     }
                 });
@@ -313,7 +343,17 @@ export default async function (fastify, opts) {
                         maxParticipants: true,
                         winner: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
                         participants: { select: { user: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } } } },
-                        matches: true,
+                        matches: {
+                            select: {
+                                id: true,
+                                playerOneScore: true,
+                                playerTwoScore: true,
+                                playedAt: true,
+                                playerOne: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
+                                playerTwo: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
+                                winner: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } }
+                            }
+                        },
                         createdAt: true
                     }
                 });

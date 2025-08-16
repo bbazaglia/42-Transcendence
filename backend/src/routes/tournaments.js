@@ -373,8 +373,72 @@ export default async function (fastify, opts) {
 
     // ROUTE: Cancels a tournament, either by the creator or automatically if conditions are not met.
     fastify.delete('/:id/cancel', {
-
+        schema: {
+            params: {
+                type: 'object',
+                properties: {
+                    id: { type: 'integer' }
+                },
+                required: ['id']
+            },
+            response: {
+                200: { $ref: 'tournamentDetail#' },
+                404: { $ref: 'httpError#' },
+                500: { $ref: 'httpError#' }
+            },
+            preHandler: [fastify.lobbyAuth]
+        }
     }, async (request, reply) => {
-        const tournamentId = request.params.id;
+        try {
+            const tournamentId = Number(request.params.id);
+            if (!Number.isInteger(tournamentId)) {
+                throw fastify.httpErrors.badRequest('Invalid tournament id.');
+            }
+
+            const tournament = await fastify.prisma.$transaction(async (prisma) => {
+                const existing = await prisma.tournament.findFirst({
+                    where: { id: tournamentId, status: { notIn: [TournamentStatus.COMPLETED, TournamentStatus.CANCELLED] } },
+                    select: { id: true }
+                });
+
+                if (!existing) {
+                    throw fastify.httpErrors.notFound('Tournament not found or already completed/cancelled.');
+                }
+
+                return prisma.tournament.update({
+                    where: { id: tournamentId },
+                    data: { status: TournamentStatus.CANCELLED },
+                    select: {
+                        id: true,
+                        name: true,
+                        status: true,
+                        maxParticipants: true,
+                        winner: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
+                        participants: { select: { user: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } } } },
+                        matches: {
+                            select: {
+                                id: true,
+                                playerOneScore: true,
+                                playerTwoScore: true,
+                                playedAt: true,
+                                playerOne: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
+                                playerTwo: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
+                                winner: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } }
+                            }
+                        },
+                        createdAt: true
+                    }
+                });
+            });
+
+            tournament.participants = tournament.participants.map(p => p.user);
+            return tournament;
+        } catch (error) {
+            fastify.log.error(error, `Failed to cancel tournament ${tournamentId}`);
+            if (error && error.statusCode) {
+                return reply.send(error);
+            }
+            return reply.internalServerError('An unexpected error occurred while canceling the tournament.');
+        }
     });
 }

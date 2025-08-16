@@ -57,12 +57,11 @@ export default async function (fastify, opts) {
 
         // Update the match record in the database
         try {
-
             if (tournamentId) {
                 // Verify the tournament is in progress.
                 const tournament = await fastify.prisma.tournament.findUnique({
                     where: { id: tournamentId },
-                    include: {
+                    select: {
                         participants: {
                             select: { userId: true }
                         }

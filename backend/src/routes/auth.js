@@ -32,7 +32,7 @@ export default async function (fastify, opts) {
             });
 
             if (existingUserByDisplayName) {
-                throw reply.conflict('Display name is already in use.');
+                throw fastify.httpErrors.conflict('Display name is already in use.');
             }
 
             const existingUserByEmail = await fastify.prisma.user.findUnique({
@@ -41,7 +41,7 @@ export default async function (fastify, opts) {
             });
 
             if (existingUserByEmail) {
-                throw reply.conflict('An account with this email already exists.');
+                throw fastify.httpErrors.conflict('An account with this email already exists.');
             }
 
             // Hash the password before storing it
@@ -98,7 +98,7 @@ export default async function (fastify, opts) {
             const isPasswordValid = user && await bcrypt.compare(password, user.passwordHash);
 
             if (!isPasswordValid) {
-                throw reply.unauthorized('Invalid email or password.');
+                throw fastify.httpErrors.unauthorized('Invalid email or password.');
             }
 
             // Create the JWT payload and sign the token.
@@ -114,7 +114,6 @@ export default async function (fastify, opts) {
             });
 
             return fastify.toPublicUser(user);
-
         } catch (error) {
             fastify.log.error(error, 'Login failed');
             if (error && error.statusCode) {

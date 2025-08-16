@@ -57,9 +57,9 @@ export default async function (fastify, opts) {
             }
         }
     }, async (request, reply) => {
-        const tournamentId = request.params.id;
-
         try {
+            const tournamentId = request.params.id;
+
             const tournament = await fastify.prisma.tournament.findUnique({
                 where: { id: tournamentId },
                 select: {
@@ -107,9 +107,9 @@ export default async function (fastify, opts) {
             }
         }
     }, async (request, reply) => {
-        const { name, maxParticipants } = request.body;
-
         try {
+            const { name, maxParticipants } = request.body;
+
             const dbTournament = await fastify.prisma.tournament.create({
                 data: {
                     name,
@@ -167,11 +167,11 @@ export default async function (fastify, opts) {
             preHandler: [fastify.lobbyAuth]
         }
     }, async (request, reply) => {
-        const tournamentId = request.params.id;
-        const { userId } = request.body;
-        const lobby = fastify.getLobby();
-
         try {
+            const tournamentId = request.params.id;
+            const { userId } = request.body;
+            const lobby = fastify.getLobby();
+
             // Check if user is authenticated
             if (!lobby.participants.has(userId)) {
                 throw reply.forbidden('User must be logged in to join a tournament.');
@@ -262,9 +262,9 @@ export default async function (fastify, opts) {
         }
 
     }, async (request, reply) => {
-        const tournamentId = request.params.id;
-
         try {
+            const tournamentId = request.params.id;
+
             // Check if all participants are still in the lobby
             const tournamentParticipants = await fastify.prisma.tournamentParticipant.findMany({
                 where: { tournamentId },

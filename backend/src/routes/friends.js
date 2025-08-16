@@ -57,10 +57,10 @@ export default async function (fastify, opts) {
             }
         }
     }, async (request, reply) => {
-        const userId = request.params.id;
-        const onlineUserIds = new Set(fastify.getLobby().participants.keys());
-
         try {
+            const userId = request.params.id;
+            const onlineUserIds = new Set(fastify.getLobby().participants.keys());
+
             const friends = await getFriendsForUser(fastify.prisma, userId, FriendshipStatus.ACCEPTED, onlineUserIds);
             return friends;
         } catch (error) {
@@ -85,11 +85,11 @@ export default async function (fastify, opts) {
             }
         }
     }, async (request, reply) => {
-        const userId = request.params.id;
-        const lobby = fastify.getLobby();
-        const onlineUserIds = new Set(lobby.participants.keys());
-
         try {
+            const userId = request.params.id;
+            const lobby = fastify.getLobby();
+            const onlineUserIds = new Set(lobby.participants.keys());
+
             if (!lobby.participants.has(userId)) {
                 throw fastify.httpErrors.forbidden('User must be in the lobby to view pending requests.');
             }
@@ -134,10 +134,10 @@ export default async function (fastify, opts) {
             }
         }
     }, async (request, reply) => {
-        const { actorId, friendId } = request.body;
-        const lobby = fastify.getLobby();
-
         try {
+            const { actorId, friendId } = request.body;
+            const lobby = fastify.getLobby();
+
             if (!lobby.participants.has(actorId)) {
                 throw fastify.httpErrors.forbidden('User must be logged in to send a friend request.');
             }
@@ -197,11 +197,11 @@ export default async function (fastify, opts) {
             }
         }
     }, async (request, reply) => {
-        const { actorId, senderId } = request.body;
-        const lobby = fastify.getLobby();
-        const onlineUserIds = new Set(lobby.participants.keys());
-
         try {
+            const { actorId, senderId } = request.body;
+            const lobby = fastify.getLobby();
+            const onlineUserIds = new Set(lobby.participants.keys());
+
             if (!lobby.participants.has(actorId)) {
                 throw fastify.httpErrors.forbidden('User must be logged in to accept a friend request.');
             }
@@ -254,11 +254,11 @@ export default async function (fastify, opts) {
             }
         }
     }, async (request, reply) => {
-        const { actorId, friendIdToRemove } = request.body;
-        const lobby = fastify.getLobby();
-        const onlineUserIds = new Set(lobby.participants.keys());
-
         try {
+            const { actorId, friendIdToRemove } = request.body;
+            const lobby = fastify.getLobby();
+            const onlineUserIds = new Set(lobby.participants.keys());
+
             if (!lobby.participants.has(actorId)) {
                 throw fastify.httpErrors.forbidden('User must be logged in to delete a friendship.');
             }

@@ -18,9 +18,9 @@ export default async function (fastify, opts) {
             }
         }
     }, async (request, reply) => {
-        const { displayName, email, password } = request.body;
-
         try {
+            const { displayName, email, password } = request.body;
+
             // Check for existing user with Prisma (case-insensitive)
             const existingUserByDisplayName = await fastify.prisma.user.findFirst({
                 where: {
@@ -61,7 +61,7 @@ export default async function (fastify, opts) {
 
         } catch (error) {
             fastify.log.error(error, 'Registration failed');
-            if (error && error.staturCode){
+            if (error && error.statusCode) {
                 return reply.send(error);
             }
             return reply.internalServerError('An unexpected error occurred during registration.');
@@ -86,9 +86,9 @@ export default async function (fastify, opts) {
             }
         }
     }, async (request, reply) => {
-               const { email, password } = request.body;
-
         try {
+            const { email, password } = request.body;
+
             // Find the user by their email.
             const user = await fastify.prisma.user.findUnique({
                 where: { email: email.toLowerCase() }

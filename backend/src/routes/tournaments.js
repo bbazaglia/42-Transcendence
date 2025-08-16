@@ -172,10 +172,10 @@ export default async function (fastify, opts) {
             },
             response: {
                 200: { $ref: 'tournamentDetail#' },
-                400: { $ref: 'errorResponse#' },
-                403: { $ref: 'errorResponse#' },
-                404: { $ref: 'errorResponse#' },
-                500: { $ref: 'errorResponse#' }
+                400: { $ref: 'HttpError#' },
+                403: { $ref: 'HttpError#' },
+                404: { $ref: 'HttpError#' },
+                500: { $ref: 'HttpError#' }
             },
             preHandler: [fastify.lobbyAuth]
         }
@@ -186,35 +186,32 @@ export default async function (fastify, opts) {
 
         // Check if user is authenticated
         if (!lobby.participants.has(userId)) {
-            reply.code(403);
-            return { error: 'User must be logged in to join a tournament.' };
+            return reply.forbidden('User must be logged in to join a tournament.');
         }
 
         try {
             // Use a transaction to ensure data integrity
             const updatedTournament = await fastify.prisma.$transaction(async (prisma) => {
                 // Fetch the tournament and its participants in a single query
-                const tournament = await prisma.tournament.findUnique({
+                const t = await prisma.tournament.findUnique({
                     where: { id: tournamentId },
                     include: { participants: true }
                 });
 
-                // Check if tournament exists and is open for joining
-                if (!tournament || tournament.status !== TournamentStatus.PENDING) {
-                    reply.code(404);
-                    return { error: 'Tournament not found or is not open for joining.' };
+                if (!t) {
+                    throw fastify.httpErrors.notFound('Tournament not found.');
                 }
 
-                // Check if the tournament is full
-                if (tournament.participants.length >= tournament.maxParticipants) {
-                    reply.code(403);
-                    return { error: 'Tournament is full. You cannot join at this time.' };
+                if (t.status !== TournamentStatus.PENDING) {
+                    throw fastify.httpErrors.forbidden('Only pending tournaments can be started.');
                 }
 
-                // Check if the user is already in the tournament
-                if (tournament.participants.some(p => p.userId === userId)) {
-                    reply.code(400);
-                    return { error: 'You are already participating in this tournament.' };
+                if (t.participants.length >= t.maxParticipants) {
+                    throw fastify.httpErrors.forbidden('Tournament is full. You cannot join at this time.');
+                }
+
+                if (t.participants.some(p => p.userId === userId)) {
+                    throw fastify.httpErrors.badRequest('You are already participating in this tournament.');
                 }
 
                 // Add the user to the tournament
@@ -243,16 +240,92 @@ export default async function (fastify, opts) {
             return updatedTournament;
         } catch (error) {
             fastify.log.error(error, 'Failed to join tournament');
-            reply.code(500);
-            return { error: 'An unexpected error occurred while joining the tournament.' };
+            if (error && error.statusCode) {
+                return reply.send(error);
+            }
+            return reply.internalServerError('An unexpected error occurred while joining the tournament.');
         }
     });
 
     // ROUTE: Starts the tournament when the required number of participants have joined.
     fastify.patch('/:id/start', {
+        schema: {
+            params: {
+                type: 'object',
+                properties: {
+                    id: { type: 'integer' }
+                },
+                required: ['id']
+            },
+            response: {
+                200: { $ref: 'tournamentDetail#' },
+                403: { $ref: 'HttpError#' },
+                404: { $ref: 'HttpError#' },
+                500: { $ref: 'HttpError#' }
+            },
+            preHandler: [fastify.lobbyAuth]
+        }
 
     }, async (request, reply) => {
         const tournamentId = request.params.id;
+
+        try {
+            // Check if all participants are still in the lobby
+            const tournamentParticipants = await fastify.prisma.tournamentParticipant.findMany({
+                where: { tournamentId },
+                select: { userId: true }
+            });
+            
+            const lobby = fastify.getLobby();
+            for (const participant of tournamentParticipants) {
+                if (!lobby.participants.has(participant.userId)) {
+                    return reply.forbidden('All tournament participants must be present in the lobby to start the tournament.');
+                }
+            }
+
+            const tournament = await fastify.prisma.$transaction(async (prisma) => {
+                // Fetch the tournament and its participants
+                const t = await prisma.tournament.findUnique({
+                    where: { id: tournamentId },
+                    include: { participants: true }
+                });
+
+                if (!t) {
+                    throw fastify.httpErrors.notFound('Tournament not found.');
+                }
+
+                if (t.status !== TournamentStatus.PENDING) {
+                    throw fastify.httpErrors.forbidden('Only pending tournaments can be started.');
+                }
+
+                if (t.participants.length != t.maxParticipants) {
+                    throw fastify.httpErrors.forbidden('Tournament must have the exact number of participants to be started.');
+                }
+
+                // Update the tournament status to IN_PROGRESS
+                return prisma.tournament.update({
+                    where: { id: tournamentId },
+                    data: { status: TournamentStatus.IN_PROGRESS },
+                    include: {
+                        winner: true,
+                        participants: { include: { user: true } },
+                        matches: true
+                    }
+                });
+            });
+
+            if (tournament) {
+                // Map participants to inclde only user details
+                tournament.participants = tournament.participants.map(p => p.user);
+                return tournament;
+            }
+        } catch (err) {
+            fastify.log.error(err, 'Failed to start tournament');
+            if (err && err.statusCode) {
+                return reply.send(err);
+            }
+            return reply.internalServerError('An unexpected error occurred while starting the tournament.');
+        }
     });
 
     // ROUTE: Cancels a tournament, either by the creator or automatically if conditions are not met.

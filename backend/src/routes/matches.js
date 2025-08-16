@@ -23,61 +23,51 @@ export default async function (fastify, opts) {
                 }
             },
             response: {
-                201: {
-                    type: 'object',
-                    properties: {
-                        id: { type: 'integer' },
-                        message: { type: 'string' }
-                    }
-                },
-                403: { $ref: 'errorResponse#' },
-                500: { $ref: 'errorResponse#' }
+                201: { $ref: 'matchDetail#' },
+                403: { $ref: 'httpError#' },
+                500: { $ref: 'httpError#' }
             }
         }
     }, async (request, reply) => {
-        const {
-            playerOneId,
-            playerTwoId,
-            playerOneScore,
-            playerTwoScore,
-            winnerId,
-            tournamentId
-        } = request.body;
-
-        const lobby = fastify.getLobby();
-
-        // Ensure both players are part of the lobby participants
-        const isPlayerOneValid = lobby.participants.has(playerOneId);
-        const isPlayerTwoValid = lobby.participants.has(playerTwoId);
-
-        if (!isPlayerOneValid || !isPlayerTwoValid) {
-            reply.code(403);
-            return { error: 'Match cannot be reported. One or both players are not verified in the current lobby.' };
-        }
-
-        // Update the match record in the database
         try {
+            const {
+                playerOneId,
+                playerTwoId,
+                playerOneScore,
+                playerTwoScore,
+                winnerId,
+                tournamentId
+            } = request.body;
+
+            const lobby = fastify.getLobby();
+
+            // Ensure both players are part of the lobby participants
+            const isPlayerOneValid = lobby.participants.has(playerOneId);
+            const isPlayerTwoValid = lobby.participants.has(playerTwoId);
+
+            if (!isPlayerOneValid || !isPlayerTwoValid) {
+                throw fastify.httpErrors.forbidden('Match cannot be reported. One or both players are not verified in the current lobby.');
+            }
+
+            // Update the match record in the database
             if (tournamentId) {
                 // Verify the tournament is in progress.
                 const tournament = await fastify.prisma.tournament.findUnique({
                     where: { id: tournamentId },
                     select: {
-                        participants: {
-                            select: { userId: true }
-                        }
+                        status: true,
+                        participants: { select: { userId: true } }
                     }
                 });
 
                 // Check if tournament exists and is in progress
                 if (!tournament || tournament.status !== TournamentStatus.IN_PROGRESS) {
-                    reply.code(403);
-                    return { error: 'Match cannot be recorded for a tournament that is not in progress.' };
+                    throw fastify.httpErrors.forbidden('Match cannot be recorded for a tournament that is not in progress.');
                 }
 
                 const participantIds = new Set(tournament.participants.map(p => p.userId));
                 if (!participantIds.has(playerOneId) || !participantIds.has(playerTwoId)) {
-                    reply.code(403);
-                    return { error: 'Both players must be participants in the tournament to record a match.' };
+                    throw fastify.httpErrors.forbidden('Both players must be participants in the tournament to record a match.');
                 }
             }
 
@@ -92,6 +82,16 @@ export default async function (fastify, opts) {
                         playerTwoScore,
                         winnerId,
                         tournamentId
+                    },
+                    select: {
+                        id: true,
+                        playerOneId: true,
+                        playerTwoId: true,
+                        winner: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
+                        playerOneScore: true,
+                        playerTwoScore: true,
+                        tournamentId: true,
+                        playedAt: true
                     }
                 });
 
@@ -117,12 +117,13 @@ export default async function (fastify, opts) {
             });
 
             reply.code(201);
-            return { id: transactionResult.id, message: 'Match created successfully' };
-
-        } catch (err) {
-            fastify.log.error(err);
-            reply.code(500);
-            return { error: 'An error occurred while creating the match record.' };
+            return transactionResult;
+        } catch (error) {
+            fastify.log.error(error, 'Error creating match record');
+            if (error && error.statusCode) {
+                return reply.send(error);
+            }
+            return reply.internalServerError('An error occurred while creating the match record.');
         }
     });
 }

@@ -8,6 +8,10 @@ export default fp(async function (fastify, opts) {
         return activeLobby;
     }
 
+    function setLobby(lobby) {
+        activeLobby = lobby;
+    }
+
     async function lobbyAuth(request, reply) {
         const lobby = fastify.getLobby();
         if (!lobby) {
@@ -32,6 +36,7 @@ export default fp(async function (fastify, opts) {
 
     // expose decorators globally (safe single source of truth)
     fastify.decorate('getLobby', getLobby);
+    fastify.decorate('setLobby', setLobby);
     fastify.decorate('lobbyAuth', lobbyAuth);
     fastify.decorate('AI_PLAYER_ID', AI_PLAYER_ID);
     fastify.decorate('toPublicUser', toPublicUser);

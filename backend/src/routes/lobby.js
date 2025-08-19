@@ -58,6 +58,7 @@ export default async function (fastify, opts) {
                 host: toPublicUser(hostUser),
                 participants: Array.from(newLobby.participants.values()).map(toPublicUser)
             };
+
         } catch (error) {
             fastify.log.error(error, 'Error creating lobby');
             if (error && error.statusCode) {
@@ -127,6 +128,7 @@ export default async function (fastify, opts) {
                 host: toPublicUser(lobby.host),
                 participants: Array.from(lobby.participants.values()).map(toPublicUser)
             };
+
         } catch (error) {
             fastify.log.error(error, 'Error joining lobby');
             if (error && error.statusCode) {
@@ -169,6 +171,7 @@ export default async function (fastify, opts) {
                 host: toPublicUser(lobby.host),
                 participants: Array.from(lobby.participants.values()).map(toPublicUser)
             };
+
         } catch (error) {
             fastify.log.error(error, 'Error leaving lobby');
             if (error && error.statusCode) {
@@ -232,6 +235,7 @@ export default async function (fastify, opts) {
                 host: toPublicUser(lobby.host),
                 participants: Array.from(lobby.participants.values()).map(toPublicUser)
             };
+
         } catch (error) {
             fastify.log.error(error, `Error updating participant profile ${request.params.id}`);
             if (error && error.statusCode) {

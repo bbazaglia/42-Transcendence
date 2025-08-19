@@ -63,6 +63,7 @@ export default async function (fastify, opts) {
 
             const friends = await getFriendsForUser(fastify.prisma, userId, FriendshipStatus.ACCEPTED, onlineUserIds);
             return friends;
+
         } catch (error) {
             fastify.log.error(error, `Error fetching friends for user ${userId}`);
             if (error && error.statusCode) {
@@ -96,6 +97,7 @@ export default async function (fastify, opts) {
 
             const requests = await getFriendsForUser(fastify.prisma, userId, FriendshipStatus.PENDING, onlineUserIds);
             return requests;
+
         } catch (error) {
             fastify.log.error(error, `Error fetching pending requests for user ${userId}`);
             if (error && error.statusCode) {
@@ -166,6 +168,7 @@ export default async function (fastify, opts) {
 
             reply.code(201);
             return newFriendship;
+
         } catch (error) {
             fastify.log.error(error, 'Error creating friendship for user', actorId);
             // This will catch the error from the @@unique constraint if the friendship already exists.
@@ -221,6 +224,7 @@ export default async function (fastify, opts) {
             });
 
             return await getFriendsForUser(fastify.prisma, actorId, FriendshipStatus.ACCEPTED, onlineUserIds);
+
         } catch (error) {
             fastify.log.error(error, 'Error accepting friendship for user', actorId);
             // If the `where` clause fails to find a match, Prisma throws P2025.
@@ -274,6 +278,7 @@ export default async function (fastify, opts) {
 
             const friends = await getFriendsForUser(fastify.prisma, actorId, FriendshipStatus.ACCEPTED, onlineUserIds);
             return friends;
+
         } catch (error) {
             fastify.log.error(error, 'Error deleting friendship');
             // If no friendship exists, Prisma will throw an error.

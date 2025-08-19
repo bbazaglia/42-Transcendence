@@ -114,6 +114,7 @@ export default async function (fastify, opts) {
             });
 
             return fastify.toPublicUser(user);
+
         } catch (error) {
             fastify.log.error(error, 'Login failed');
             if (error && error.statusCode) {

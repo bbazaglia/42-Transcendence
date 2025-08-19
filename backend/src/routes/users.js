@@ -1,6 +1,7 @@
 export default async function (fastify, opts) {
     // Apply authentication hook to all routes in this plugin
     fastify.addHook('preHandler', fastify.authenticate);
+    fastify.addHook('preHandler', fastify.lobbyAuth);
 
     // ROUTE: Gets the public profile (stats, display name) of any user by their ID.
     fastify.get('/:id', {
@@ -40,6 +41,7 @@ export default async function (fastify, opts) {
             }
 
             return user;
+
         } catch (error) {
             fastify.log.error(error, `Error fetching user profile for ID ${request.params.id}`);
             if (error && error.statusCode) {
@@ -82,6 +84,7 @@ export default async function (fastify, opts) {
             });
 
             return matches;
+
         } catch (error) {
             fastify.log.error(error, `Error fetching match history for user ID ${request.params.id}`);
             if (error && error.statusCode) {

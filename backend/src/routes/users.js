@@ -1,3 +1,5 @@
+import { publicUserSelect } from '../lib/prismaSelects.js';
+
 export default async function (fastify, opts) {
     // Apply authentication hook to all routes in this plugin
     fastify.addHook('preHandler', fastify.authenticate);
@@ -25,15 +27,7 @@ export default async function (fastify, opts) {
 
             const user = await fastify.prisma.user.findUnique({
                 where: { id: userId },
-                // Use 'select' to pick only the public fields we need and avoid exposing sensitive data
-                select: {
-                    id: true,
-                    displayName: true,
-                    avatarUrl: true,
-                    wins: true,
-                    losses: true,
-                    createdAt: true
-                }
+                select: publicUserSelect
             });
 
             if (!user) {

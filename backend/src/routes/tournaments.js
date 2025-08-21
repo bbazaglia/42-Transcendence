@@ -1,4 +1,5 @@
 import { TournamentStatus } from '@prisma/client';
+import { tournamentDetailSelect } from '../lib/prismaSelects.js';
 
 export default async function (fastify, opts) {
     // All routes in this file require authentication
@@ -19,26 +20,7 @@ export default async function (fastify, opts) {
     }, async (request, reply) => {
         try {
             const tournaments = await fastify.prisma.tournament.findMany({
-                select: {
-                    id: true,
-                    name: true,
-                    status: true,
-                    maxParticipants: true,
-                    winner: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
-                    participants: { select: { user: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } } } },
-                    matches: {
-                        select: {
-                            id: true,
-                            playerOneScore: true,
-                            playerTwoScore: true,
-                            playedAt: true,
-                            playerOne: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
-                            playerTwo: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
-                            winner: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } }
-                        }
-                    },
-                    createdAt: true
-                },
+                select: tournamentDetailSelect,
                 orderBy: {
                     createdAt: 'desc'
                 }
@@ -78,26 +60,7 @@ export default async function (fastify, opts) {
 
             const tournament = await fastify.prisma.tournament.findUnique({
                 where: { id: tournamentId },
-                select: {
-                    id: true,
-                    name: true,
-                    status: true,
-                    maxParticipants: true,
-                    winner: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
-                    participants: { select: { user: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } } } },
-                    matches: {
-                        select: {
-                            id: true,
-                            playerOneScore: true,
-                            playerTwoScore: true,
-                            playedAt: true,
-                            playerOne: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
-                            playerTwo: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
-                            winner: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } }
-                        }
-                    },
-                    createdAt: true
-                }
+                select: tournamentDetailSelect
             });
 
             if (!tournament) {
@@ -137,28 +100,15 @@ export default async function (fastify, opts) {
         try {
             const { name, maxParticipants } = request.body;
 
-            const dbTournament = await fastify.prisma.tournament.create({
+            const newTournament = await fastify.prisma.tournament.create({
                 data: {
                     name,
                     maxParticipants,
                 },
-                select: {
-                    id: true,
-                    name: true,
-                    status: true,
-                    maxParticipants: true,
-                    createdAt: true
-                }
+                select: tournamentDetailSelect
             });
 
-            // Build the tournamentDetail-shaped response without querying empty relations
-            const newTournament = {
-                ...dbTournament,
-                winner: null,             // no winner at creation
-                participants: [],         // empty participants array
-                matches: []               // empty matches array
-            };
-
+            newTournament.participants = newTournament.participants.map(p => p.user);
             reply.code(201);
             return newTournament;
 
@@ -244,26 +194,7 @@ export default async function (fastify, opts) {
                 // Fetch the updated tournament with all necessary details for the response
                 return prisma.tournament.findUnique({
                     where: { id: tournamentId },
-                    select: {
-                        id: true,
-                        name: true,
-                        status: true,
-                        maxParticipants: true,
-                        winner: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
-                        participants: { select: { user: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } } } },
-                        matches: {
-                            select: {
-                                id: true,
-                                playerOneScore: true,
-                                playerTwoScore: true,
-                                playedAt: true,
-                                playerOne: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
-                                playerTwo: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
-                                winner: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } }
-                            }
-                        },
-                        createdAt: true
-                    }
+                    select: tournamentDetailSelect
                 });
             });
 
@@ -371,26 +302,7 @@ export default async function (fastify, opts) {
                 // 5. Fetch the complete tournament data for the response
                 return prisma.tournament.findUnique({
                     where: { id: tournamentId },
-                    select: {
-                        id: true,
-                        name: true,
-                        status: true,
-                        maxParticipants: true,
-                        winner: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
-                        participants: { select: { user: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } } } },
-                        matches: {
-                            select: {
-                                id: true,
-                                playerOneScore: true,
-                                playerTwoScore: true,
-                                playedAt: true,
-                                playerOne: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
-                                playerTwo: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
-                                winner: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } }
-                            }
-                        },
-                        createdAt: true
-                    }
+                    select: tournamentDetailSelect
                 });
             });
 
@@ -499,19 +411,7 @@ export default async function (fastify, opts) {
                 // 6. Return the full, updated tournament state
                 return prisma.tournament.findUnique({
                     where: { id: tournamentId },
-                    select: {
-                        id: true, name: true, status: true, maxParticipants: true, createdAt: true,
-                        winner: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
-                        participants: { select: { user: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } } } },
-                        matches: {
-                            select: {
-                                id: true, playerOneScore: true, playerTwoScore: true, playedAt: true,
-                                playerOne: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
-                                playerTwo: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
-                                winner: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } }
-                            }
-                        }
-                    }
+                    select: tournamentDetailSelect
                 });
             });
 
@@ -560,26 +460,7 @@ export default async function (fastify, opts) {
                 return prisma.tournament.update({
                     where: { id: tournamentId },
                     data: { status: TournamentStatus.CANCELLED },
-                    select: {
-                        id: true,
-                        name: true,
-                        status: true,
-                        maxParticipants: true,
-                        winner: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
-                        participants: { select: { user: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } } } },
-                        matches: {
-                            select: {
-                                id: true,
-                                playerOneScore: true,
-                                playerTwoScore: true,
-                                playedAt: true,
-                                playerOne: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
-                                playerTwo: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
-                                winner: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } }
-                            }
-                        },
-                        createdAt: true
-                    }
+                    select: tournamentDetailSelect
                 });
             });
 

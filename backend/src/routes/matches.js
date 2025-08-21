@@ -1,3 +1,5 @@
+import { matchDetailSelect } from "../lib/prismaSelects";
+
 export default async function (fastify, opts) {
     // All routes in this file require authentication
     fastify.addHook('preHandler', fastify.authenticate);
@@ -64,16 +66,7 @@ export default async function (fastify, opts) {
                         playerTwoScore,
                         winnerId
                     },
-                    select: {
-                        id: true,
-                        playerOne: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
-                        playerTwo: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
-                        winner: { select: { id: true, displayName: true, avatarUrl: true, wins: true, losses: true, createdAt: true } },
-                        playerOneScore: true,
-                        playerTwoScore: true,
-                        tournamentId: true,
-                        playedAt: true
-                    }
+                    select: matchDetailSelect
                 });
 
                 const loserId = winnerId === playerOneId ? playerTwoId : playerOneId;

@@ -1,4 +1,4 @@
-import { privatePrisma } from '../lib/prisma.js';
+import { privatePrisma } from '../lib/prismaClients.js';
 import { publicUserSelect } from '../lib/prismaSelects.js';
 import bcrypt from 'bcrypt';
 

@@ -10,7 +10,7 @@ import { fileURLToPath } from 'url';
 
 import sharedSchemas from './schemas/sharedSchemas.js'
 import lobbySetup from './plugins/lobbySetup.js';
-import jwtSetup from './plugins/jwtSetup.js';
+import jwt from './plugins/jwt.js';
 import prisma from './plugins/prisma.js';
 
 import authRoutes from './routes/auth.js';
@@ -34,7 +34,7 @@ async function app(fastify, opts) {
     await fastify.register(fastifyStatic, { root: path.join(__dirname, '..', 'public'), prefix: '/', });
     await fastify.register(sharedSchemas);
     await fastify.register(lobbySetup);
-    await fastify.register(jwtSetup);
+    await fastify.register(jwt);
     await fastify.register(prisma);
 
     // Register routes

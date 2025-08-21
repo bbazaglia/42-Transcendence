@@ -1,6 +1,6 @@
-import bcrypt from 'bcrypt';
-import { privatePrisma } from '../lib/prisma.js';
+import { privatePrisma } from '../lib/prismaClients.js';
 import { publicUserSelect } from '../lib/prismaSelects.js';
+import bcrypt from 'bcrypt';
 
 export default async function (fastify, opts) {
     // Ensure decorators plugin is registered before routes (avoid soft dependency).

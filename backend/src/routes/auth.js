@@ -1,3 +1,7 @@
+import { privatePrisma } from '../lib/prisma.js';
+import { publicUserSelect } from '../lib/prismaSelects.js';
+import bcrypt from 'bcrypt';
+
 export default async function (fastify, opts) {
     // ROUTE: Creates a new user account.
     fastify.post('/register', {
@@ -57,7 +61,7 @@ export default async function (fastify, opts) {
             });
 
             reply.code(201);
-            return fastify.toPublicUser(newUser);
+            return newUser;
 
         } catch (error) {
             fastify.log.error(error, 'Registration failed');
@@ -89,20 +93,20 @@ export default async function (fastify, opts) {
         try {
             const { email, password } = request.body;
 
-            // Find the user by their email.
-            const user = await fastify.prisma.user.findUnique({
+            // Find the user by email using the PRIVATE client to get the password hash.
+            const hostWithSecrets = await privatePrisma.user.findUnique({
                 where: { email: email.toLowerCase() }
             });
 
             // Verify the password.
-            const isPasswordValid = user && await bcrypt.compare(password, user.passwordHash);
+            const isPasswordValid = hostWithSecrets && await bcrypt.compare(password, hostWithSecrets.passwordHash);
 
             if (!isPasswordValid) {
                 throw fastify.httpErrors.unauthorized('Invalid email or password.');
             }
 
             // Create the JWT payload and sign the token.
-            const payload = { id: user.id, displayName: user.displayName };
+            const payload = { id: hostWithSecrets.id, displayName: hostWithSecrets.displayName };
             const token = fastify.jwt.sign({ payload });
 
             reply.setCookie('token', token, {
@@ -113,7 +117,14 @@ export default async function (fastify, opts) {
                 maxAge: 60 * 60 * 24 * 7
             });
 
-            return fastify.toPublicUser(user);
+            // IMPORTANT: Fetch the user again with the SAFE client to return to the frontend.
+            // This ensures no secrets are ever sent in the response.
+            const publicHost = await fastify.prisma.user.findUnique({
+                where: { id: hostWithSecrets.id },
+                select: publicUserSelect
+            });
+
+            return publicHost;
 
         } catch (error) {
             fastify.log.error(error, 'Login failed');

@@ -3,6 +3,15 @@ import fp from 'fastify-plugin';
 export default fp(async function (fastify, opts) {
     let activeLobby = null;
     const AI_PLAYER_ID = 0;
+    const AI_CREATED_AT = new Date();
+    const AI_PLAYER = {
+        id: AI_PLAYER_ID,
+        displayName: 'AI Bot',
+        avatarUrl: '/avatars/ai-avatar.png',
+        wins: 0,
+        losses: 0,
+        createdAt: AI_CREATED_AT
+    };
 
     function getLobby() {
         return activeLobby;
@@ -22,25 +31,10 @@ export default fp(async function (fastify, opts) {
         }
     }
 
-    function toPublicUser(user) {
-        if (!user) {
-            return null;
-        }
-
-        return {
-            id: user.id,
-            displayName: user.displayName,
-            avatarUrl: user.avatarUrl,
-            wins: user.wins,
-            losses: user.losses,
-            createdAt: user.createdAt.toISOString()
-        };
-    }
-
     // expose decorators globally (safe single source of truth)
     fastify.decorate('getLobby', getLobby);
     fastify.decorate('setLobby', setLobby);
     fastify.decorate('lobbyAuth', lobbyAuth);
     fastify.decorate('AI_PLAYER_ID', AI_PLAYER_ID);
-    fastify.decorate('toPublicUser', toPublicUser);
+    fastify.decorate('AI_PLAYER', AI_PLAYER);
 });

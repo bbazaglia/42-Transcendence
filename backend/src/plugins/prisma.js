@@ -1,10 +1,7 @@
 import fp from 'fastify-plugin';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma.js';
 
 async function prisma(fastify, opts) {
-    const prisma = new PrismaClient({
-        log: process.env.NODE_ENV === 'development' ? ['query', 'info', 'warn', 'error'] : ['error'],
-    });
 
     await prisma.$connect();
 

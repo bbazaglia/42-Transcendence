@@ -1,4 +1,6 @@
 import bcrypt from 'bcrypt';
+import { privatePrisma } from '../lib/prisma.js';
+import { publicUserSelect } from '../lib/prismaSelects.js';
 
 export default async function (fastify, opts) {
     // Ensure decorators plugin is registered before routes (avoid soft dependency).
@@ -7,17 +9,16 @@ export default async function (fastify, opts) {
         !fastify.hasDecorator('getLobby') ||
         !fastify.hasDecorator('setLobby') ||
         !fastify.hasDecorator('lobbyAuth') ||
-        !fastify.hasDecorator('AI_PLAYER_ID') ||
-        !fastify.hasDecorator('toPublicUser')
+        !fastify.hasDecorator('AI_PLAYER_ID')
     ) {
-        throw new Error('lobbyPlugin must be registered before lobby routes');
+        throw new Error('lobbySetup plugin must be registered before lobby routes');
     }
 
     // All lobby management routes require the host to be authenticated.
     fastify.addHook('preHandler', fastify.authenticate);
 
-    const toPublicUser = fastify.toPublicUser;
     const AI_PLAYER_ID = fastify.AI_PLAYER_ID;
+    const AI_PLAYER = fastify.AI_PLAYER;
 
     // ROUTE: Creates a new lobby session.
     fastify.post('/create', {
@@ -34,20 +35,18 @@ export default async function (fastify, opts) {
                 throw fastify.httpErrors.conflict('A lobby is already in session.');
             }
 
-            const hostUser = request.user;
+            const hostUser = await fastify.prisma.user.findUnique({
+                where: { id: request.user.id },
+                select: publicUserSelect
+            });
+
             const newLobby = {
                 host: hostUser,
                 participants: new Map()
             };
 
             newLobby.participants.set(hostUser.id, hostUser);
-            newLobby.participants.set(AI_PLAYER_ID, {
-                id: AI_PLAYER_ID,
-                displayName: 'AI Bot',
-                avatarUrl: '/avatars/ai-avatar.png',
-                wins: 0,
-                losses: 0
-            });
+            newLobby.participants.set(AI_PLAYER_ID, AI_PLAYER);
 
             fastify.setLobby(newLobby);
             fastify.log.info(`Lobby created by host: ${hostUser.displayName}`);
@@ -55,8 +54,8 @@ export default async function (fastify, opts) {
             // Return the initial state.
             reply.code(201);
             return {
-                host: toPublicUser(hostUser),
-                participants: Array.from(newLobby.participants.values()).map(toPublicUser)
+                host: hostUser,
+                participants: Array.from(newLobby.participants.values())
             };
 
         } catch (error) {
@@ -106,15 +105,25 @@ export default async function (fastify, opts) {
         preHandler: [fastify.lobbyAuth]
     }, async (request, reply) => {
         try {
-            const { displayName, password } = request.body;
-
+            const { email, password } = request.body;
             const lobby = fastify.getLobby();
-            const guestUser = await fastify.prisma.user.findUnique({ where: { displayName } });
-            const isPasswordValid = guestUser && await bcrypt.compare(password, guestUser.passwordHash);
+
+            // Use the PRIVATE client to fetch the user with their password hash for validation.
+            const guestUserWithSecrets = await privatePrisma.user.findUnique({
+                where: { email: email.toLowerCase() }
+            });
+
+            const isPasswordValid = guestUserWithSecrets && await bcrypt.compare(password, guestUserWithSecrets.passwordHash);
 
             if (!isPasswordValid) {
                 throw fastify.httpErrors.unauthorized('Invalid credentials.');
             }
+
+            // Now that validation is done, get the public version of the user.
+            const guestUser = await fastify.prisma.user.findUnique({
+                where: { id: guestUserWithSecrets.id },
+                select: publicUserSelect
+            });
 
             if (guestUser.id === lobby.host.id || lobby.participants.has(guestUser.id)) {
                 throw fastify.httpErrors.conflict('User is already in the lobby.');
@@ -125,8 +134,8 @@ export default async function (fastify, opts) {
 
             // Return the new state.
             return {
-                host: toPublicUser(lobby.host),
-                participants: Array.from(lobby.participants.values()).map(toPublicUser)
+                host: lobby.host,
+                participants: Array.from(lobby.participants.values())
             };
 
         } catch (error) {
@@ -168,8 +177,8 @@ export default async function (fastify, opts) {
 
             // Return the new state.
             return {
-                host: toPublicUser(lobby.host),
-                participants: Array.from(lobby.participants.values()).map(toPublicUser)
+                host: lobby.host,
+                participants: Array.from(lobby.participants.values())
             };
 
         } catch (error) {
@@ -221,7 +230,8 @@ export default async function (fastify, opts) {
 
             const updatedUser = await fastify.prisma.user.update({
                 where: { id: userId },
-                data: { displayName, avatarUrl } // Prisma handles undefined fields
+                data: { displayName, avatarUrl }, // Prisma handles undefined fields
+                select: publicUserSelect
             });
 
             lobby.participants.set(userId, updatedUser);
@@ -232,8 +242,8 @@ export default async function (fastify, opts) {
 
             // Return the new state.
             return {
-                host: toPublicUser(lobby.host),
-                participants: Array.from(lobby.participants.values()).map(toPublicUser)
+                host: lobby.host,
+                participants: Array.from(lobby.participants.values())
             };
 
         } catch (error) {

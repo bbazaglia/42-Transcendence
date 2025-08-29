@@ -1,4 +1,4 @@
-import { matchDetailSelect } from "../lib/prismaSelects";
+import { matchDetailSelect } from "../lib/prismaSelects.js";
 
 export default async function (fastify, opts) {
     // All routes in this file require authentication

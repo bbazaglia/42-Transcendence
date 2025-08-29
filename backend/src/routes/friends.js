@@ -1,5 +1,5 @@
 import { FriendshipStatus } from '@prisma/client';
-import { publicUserSelect } from '../lib/prismaSelects';
+import { publicUserSelect } from '../lib/prismaSelects.js';
 
 async function getFriendsForUser(prisma, userId, status, onlineUserIds = new Set()) {
     const whereClause = {

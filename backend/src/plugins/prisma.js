@@ -1,7 +1,7 @@
 import fp from 'fastify-plugin';
 import prisma from '../lib/prismaClients.js';
 
-async function prisma(fastify, opts) {
+async function prismaPlugin(fastify, opts) {
 
     await prisma.$connect();
 
@@ -12,4 +12,4 @@ async function prisma(fastify, opts) {
     });
 }
 
-export default fp(prisma);
+export default fp(prismaPlugin);

@@ -1,6 +1,6 @@
 /**
- * Modal de autenticação (Login/Registro)
- * Componente reutilizável para autenticação
+ * Authentication Modal (Login/Register)
+ * Reusable component for authentication
  */
 
 import { authService } from '../services/AuthService.js';
@@ -15,7 +15,7 @@ export class AuthModal {
   }
 
   /**
-   * Renderiza o modal de autenticação
+   * Renders the authentication modal
    */
   private render(): void {
     const modalHTML = `
@@ -84,39 +84,39 @@ export class AuthModal {
       </div>
     `;
 
-    // Adiciona o modal ao body
+    // Add the modal to the body
     document.body.insertAdjacentHTML('beforeend', modalHTML);
     this.modalElement = document.getElementById('auth-modal');
   }
 
   /**
-   * Configura os event listeners
+   * Sets up event listeners
    */
   private setupEventListeners(): void {
-    // Toggle entre login e registro
+    // Toggle between login and register
     document.getElementById('toggle-mode-btn')?.addEventListener('click', () => {
       this.toggleMode();
     });
 
-    // Fechar modal
+    // Close modal
     document.getElementById('close-auth-modal')?.addEventListener('click', () => {
       this.hide();
     });
 
-    // Fechar ao clicar fora do modal
+    // Close when clicking outside the modal
     this.modalElement?.addEventListener('click', (e) => {
       if (e.target === this.modalElement) {
         this.hide();
       }
     });
 
-    // Submit do formulário
+    // Form submit
     document.getElementById('auth-form')?.addEventListener('submit', (e) => {
       e.preventDefault();
       this.handleSubmit();
     });
 
-    // Escutar mudanças no estado de auth
+    // Listen to auth state changes
     authService.subscribe((state) => {
       if (state.isAuthenticated) {
         this.hide();
@@ -126,7 +126,7 @@ export class AuthModal {
   }
 
   /**
-   * Alterna entre modo de login e registro
+   * Toggles between login and register mode
    */
   private toggleMode(): void {
     this.isLoginMode = !this.isLoginMode;
@@ -134,7 +134,7 @@ export class AuthModal {
   }
 
   /**
-   * Atualiza a interface baseada no modo atual
+   * Updates the interface based on the current mode
    */
   private updateUI(): void {
     const title = document.getElementById('auth-title');
@@ -160,13 +160,13 @@ export class AuthModal {
       displayNameInput!.required = true;
     }
 
-    // Limpa mensagens e campos
+    // Clear messages and fields
     this.hideMessage();
     this.clearForm();
   }
 
   /**
-   * Manipula o submit do formulário
+   * Handles form submission
    */
   private async handleSubmit(): Promise<void> {
     const email = (document.getElementById('email') as HTMLInputElement).value;
@@ -194,7 +194,7 @@ export class AuthModal {
           this.isLoginMode ? 'Login realizado com sucesso!' : 'Conta criada com sucesso!',
           'success'
         );
-        // O modal será fechado automaticamente pelo listener do authService
+        // The modal will be closed automatically by the authService listener
       } else {
         this.showMessage(result.error || 'Erro na autenticação', 'error');
       }
@@ -206,7 +206,7 @@ export class AuthModal {
   }
 
   /**
-   * Define o estado de carregamento
+   * Sets the loading state
    */
   private setLoading(loading: boolean): void {
     const submitBtn = document.getElementById('auth-submit-btn') as HTMLButtonElement;
@@ -225,7 +225,7 @@ export class AuthModal {
   }
 
   /**
-   * Mostra uma mensagem no modal
+   * Shows a message in the modal
    */
   private showMessage(message: string, type: 'success' | 'error'): void {
     const messageElement = document.getElementById('auth-message');
@@ -248,7 +248,7 @@ export class AuthModal {
   }
 
   /**
-   * Esconde a mensagem
+   * Hides the message
    */
   private hideMessage(): void {
     const messageElement = document.getElementById('auth-message');
@@ -258,7 +258,7 @@ export class AuthModal {
   }
 
   /**
-   * Limpa o formulário
+   * Clears the form
    */
   private clearForm(): void {
     (document.getElementById('email') as HTMLInputElement).value = '';
@@ -267,7 +267,7 @@ export class AuthModal {
   }
 
   /**
-   * Mostra o modal
+   * Shows the modal
    */
   show(mode: 'login' | 'register' = 'login'): void {
     this.isLoginMode = mode === 'login';
@@ -278,7 +278,7 @@ export class AuthModal {
   }
 
   /**
-   * Esconde o modal
+   * Hides the modal
    */
   hide(): void {
     this.modalElement?.classList.add('hidden');
@@ -287,7 +287,7 @@ export class AuthModal {
   }
 
   /**
-   * Remove o modal do DOM
+   * Removes the modal from the DOM
    */
   destroy(): void {
     this.modalElement?.remove();

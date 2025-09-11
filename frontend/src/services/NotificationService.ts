@@ -1,6 +1,6 @@
 /**
- * Serviço de notificações
- * Gerencia mensagens de sucesso, erro e informações
+ * Notification service
+ * Manages success, error and information messages
  */
 
 export type NotificationType = 'success' | 'error' | 'warning' | 'info';
@@ -10,7 +10,7 @@ export interface Notification {
   type: NotificationType;
   title: string;
   message: string;
-  duration?: number; // em ms, 0 = permanente
+  duration?: number; // in ms, 0 = permanent
 }
 
 class NotificationService {
@@ -22,7 +22,7 @@ class NotificationService {
   }
 
   /**
-   * Cria o container de notificações
+   * Creates the notification container
    */
   private createContainer(): void {
     const containerHTML = `
@@ -35,7 +35,7 @@ class NotificationService {
   }
 
   /**
-   * Adiciona uma nova notificação
+   * Adds a new notification
    */
   show(type: NotificationType, title: string, message: string, duration: number = 5000): string {
     const id = `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -51,7 +51,7 @@ class NotificationService {
     this.notifications.push(notification);
     this.renderNotification(notification);
 
-    // Auto-remove se tiver duração
+    // Auto-remove if it has duration
     if (duration > 0) {
       setTimeout(() => {
         this.remove(id);
@@ -62,7 +62,7 @@ class NotificationService {
   }
 
   /**
-   * Remove uma notificação
+   * Removes a notification
    */
   remove(id: string): void {
     const notification = this.notifications.find(n => n.id === id);
@@ -79,7 +79,7 @@ class NotificationService {
   }
 
   /**
-   * Remove todas as notificações
+   * Removes all notifications
    */
   clear(): void {
     this.notifications.forEach(notification => {
@@ -88,7 +88,7 @@ class NotificationService {
   }
 
   /**
-   * Renderiza uma notificação
+   * Renders a notification
    */
   private renderNotification(notification: Notification): void {
     if (!this.container) return;
@@ -127,7 +127,7 @@ class NotificationService {
 
     this.container.insertAdjacentHTML('beforeend', notificationHTML);
 
-    // Adiciona animação de entrada
+    // Add entrance animation
     const element = document.getElementById(notification.id);
     if (element) {
       setTimeout(() => {
@@ -136,7 +136,7 @@ class NotificationService {
     }
   }
 
-  // Métodos de conveniência
+  // Convenience methods
   success(title: string, message: string, duration?: number): string {
     return this.show('success', title, message, duration);
   }
@@ -154,10 +154,10 @@ class NotificationService {
   }
 }
 
-// Exporta uma instância singleton
+// Export a singleton instance
 export const notificationService = new NotificationService();
 
-// Adiciona CSS para animações
+// Add CSS for animations
 const style = document.createElement('style');
 style.textContent = `
   .notification-enter {

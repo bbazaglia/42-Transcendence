@@ -1,7 +1,7 @@
-import { Router } from './Router'
-import { TournamentManager } from './TournamentManager'
-import { GameManager } from './GameManager'
-import { GameCustomization } from './GameCustomization'
+import { Router } from './utils/Router'
+import { TournamentManager } from './managers/TournamentManager'
+import { GameManager } from './managers/GameManager'
+import { GameCustomization } from './managers/GameCustomization'
 import { AuthModal } from './components/AuthModal'
 import { authService } from './services/AuthService'
 
@@ -27,7 +27,7 @@ export class App {
     this.render()
     this.setupCustomizationHandlers()
     this.setupAuthListeners()
-    this.updateAuthStatus()
+    // Does not call updateAuthStatus() automatically - only when needed
     
     // Listen for tournament updates
     window.addEventListener('tournament-updated', () => {

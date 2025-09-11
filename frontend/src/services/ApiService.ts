@@ -1,6 +1,6 @@
 /**
- * Serviço para comunicação com a API do backend
- * Centraliza todas as chamadas HTTP e tratamento de erros
+ * Service for backend API communication
+ * Centralizes all HTTP calls and error handling
  */
 
 import { notificationService } from './NotificationService.js';
@@ -43,15 +43,15 @@ class ApiService {
   private baseUrl: string;
 
   constructor() {
-    // Em desenvolvimento, usa o proxy do Vite
-    // Em produção, usa a URL do backend
+    // In development, uses Vite proxy
+    // In production, uses backend URL
     this.baseUrl = (import.meta as any).env?.DEV ? '/api' : 'http://localhost:3000/api';
   }
 
   /**
-   * Faz uma requisição HTTP genérica
+   * Makes a generic HTTP request
    */
-  private async request<T>(
+  async request<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
@@ -63,7 +63,7 @@ class ApiService {
           'Content-Type': 'application/json',
           ...options.headers,
         },
-        credentials: 'include', // Importante para cookies
+        credentials: 'include', // Important for cookies
       };
 
       const response = await fetch(url, { ...defaultOptions, ...options });
@@ -78,8 +78,10 @@ class ApiService {
       if (!response.ok) {
         const errorMessage = data?.message || `HTTP ${response.status}: ${response.statusText}`;
         
-        // Mostra notificação de erro para o usuário
-        notificationService.error('Erro na API', errorMessage);
+        // Don't show notification for 401 error (not authenticated) - this is normal
+        if (response.status !== 401) {
+          notificationService.error('Erro na API', errorMessage);
+        }
         
         return {
           error: errorMessage,
@@ -95,7 +97,7 @@ class ApiService {
       console.error('API Request failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'Network error';
       
-      // Mostra notificação de erro de rede
+      // Show network error notification
       notificationService.error('Erro de Conexão', errorMessage);
       
       return {
@@ -106,7 +108,7 @@ class ApiService {
   }
 
   /**
-   * Autenticação - Registro de usuário
+   * Authentication - User registration
    */
   async register(userData: RegisterRequest): Promise<ApiResponse<User>> {
     return this.request<User>('/auth/register', {
@@ -116,7 +118,7 @@ class ApiService {
   }
 
   /**
-   * Autenticação - Login de usuário
+   * Authentication - User login
    */
   async login(credentials: LoginRequest): Promise<ApiResponse<User>> {
     return this.request<User>('/auth/login', {
@@ -126,42 +128,44 @@ class ApiService {
   }
 
   /**
-   * Busca perfil público de um usuário
+   * Gets public profile of a user
    */
   async getUserProfile(userId: number): Promise<ApiResponse<User>> {
     return this.request<User>(`/users/${userId}`);
   }
 
   /**
-   * Busca histórico de partidas de um usuário
+   * Gets match history of a user
    */
   async getUserMatchHistory(userId: number): Promise<ApiResponse<Match[]>> {
     return this.request<Match[]>(`/users/${userId}/history`);
   }
 
   /**
-   * Health check do backend
+   * Backend health check
    */
   async healthCheck(): Promise<ApiResponse> {
     return this.request('/health');
   }
 
   /**
-   * Verifica se o usuário está autenticado
-   * (faz uma requisição que requer autenticação)
+   * Checks if the user is authenticated
+   * (makes a request that requires authentication)
    */
   async checkAuth(): Promise<boolean> {
     try {
-      // Tenta buscar o perfil do usuário atual
-      // Se falhar, significa que não está autenticado
+      // Tries to get the current user profile
+      // If it fails, it means the user is not authenticated
       const response = await this.request('/users/1'); // ID temporário
       return response.status === 200;
-    } catch {
+    } catch (error) {
+      // If it's a 401 error (not authenticated), it's not a real error
+      // Just returns false silently
       return false;
     }
   }
 }
 
-// Exporta uma instância singleton
+// Export a singleton instance
 export const apiService = new ApiService();
 export default apiService;

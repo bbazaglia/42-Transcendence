@@ -1,4 +1,5 @@
-import { TournamentStatus } from '@prisma/client';
+import pkg from '@prisma/client';
+const { TournamentStatus } = pkg;
 import { tournamentDetailSelect } from '../lib/prismaSelects.js';
 
 export default async function (fastify, opts) {

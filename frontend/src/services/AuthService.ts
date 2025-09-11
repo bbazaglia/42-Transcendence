@@ -1,6 +1,6 @@
 /**
- * Serviço de autenticação
- * Gerencia estado do usuário logado e operações de auth
+ * Authentication service
+ * Manages logged user state and auth operations
  */
 
 import { apiService, User, LoginRequest, RegisterRequest } from './ApiService.js';
@@ -22,17 +22,17 @@ class AuthService {
   private listeners: Array<(state: AuthState) => void> = [];
 
   constructor() {
-    // Verifica se há um usuário logado ao inicializar
-    this.checkAuthStatus();
+    // Does not check authentication automatically on initialization
+    // Verification only happens when user tries to login
   }
 
   /**
-   * Adiciona um listener para mudanças no estado de auth
+   * Adds a listener for auth state changes
    */
   subscribe(listener: (state: AuthState) => void): () => void {
     this.listeners.push(listener);
     
-    // Retorna função para remover o listener
+    // Returns function to remove the listener
     return () => {
       const index = this.listeners.indexOf(listener);
       if (index > -1) {
@@ -42,14 +42,14 @@ class AuthService {
   }
 
   /**
-   * Notifica todos os listeners sobre mudanças no estado
+   * Notifies all listeners about state changes
    */
   private notifyListeners(): void {
     this.listeners.forEach(listener => listener(this.state));
   }
 
   /**
-   * Atualiza o estado interno
+   * Updates internal state
    */
   private setState(newState: Partial<AuthState>): void {
     this.state = { ...this.state, ...newState };
@@ -57,25 +57,26 @@ class AuthService {
   }
 
   /**
-   * Retorna o estado atual
+   * Returns current state
    */
   getState(): AuthState {
     return { ...this.state };
   }
 
   /**
-   * Verifica se o usuário está autenticado
+   * Checks if the user is authenticated
+   * Public method to be called when needed
    */
-  private async checkAuthStatus(): Promise<void> {
+  async checkAuthStatus(): Promise<void> {
     this.setState({ isLoading: true });
 
     try {
-      // Verifica se há um token válido fazendo uma requisição autenticada
+      // Checks if there is a valid token by making an authenticated request
       const isAuth = await apiService.checkAuth();
       
       if (isAuth) {
-        // Se autenticado, você pode buscar dados do usuário atual
-        // Por enquanto, vamos simular que está logado
+        // If authenticated, you can fetch current user data
+        // For now, we will simulate that user is logged in
         this.setState({
           isAuthenticated: true,
           isLoading: false,
@@ -98,7 +99,7 @@ class AuthService {
   }
 
   /**
-   * Registra um novo usuário
+   * Registers a new user
    */
   async register(userData: RegisterRequest): Promise<{ success: boolean; error?: string }> {
     this.setState({ isLoading: true });
@@ -111,7 +112,7 @@ class AuthService {
         return { success: false, error: response.error };
       }
 
-      // Após registro bem-sucedido, fazer login automaticamente
+      // After successful registration, automatically login
       return await this.login({
         email: userData.email,
         password: userData.password,
@@ -126,7 +127,7 @@ class AuthService {
   }
 
   /**
-   * Faz login do usuário
+   * Logs in the user
    */
   async login(credentials: LoginRequest): Promise<{ success: boolean; error?: string }> {
     this.setState({ isLoading: true });
@@ -139,7 +140,7 @@ class AuthService {
         return { success: false, error: response.error };
       }
 
-      // Login bem-sucedido
+      // Successful login
       this.setState({
         user: response.data!,
         isAuthenticated: true,
@@ -158,13 +159,13 @@ class AuthService {
   }
 
   /**
-   * Faz logout do usuário
+   * Logs out the user
    */
   async logout(): Promise<void> {
     const userName = this.state.user?.displayName;
     
-    // Limpa o cookie fazendo uma requisição para logout (se existir endpoint)
-    // Por enquanto, apenas limpa o estado local
+    // Clears the cookie by making a logout request (if endpoint exists)
+    // For now, just clears local state
     this.setState({
       user: null,
       isAuthenticated: false,
@@ -173,32 +174,32 @@ class AuthService {
 
     notificationService.info('Logout realizado', userName ? `Até logo, ${userName}!` : 'Logout realizado com sucesso!');
 
-    // Opcional: fazer requisição para limpar cookie no servidor
+    // Optional: make request to clear cookie on server
     // await apiService.logout();
   }
 
   /**
-   * Retorna o usuário atual
+   * Returns the current user
    */
   getCurrentUser(): User | null {
     return this.state.user;
   }
 
   /**
-   * Verifica se está autenticado
+   * Checks if authenticated
    */
   isAuthenticated(): boolean {
     return this.state.isAuthenticated;
   }
 
   /**
-   * Verifica se está carregando
+   * Checks if loading
    */
   isLoading(): boolean {
     return this.state.isLoading;
   }
 }
 
-// Exporta uma instância singleton
+// Export a singleton instance
 export const authService = new AuthService();
 export default authService;

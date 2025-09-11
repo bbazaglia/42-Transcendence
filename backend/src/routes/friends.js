@@ -1,4 +1,5 @@
-import { FriendshipStatus } from '@prisma/client';
+import pkg from '@prisma/client';
+const { FriendshipStatus } = pkg;
 import { publicUserSelect } from '../lib/prismaSelects.js';
 
 async function getFriendsForUser(prisma, userId, status, onlineUserIds = new Set()) {

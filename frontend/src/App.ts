@@ -2,12 +2,15 @@ import { Router } from './Router'
 import { TournamentManager } from './TournamentManager'
 import { GameManager } from './GameManager'
 import { GameCustomization } from './GameCustomization'
+import { AuthModal } from './components/AuthModal'
+import { authService } from './services/AuthService'
 
 export class App {
   private router: Router
   private tournamentManager: TournamentManager
   private gameManager: GameManager
   private customization: GameCustomization
+  private authModal: AuthModal
   private rootElement: HTMLElement
 
   constructor() {
@@ -15,6 +18,7 @@ export class App {
     this.tournamentManager = new TournamentManager()
     this.gameManager = new GameManager()
     this.customization = GameCustomization.getInstance()
+    this.authModal = new AuthModal()
     this.rootElement = document.getElementById('root')!
   }
 
@@ -22,6 +26,8 @@ export class App {
     this.setupRouting()
     this.render()
     this.setupCustomizationHandlers()
+    this.setupAuthListeners()
+    this.updateAuthStatus()
     
     // Listen for tournament updates
     window.addEventListener('tournament-updated', () => {
@@ -79,14 +85,15 @@ export class App {
   private showHomePage(): void {
     this.rootElement.innerHTML = `
       <div class="min-h-screen mesh-gradient relative overflow-hidden">
+        ${this.renderAuthBar()}
         
         <!-- Main content -->
-        <div class="relative z-10 flex items-center justify-center min-h-screen px-4">
+        <div class="relative z-10 flex items-center justify-center min-h-screen px-4 pt-20">
           <div class="text-center max-w-4xl">
 
             
             <!-- Title -->
-            <h1 class="text-7xl font-black mb-4 bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 bg-clip-text text-transparent mt-16 pt-4 pb-2 leading-tight press-start-font">
+            <h1 class="text-7xl font-black mb-4 bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 bg-clip-text text-transparent pt-4 pb-2 leading-tight press-start-font">
               Pong Tournament
             </h1>
             
@@ -95,7 +102,7 @@ export class App {
               Experience the ultimate competitive Pong experience with tournament brackets, 
               real-time gameplay, epic battles for glory, and customizable game options.
             </p>
-            
+
             <!-- Action buttons -->
             <div class="flex flex-col sm:flex-row gap-6 justify-center items-center">
               <button id="tournament-btn" 
@@ -154,6 +161,9 @@ export class App {
       window.history.pushState({}, '', '/tournament')
       this.render()
     })
+
+    // Auth button listeners
+    this.setupAuthBarListeners()
   }
 
   private showTournamentPage(): void {
@@ -165,9 +175,10 @@ export class App {
 
     this.rootElement.innerHTML = `
       <div class="min-h-screen mesh-gradient relative overflow-hidden">
+        ${this.renderAuthBar()}
         
         <!-- Main content -->
-        <div class="relative z-10 p-8">
+        <div class="relative z-10 p-8 pt-24">
           <div class="max-w-6xl mx-auto">
             <!-- Header -->
             <div class="text-center mb-12">
@@ -212,9 +223,10 @@ export class App {
   private showGamePage(isQuickGame: boolean): void {
     this.rootElement.innerHTML = `
       <div class="min-h-screen mesh-gradient relative overflow-hidden">
+        ${this.renderAuthBar()}
         
         <!-- Main content -->
-        <div class="relative z-10 flex items-center justify-center min-h-screen px-4">
+        <div class="relative z-10 flex items-center justify-center min-h-screen px-4 pt-20">
           <div class="text-center">
             <h2 class="text-4xl font-black mb-6 bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 bg-clip-text text-transparent press-start-font">
               ${isQuickGame ? 'Quick Game' : 'Tournament Match'}
@@ -306,15 +318,13 @@ export class App {
   private showRegistrationPage(): void {
     this.rootElement.innerHTML = `
       <div class="min-h-screen mesh-gradient relative overflow-hidden">
+        ${this.renderAuthBar()}
         
         <!-- Main content -->
-        <div class="relative z-10 flex items-center justify-center min-h-screen px-4">
+        <div class="relative z-10 flex items-center justify-center min-h-screen px-4 pt-20">
           <div class="bg-white/10 backdrop-blur-xl rounded-2xl p-8 max-w-md w-full mx-4 border border-white/20 shadow-2xl">
             <!-- Header -->
             <div class="text-center mb-8">
-              <div class="w-16 h-16 bg-gradient-to-br from-cyan-400 to-purple-600 rounded-xl flex items-center justify-center mx-auto mb-4">
-                <span class="text-2xl">🏆</span>
-              </div>
               <h2 class="text-3xl font-black mb-2 bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">
                 Tournament Registration
               </h2>
@@ -614,6 +624,81 @@ export class App {
     document.getElementById('back-main-btn')?.addEventListener('click', (e) => {
       e.preventDefault()
       this.gameManager.backToMain()
+    })
+  }
+
+  // Auth-related methods
+  private setupAuthListeners(): void {
+    // Listen for auth state changes
+    authService.subscribe(() => {
+      this.updateAuthStatus()
+    })
+  }
+
+  private updateAuthStatus(): void {
+    const userInfo = document.getElementById('user-info')
+    const guestInfo = document.getElementById('guest-info')
+    const userName = document.getElementById('user-name')
+    const userInitial = document.getElementById('user-initial')
+
+    if (authService.isAuthenticated()) {
+      const user = authService.getCurrentUser()
+      if (user) {
+        userName!.textContent = user.displayName
+        userInitial!.textContent = user.displayName.charAt(0).toUpperCase()
+        userInfo?.classList.remove('hidden')
+        guestInfo?.classList.add('hidden')
+      }
+    } else {
+      userInfo?.classList.add('hidden')
+      guestInfo?.classList.remove('hidden')
+    }
+  }
+
+  private renderAuthBar(): string {
+    return `
+      <!-- Auth Bar -->
+      <div class="fixed top-0 left-0 right-0 z-50 bg-black/20 backdrop-blur-md border-b border-white/10">
+        <div class="max-w-7xl mx-auto px-4 py-3">
+          <div class="flex items-center justify-between">
+            <!-- Logo/Brand -->
+            <div class="flex items-center space-x-3">
+            </div>
+            
+            <!-- Auth Status -->
+            <div id="auth-status" class="flex items-center space-x-4">
+              <div id="user-info" class="hidden flex items-center space-x-3">
+                <div class="w-8 h-8 bg-gradient-to-br from-cyan-400 to-purple-600 rounded-full flex items-center justify-center">
+                  <span class="text-sm font-bold text-white" id="user-initial"></span>
+                </div>
+                <span class="text-white text-sm">Olá, <span id="user-name" class="text-cyan-400 font-semibold"></span>!</span>
+                <button id="logout-btn" class="px-3 py-1.5 bg-red-600/20 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-600/30 transition-colors text-xs font-medium">
+                  Sair
+                </button>
+              </div>
+              <div id="guest-info" class="flex items-center space-x-2">
+                <button id="login-btn" class="px-4 py-2 bg-black/60 text-white font-medium rounded-lg border border-white/20 hover:bg-black/80 transition-all duration-300 text-sm">
+                  Sign In
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `
+  }
+
+  private setupAuthBarListeners(): void {
+    // Auth button listeners
+    document.getElementById('login-btn')?.addEventListener('click', (e) => {
+      e.preventDefault()
+      this.authModal.show('login')
+    })
+
+    document.getElementById('logout-btn')?.addEventListener('click', (e) => {
+      e.preventDefault()
+      authService.logout()
+      this.updateAuthStatus()
     })
   }
 }

@@ -9,6 +9,8 @@ services:
     env_file:
       - ./.env
     restart: unless-stopped
+    networks:
+      - app-network
 
   frontend:
     build:
@@ -21,6 +23,12 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+    networks:
+      - app-network
 
 volumes:
   db_data:
+
+networks:
+  app-network:
+    driver: bridge

@@ -1,3 +1,5 @@
+import { matchService } from '../services/MatchService.js';
+
 interface Paddle {
   x: number
   y: number
@@ -456,7 +458,7 @@ export class GameManager {
     this.ball.dy = Math.random() > 0.5 ? ballSpeed : -ballSpeed
   }
 
-  private endGame(): void {
+  private async endGame(): Promise<void> {
     this.gameRunning = false
     if (this.animationId) {
       cancelAnimationFrame(this.animationId)
@@ -465,6 +467,9 @@ export class GameManager {
     const winner = this.score1 > this.score2 ? 'Player 1' : 'Player 2'
     this.gameWinner = winner
     this.gameOver = true
+
+    // Save match to backend
+    await this.saveMatchToBackend(winner)
 
     // Record the match result if this is a tournament match
     // console.log('=== GAME ENDED ===')
@@ -496,6 +501,35 @@ export class GameManager {
       // For quick games, we'll show the game over overlay
       // The user can choose to play again or go back to main
       this.showGameOverButtons()
+    }
+  }
+
+  /**
+   * Saves the match result to the backend
+   */
+  private async saveMatchToBackend(winner: string): Promise<void> {
+    try {
+      // Create match result data
+      const matchResult = matchService.createMatchResult(
+        'Player 1', // Player 1 name
+        'Player 2', // Player 2 name
+        this.score1,
+        this.score2,
+        winner
+      )
+
+      if (matchResult) {
+        const result = await matchService.createMatch(matchResult)
+        if (result.success) {
+          console.log('Match saved to backend successfully')
+        } else {
+          console.warn('Failed to save match to backend:', result.error)
+        }
+      } else {
+        console.log('Skipping match save - user not authenticated')
+      }
+    } catch (error) {
+      console.error('Error saving match to backend:', error)
     }
   }
 

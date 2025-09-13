@@ -3,7 +3,6 @@
  * Centralizes all HTTP calls and error handling
  */
 
-import { notificationService } from './NotificationService.js';
 
 export interface ApiResponse<T = any> {
   data?: T;
@@ -15,6 +14,9 @@ export interface User {
   id: number;
   displayName: string;
   email: string;
+  wins: number;
+  losses: number;
+  avatarUrl: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -36,7 +38,16 @@ export interface Match {
   playerTwoId: number;
   playerOneScore: number;
   playerTwoScore: number;
+  winnerId: number | null;
   playedAt: string;
+}
+
+export interface CreateMatchRequest {
+  playerOneId: number;
+  playerTwoId: number;
+  playerOneScore: number;
+  playerTwoScore: number;
+  winnerId: number;
 }
 
 class ApiService {
@@ -80,7 +91,7 @@ class ApiService {
         
         // Don't show notification for 401 error (not authenticated) - this is normal
         if (response.status !== 401) {
-          notificationService.error('Erro na API', errorMessage);
+          console.error('Erro na API:', errorMessage);
         }
         
         return {
@@ -98,7 +109,7 @@ class ApiService {
       const errorMessage = error instanceof Error ? error.message : 'Network error';
       
       // Show network error notification
-      notificationService.error('Erro de Conexão', errorMessage);
+      console.error('Erro de Conexão:', errorMessage);
       
       return {
         error: errorMessage,
@@ -135,13 +146,6 @@ class ApiService {
   }
 
   /**
-   * Gets match history of a user
-   */
-  async getUserMatchHistory(userId: number): Promise<ApiResponse<Match[]>> {
-    return this.request<Match[]>(`/users/${userId}/history`);
-  }
-
-  /**
    * Backend health check
    */
   async healthCheck(): Promise<ApiResponse> {
@@ -163,6 +167,40 @@ class ApiService {
       // Just returns false silently
       return false;
     }
+  }
+
+  /**
+   * Creates a new match record
+   */
+  async createMatch(matchData: CreateMatchRequest): Promise<ApiResponse<Match>> {
+    return this.request<Match>('/matches', {
+      method: 'POST',
+      body: JSON.stringify(matchData),
+    });
+  }
+
+  /**
+   * Gets match history of a user
+   */
+  async getUserMatchHistory(userId: number): Promise<ApiResponse<Match[]>> {
+    return this.request<Match[]>(`/users/${userId}/history`);
+  }
+
+  /**
+   * Updates user profile information
+   */
+  async updateUserProfile(userId: number, profileData: { displayName?: string; avatarUrl?: string }): Promise<ApiResponse<User>> {
+    return this.request<User>(`/users/${userId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(profileData),
+    });
+  }
+
+  /**
+   * Searches for users by display name
+   */
+  async searchUsers(query: string): Promise<ApiResponse<User[]>> {
+    return this.request<User[]>(`/users/search?q=${encodeURIComponent(query)}`);
   }
 }
 

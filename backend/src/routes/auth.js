@@ -29,8 +29,7 @@ export default async function (fastify, opts) {
             const existingUserByDisplayName = await fastify.prisma.user.findFirst({
                 where: {
                     displayName: {
-                        equals: displayName,
-                        mode: 'insensitive'
+                        equals: displayName
                     }
                 }
             });

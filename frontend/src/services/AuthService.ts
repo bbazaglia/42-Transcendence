@@ -4,7 +4,6 @@
  */
 
 import { apiService, User, LoginRequest, RegisterRequest } from './ApiService.js';
-import { notificationService } from './NotificationService.js';
 
 export interface AuthState {
   user: User | null;
@@ -22,8 +21,8 @@ class AuthService {
   private listeners: Array<(state: AuthState) => void> = [];
 
   constructor() {
-    // Does not check authentication automatically on initialization
-    // Verification only happens when user tries to login
+    // Restore authentication state from localStorage on initialization
+    this.restoreAuthState();
   }
 
   /**
@@ -53,7 +52,41 @@ class AuthService {
    */
   private setState(newState: Partial<AuthState>): void {
     this.state = { ...this.state, ...newState };
+    this.persistAuthState();
     this.notifyListeners();
+  }
+
+  /**
+   * Persists authentication state to localStorage
+   */
+  private persistAuthState(): void {
+    try {
+      console.log('Persisting auth state to localStorage:', this.state);
+      localStorage.setItem('authState', JSON.stringify(this.state));
+    } catch (error) {
+      console.error('Error persisting auth state:', error);
+    }
+  }
+
+  /**
+   * Restores authentication state from localStorage
+   */
+  private restoreAuthState(): void {
+    try {
+      const savedState = localStorage.getItem('authState');
+      if (savedState) {
+        const parsedState = JSON.parse(savedState);
+        console.log('Restoring auth state from localStorage:', parsedState);
+        this.state = { ...this.state, ...parsedState };
+        this.notifyListeners();
+      } else {
+        console.log('No saved auth state found in localStorage');
+      }
+    } catch (error) {
+      console.error('Error restoring auth state:', error);
+      // Clear corrupted data
+      localStorage.removeItem('authState');
+    }
   }
 
   /**
@@ -75,26 +108,40 @@ class AuthService {
       const isAuth = await apiService.checkAuth();
       
       if (isAuth) {
-        // If authenticated, you can fetch current user data
-        // For now, we will simulate that user is logged in
+        // If authenticated, keep the current user data
         this.setState({
           isAuthenticated: true,
           isLoading: false,
         });
       } else {
+        // Only clear auth state if we were previously authenticated
+        // This prevents clearing the state when just checking on app load
+        if (this.state.isAuthenticated) {
+          this.setState({
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+          });
+        } else {
+          this.setState({
+            isLoading: false,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error checking auth status:', error);
+      // Only clear auth state if we were previously authenticated
+      if (this.state.isAuthenticated) {
         this.setState({
           user: null,
           isAuthenticated: false,
           isLoading: false,
         });
+      } else {
+        this.setState({
+          isLoading: false,
+        });
       }
-    } catch (error) {
-      console.error('Error checking auth status:', error);
-      this.setState({
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-      });
     }
   }
 
@@ -147,7 +194,7 @@ class AuthService {
         isLoading: false,
       });
 
-      notificationService.success('Login realizado!', `Bem-vindo, ${response.data!.displayName}!`);
+      console.log(`Login realizado! Bem-vindo, ${response.data!.displayName}!`);
       return { success: true };
     } catch (error) {
       this.setState({ isLoading: false });
@@ -172,7 +219,10 @@ class AuthService {
       isLoading: false,
     });
 
-    notificationService.info('Logout realizado', userName ? `Até logo, ${userName}!` : 'Logout realizado com sucesso!');
+    // Clear localStorage
+    localStorage.removeItem('authState');
+
+    console.log(userName ? `Logout realizado. Até logo, ${userName}!` : 'Logout realizado com sucesso!');
 
     // Optional: make request to clear cookie on server
     // await apiService.logout();
@@ -197,6 +247,45 @@ class AuthService {
    */
   isLoading(): boolean {
     return this.state.isLoading;
+  }
+
+  /**
+   * Updates user stats after a match
+   */
+  updateUserStats(wins: number, losses: number): void {
+    if (this.state.user) {
+      this.setState({
+        user: {
+          ...this.state.user,
+          wins: this.state.user.wins + wins,
+          losses: this.state.user.losses + losses,
+        }
+      });
+    }
+  }
+
+  /**
+   * Updates user profile information
+   */
+  updateUserProfile(userData: any): void {
+    if (this.state.user) {
+      this.setState({
+        user: {
+          ...this.state.user,
+          ...userData,
+        }
+      });
+    }
+  }
+
+  /**
+   * Debug method to check current auth state
+   */
+  debugAuthState(): void {
+    console.log('Current auth state:', this.state);
+    console.log('localStorage authState:', localStorage.getItem('authState'));
+    console.log('Is authenticated:', this.isAuthenticated());
+    console.log('Current user:', this.getCurrentUser());
   }
 }
 

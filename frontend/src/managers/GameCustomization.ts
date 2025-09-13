@@ -312,7 +312,7 @@ export class GameCustomization {
     //const currentTheme = this.getCurrentTheme()
     
     return `
-      <div class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+      <div class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[60]">
         <div class="bg-white/10 backdrop-blur-xl rounded-2xl p-8 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto border border-white/20 shadow-2xl">
           <div class="flex justify-between items-center mb-6">
             <h2 class="text-3xl font-black bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent orbitron-font">
@@ -400,11 +400,11 @@ export class GameCustomization {
           <!-- Action Buttons -->
           <div class="flex justify-end space-x-4 mt-8 pt-6 border-t border-white/20">
             <button onclick="resetToDefaults()" 
-                    class="px-6 py-3 bg-gradient-to-r from-gray-600 to-gray-700 text-white font-semibold rounded-lg hover:shadow-lg transition-all duration-300">
+                    class="px-3 py-1.5 bg-cyan-600/20 text-cyan-400 border border-cyan-500/30 rounded-lg hover:bg-cyan-600/30 transition-colors text-xs font-medium">
               Reset to Defaults
             </button>
             <button onclick="saveCustomizationSettings()" 
-                    class="px-6 py-3 bg-gradient-to-r from-cyan-600 to-purple-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all duration-300">
+                    class="px-3 py-1.5 bg-cyan-600/20 text-cyan-400 border border-cyan-500/30 rounded-lg hover:bg-cyan-600/30 transition-colors text-xs font-medium">
               Save Settings
             </button>
           </div>
@@ -416,7 +416,7 @@ export class GameCustomization {
   renderSettingsButton(): string {
     return `
       <button onclick="openCustomizationMenu()" 
-              class="fixed top-4 right-4 z-40 p-2 text-white hover:text-cyan-400 transition-all duration-300 transform hover:scale-110">
+              class="fixed top-20 right-4 z-50 p-2 text-white hover:text-cyan-400 transition-all duration-300 transform hover:scale-110 bg-black/20 backdrop-blur-sm rounded-lg border border-white/10">
         <span class="text-2xl">⚙️</span>
       </button>
     `
@@ -427,7 +427,7 @@ export class GameCustomization {
     if (active.length === 0) return ''
 
     return `
-      <div class="fixed top-4 left-4 z-40 space-y-2">
+      <div class="fixed top-16 left-4 z-50 space-y-2">
         ${active.map(({ powerUp, endTime }) => {
           const remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000))
           const progress = (remaining / (powerUp.duration / 1000)) * 100

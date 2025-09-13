@@ -239,13 +239,13 @@ export class App {
                   <div class="bg-black/80 backdrop-blur-sm rounded-2xl p-8 border border-white/20 text-center">
                     <h3 class="text-3xl font-bold text-cyan-400 mb-2 orbitron-font">Game Over</h3>
                     <p class="text-xl text-yellow-400 mb-6" id="winner-text">Player Wins!</p>
-                    <div class="space-y-4">
+                    <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
                       <button id="play-again-btn" 
-                              class="px-6 py-3 bg-gradient-to-r from-teal-600 to-cyan-500 text-white font-bold rounded-lg shadow-lg hover:shadow-teal-500/25 transition-all duration-300 transform hover:scale-105 mr-4">
+                              class="px-6 py-3 bg-cyan-600/20 text-white border border-cyan-500/30 font-bold rounded-xl hover:bg-cyan-600/30 transition-colors">
                         Play Again
                       </button>
                       <button id="back-main-btn" 
-                              class="px-6 py-3 bg-gradient-to-r from-purple-600 to-cyan-600 text-white font-bold rounded-lg shadow-lg hover:shadow-purple-500/25 transition-all duration-300 transform hover:scale-105">
+                              class="px-6 py-3 bg-cyan-600/20 text-white border border-cyan-500/30 font-bold rounded-xl hover:bg-cyan-600/30 transition-colors">
                         Back to Home
                       </button>
                     </div>

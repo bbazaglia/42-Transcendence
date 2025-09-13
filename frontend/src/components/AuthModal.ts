@@ -25,7 +25,7 @@ export class AuthModal {
             
             <!-- Header -->
             <div class="text-center mb-8">
-              <h2 id="auth-title" class="text-3xl font-black mb-2 bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent orbitron-font">
+              <h2 id="auth-title" class="text-3xl font-black mb-2 text-cyan-400 orbitron-font">
                 Login
               </h2>
             </div>
@@ -57,7 +57,7 @@ export class AuthModal {
               </div>
 
               <button type="submit" id="auth-submit-btn"
-                      class="w-full py-4 bg-gradient-to-r from-purple-600 to-cyan-600 text-white font-bold rounded-xl shadow-lg hover:shadow-purple-500/25 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed">
+                      class="w-full py-4 bg-cyan-600/20 text-white border border-cyan-500/30 font-bold rounded-lg hover:bg-cyan-600/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                 <span id="submit-text">Entrar</span>
                 <span id="loading-spinner" class="hidden">⏳ Carregando...</span>
               </button>

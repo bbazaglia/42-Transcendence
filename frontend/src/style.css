@@ -483,6 +483,61 @@ body {
   font-family: 'Orbitron', sans-serif;
 }
 
+/* Navigation styles */
+.nav-link {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #06b6d4, #8b5cf6);
+  transition: width 0.3s ease;
+}
+
+.nav-link:hover::after {
+  width: 100%;
+}
+
+/* Mobile menu animations */
+#mobile-menu {
+  transition: all 0.3s ease-in-out;
+  transform: translateY(-100%);
+  opacity: 0;
+}
+
+#mobile-menu:not(.hidden) {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* Mobile menu button animation */
+#mobile-menu-btn {
+  transition: transform 0.3s ease;
+}
+
+#mobile-menu-btn:hover {
+  transform: scale(1.1);
+}
+
+/* Mobile menu items */
+#mobile-menu a,
+#mobile-menu button {
+  transition: all 0.2s ease;
+  border-radius: 8px;
+}
+
+#mobile-menu a:hover,
+#mobile-menu button:hover {
+  background-color: rgba(6, 182, 212, 0.1);
+  transform: translateX(4px);
+}
+
 /* Mesh gradient class */
 .mesh-gradient {
     --y-0: 63%;

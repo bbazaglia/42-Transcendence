@@ -1,20 +1,24 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  root: './src',
   build: {
-    outDir: '../dist',      // Output to frontend/dist
+    outDir: 'dist',
     emptyOutDir: true,
   },
   server: {
     port: 5173,
-    host: true,
+    host: '0.0.0.0',
     proxy: {
       '/api': {
         target: 'http://backend:3000',
         changeOrigin: true,
         secure: false,
       },
+    },
+  },
+  resolve: {
+    alias: {
+      '@': '/src',
     },
   },
 });

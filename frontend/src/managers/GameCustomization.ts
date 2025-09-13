@@ -315,7 +315,7 @@ export class GameCustomization {
       <div class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[60]">
         <div class="bg-white/10 backdrop-blur-xl rounded-2xl p-8 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto border border-white/20 shadow-2xl">
           <div class="flex justify-between items-center mb-6">
-            <h2 class="text-3xl font-black bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent orbitron-font">
+            <h2 class="text-3xl font-black text-cyan-400 orbitron-font">
               Game Customization
             </h2>
             <button onclick="closeCustomizationMenu()" class="text-white hover:text-cyan-400 text-2xl">
@@ -400,11 +400,11 @@ export class GameCustomization {
           <!-- Action Buttons -->
           <div class="flex justify-end space-x-4 mt-8 pt-6 border-t border-white/20">
             <button onclick="resetToDefaults()" 
-                    class="px-3 py-1.5 bg-cyan-600/20 text-cyan-400 border border-cyan-500/30 rounded-lg hover:bg-cyan-600/30 transition-colors text-xs font-medium">
+                    class="px-6 py-3 bg-cyan-600/20 text-cyan-400 border border-cyan-500/30 rounded-xl hover:bg-cyan-600/30 transition-colors text-sm font-bold">
               Reset to Defaults
             </button>
             <button onclick="saveCustomizationSettings()" 
-                    class="px-3 py-1.5 bg-cyan-600/20 text-cyan-400 border border-cyan-500/30 rounded-lg hover:bg-cyan-600/30 transition-colors text-xs font-medium">
+                    class="px-6 py-3 bg-cyan-600/20 text-cyan-400 border border-cyan-500/30 rounded-xl hover:bg-cyan-600/30 transition-colors text-sm font-bold">
               Save Settings
             </button>
           </div>

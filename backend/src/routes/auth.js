@@ -30,7 +30,6 @@ export default async function (fastify, opts) {
                 where: {
                     displayName: {
                         equals: displayName,
-                        mode: 'insensitive'
                     }
                 }
             });

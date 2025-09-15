@@ -4,10 +4,10 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     init: true
-    command: npm run dev
+    command: sh -c "npx prisma migrate deploy --schema=./src/schemas/schema.prisma && npm run dev"
     volumes:
       - ./backend/src:/app/src
-      - db_data:/app/data
+      - ./backend/db_data:/app/data
     ports:
       # Exposing the backend API for development
       - "3000:3000"

@@ -148,43 +148,32 @@ export default async function (fastify, opts) {
       try {
         const { token } = await fastify.googleOAuth2.getAccessTokenFromAuthorizationCodeFlow(request);
 
-        const userResponse = await fetch(process.env.GOOGLE_OAUTH_USER_INFO_URL, {
+        const googleResponse = await fetch(process.env.GOOGLE_OAUTH_USER_INFO_URL, {
           headers: {
             'Authorization': `Bearer ${token.access_token}`,
           },
         });
 
-        let googleData = await userResponse.json();
+        const googleData = await googleResponse.json();
 
-        const existingUserByDisplayName = await fastify.prisma.user.findFirst({
-          where: {
-            displayName: {
-              equals: googleData.displayName
-            }
-          }
+        let user = {
+          displayName: googleData.name,
+          email: googleData.email,
+          googleId: googleData.id,
+          avatarUrl: googleData.picture, //TODO dowload it from google URL and store it locally.
+        };
+
+        user.displayName = (await fastify.prisma.user.findFirst({
+          where: { displayName: user.displayName }
+        })) ? generateUsername() : user.displayName;
+
+        const dbUser = await fastify.prisma.user.upsert({
+          where: { email: user.email.toLowerCase() },
+          update: { ...user },
+          create: { ...user },
         });
 
-        if (existingUserByDisplayName) {
-          googleData.name = generateUsername();
-        }
-
-        const existingUserByEmail = await fastify.prisma.user.findUnique({
-          where: { email: googleData.email.toLowerCase() },
-          select: { id: true }
-        });
-
-        if (!existingUserByEmail) {
-          await fastify.prisma.user.create({
-            data: {
-              displayName: googleData.name,
-              email: googleData.email,
-              googleId: googleData.id,
-              avatarUrl: googleData.picture, //implement logic to download image from google?
-            }
-          });
-        }
-
-        const jwt_signed_token = fastify.jwt.sign({ id: googleData.id, displayName: googleData.name }); //chang from googledata.id to db.id
+        const jwt_signed_token = fastify.jwt.sign({ id: dbUser.id, displayName: dbUser.displayName });
 
         reply.setCookie('transcendence-tok', jwt_signed_token, {
             path: '/',

@@ -163,9 +163,15 @@ export default async function (fastify, opts) {
           avatarUrl: googleData.picture, //TODO dowload it from google URL and store it locally.
         };
 
-        user.displayName = (await fastify.prisma.user.findFirst({
-          where: { displayName: user.displayName }
-        })) ? generateUsername() : user.displayName;
+        const existingUser = await fastify.prisma.user.findUnique({
+          where: { email: user.email.toLowerCase() }
+        });
+
+        if (!existingUser) {
+          user.displayName = (await fastify.prisma.user.findFirst({
+            where: { displayName: user.displayName }
+          })) ? generateUsername() : user.displayName;
+        }
 
         const dbUser = await fastify.prisma.user.upsert({
           where: { email: user.email.toLowerCase() },
@@ -173,7 +179,7 @@ export default async function (fastify, opts) {
           create: { ...user },
         });
 
-        const { payload } = { id: dbUser.id, displayName: dbUser.displayName };
+        const payload  = { id: dbUser.id, displayName: dbUser.displayName };
         const jwt_signed_token = fastify.jwt.sign({ payload });
 
         reply.setCookie('token', jwt_signed_token, { //TODO check this token name

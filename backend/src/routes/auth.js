@@ -135,13 +135,56 @@ export default async function (fastify, opts) {
     });
 
     // ROUTE: Redirects the user to the Google sign-in page.
-    fastify.get('/google', async (request, reply) => {
-        // Google OAuth logic
-    });
 
     // ROUTE: The route Google redirects back to after a user authorizes the app.
-    fastify.get('/googles/callback', async (request, reply) => {
-        // Google OAuth callback logic
+    fastify.get('/google/callback', async (request, reply) => {
+      try {
+        // Exchange authorization code for access token
+        const url = process.env.GOOGLE_OAUTH_TOKEN_URL;
+
+        const params = new URLSearchParams({
+          code: request.query.code,
+          client_id: process.env.GOOGLE_CLIENT_ID,
+          client_secret: process.env.GOOGLE_CLIENT_SECRET,
+          redirect_uri: process.env.GOOGLE_CALLBACK_URL,
+          grant_type: "authorization_code",
+        });
+
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: params.toString(),
+        });
+
+        const token = await res.json();
+
+        // const token = await fastify.fastifyOauth2.getAccessTokenFromAuthorizationCodeFlow(request);
+
+        // Get user information from Google
+        const userResponse = await fetch(process.env.GOOGLE_OAUTH_USER_INFO_URL, {
+          headers: {
+            'Authorization': `Bearer ${token.access_token}`,
+          },
+        });
+
+        const googleUserData = await userResponse.json();
+
+          // NEW USER - REGISTRATION
+          await fastify.prisma.user.create({
+            data: {
+                displayName: googleUserData.name,
+                email: googleUserData.email,
+                googleId: googleUserData.id,
+            }
+          });
+
+          reply.code(201);
+
+      } catch (error) {
+        fastify.log.error('OAuth callback error:', error);
+        console.log(error);
+        reply.redirect('/?error=oauth_failed');
+      }
     });
 
     // ROUTE: Generates a new secret and QR code for setting up 2FA.

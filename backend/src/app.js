@@ -11,6 +11,7 @@ import { fileURLToPath } from 'url';
 import sharedSchemas from './schemas/sharedSchemas.js'
 import lobbySetup from './plugins/lobbySetup.js';
 import jwt from './plugins/jwt.js';
+import oauth from './plugins/oauth.js';
 import prismaPlugin from './plugins/prisma.js';
 
 import authRoutes from './routes/auth.js';
@@ -35,10 +36,11 @@ async function app(fastify, opts) {
     await fastify.register(sharedSchemas);
     await fastify.register(lobbySetup);
     await fastify.register(jwt);
+    await fastify.register(oauth);
     await fastify.register(prismaPlugin);
 
     // Register routes
-    await fastify.register(authRoutes, { prefix: '/api/auth' });
+    await fastify.register(authRoutes, { prefix: '/auth' });
     await fastify.register(lobbyRoutes, { prefix: '/api/lobby' });
     await fastify.register(friendsRoutes, { prefix: '/api/friends' });
     await fastify.register(healthRoutes, { prefix: '/api/health' });

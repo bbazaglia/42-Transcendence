@@ -1364,27 +1364,20 @@ export class App {
     // Listen for auth state changes
     authService.subscribe(() => {
       this.updateAuthStatus()
+      // Re-render the entire app to update lobby and other components
+      this.render()
     })
   }
 
 
   private updateAuthStatus(): void {
-    const guestInfo = document.getElementById('guest-info')
-    // Mobile elements
-    const mobileGuestInfo = document.getElementById('mobile-guest-info')
-
-    if (authService.isAuthenticated()) {
-      // Hide guest info when authenticated
-      guestInfo?.classList.add('hidden')
-      mobileGuestInfo?.classList.add('hidden')
-    } else {
-      // Show guest info when not authenticated
-      guestInfo?.classList.remove('hidden')
-      mobileGuestInfo?.classList.remove('hidden')
-    }
+    // No need to hide/show guest info since Sign In button is always visible
+    // This method is kept for potential future use
   }
 
   private renderAuthBar(): string {
+    const isAuthenticated = authService.isAuthenticated()
+    
     return `
       <!-- Auth Bar -->
       <div class="fixed top-0 left-0 right-0 z-50 bg-black/20 backdrop-blur-md border-b border-white/10">
@@ -1415,11 +1408,22 @@ export class App {
             
             <!-- Auth Status -->
             <div id="auth-status" class="hidden md:flex items-center space-x-4">
-              <div id="guest-info" class="flex items-center space-x-2">
-                <button id="login-btn" class="px-4 py-2 bg-black/60 text-white font-medium rounded-lg border border-white/20 hover:bg-white/10 hover:border-white/40 transition-all duration-300 text-sm transform hover:scale-105">
-                  Sign In
-                </button>
-              </div>
+              <!-- Always show Sign In button -->
+              <button id="login-btn" class="px-4 py-2 bg-black/60 text-white font-medium rounded-lg border border-white/20 hover:bg-white/10 hover:border-white/40 transition-all duration-300 text-sm transform hover:scale-105">
+                Sign In
+              </button>
+              
+              ${isAuthenticated ? `
+                <!-- Authenticated User -->
+                <div class="flex items-center space-x-3">
+                  <button id="desktop-profile-btn" class="px-3 py-1 bg-cyan-600/20 text-white border border-cyan-500/30 text-sm rounded hover:bg-cyan-600/30 transition-colors">
+                    Profile
+                  </button>
+                  <button id="logout-btn" class="px-3 py-1 bg-red-600/20 text-white border border-red-500/30 text-sm rounded hover:bg-red-600/30 transition-colors">
+                    Logout
+                  </button>
+                </div>
+              ` : ''}
             </div>
           </div>
         </div>
@@ -1436,11 +1440,22 @@ export class App {
             
             <!-- Mobile Auth Status -->
             <div class="border-t border-white/20 pt-4">
-              <div id="mobile-guest-info" class="flex items-center space-x-2">
-                <button id="mobile-login-btn" class="w-full px-4 py-2 bg-black/60 text-white font-medium rounded-lg border border-white/20 hover:bg-white/10 hover:border-white/40 transition-all duration-300 text-sm transform hover:scale-105">
-                  Sign In
-                </button>
-              </div>
+              <!-- Always show Sign In button -->
+              <button id="mobile-login-btn" class="w-full px-4 py-2 bg-black/60 text-white font-medium rounded-lg border border-white/20 hover:bg-white/10 hover:border-white/40 transition-all duration-300 text-sm transform hover:scale-105 mb-3">
+                Sign In
+              </button>
+              
+              ${isAuthenticated ? `
+                <!-- Mobile Authenticated User -->
+                <div class="space-y-3">
+                  <button id="mobile-nav-profile-btn" class="w-full px-4 py-2 bg-cyan-600/20 text-white border border-cyan-500/30 text-sm rounded-lg hover:bg-cyan-600/30 transition-colors">
+                    Profile
+                  </button>
+                  <button id="mobile-logout-btn" class="w-full px-4 py-2 bg-red-600/20 text-white border border-red-500/30 text-sm rounded-lg hover:bg-red-600/30 transition-colors">
+                    Logout
+                  </button>
+                </div>
+              ` : ''}
             </div>
           </div>
         </div>
@@ -1780,10 +1795,23 @@ export class App {
       this.authModal.show('login')
     })
 
+    // Desktop logout button listener
+    document.getElementById('logout-btn')?.addEventListener('click', async (e) => {
+      e.preventDefault()
+      await this.handleLogout()
+    })
+
     // Mobile Auth button listeners
     document.getElementById('mobile-login-btn')?.addEventListener('click', (e) => {
       e.preventDefault()
       this.authModal.show('login')
+    })
+
+    // Mobile logout button listener
+    document.getElementById('mobile-logout-btn')?.addEventListener('click', async (e) => {
+      e.preventDefault()
+      this.closeMobileMenu()
+      await this.handleLogout()
     })
 
     // Mobile menu toggle
@@ -1854,8 +1882,8 @@ export class App {
   private removeAuthBarListeners(): void {
     // Remove all existing event listeners by cloning and replacing elements
     const elementsToClean = [
-      'login-btn', 'profile-btn', 'logout-btn',
-      'mobile-login-btn', 'mobile-profile-btn', 'mobile-logout-btn',
+      'login-btn', 'logout-btn',
+      'mobile-login-btn', 'mobile-logout-btn',
       'mobile-menu-btn', 'desktop-profile-btn', 'mobile-nav-profile-btn'
     ]
 
@@ -1891,6 +1919,24 @@ export class App {
     const mobileMenu = document.getElementById('mobile-menu')
     if (mobileMenu) {
       mobileMenu.classList.add('hidden')
+    }
+  }
+
+  /**
+   * Handles user logout
+   */
+  private async handleLogout(): Promise<void> {
+    try {
+      await authService.logout()
+      // Redirect to home page after logout
+      window.history.pushState({}, '', '/')
+      this.render()
+      console.log('Logout realizado com sucesso!')
+    } catch (error) {
+      console.error('Erro durante logout:', error)
+      // Even if logout fails, redirect to home and refresh
+      window.history.pushState({}, '', '/')
+      this.render()
     }
   }
 }

@@ -209,6 +209,7 @@ class ApiService {
   async logout(): Promise<ApiResponse> {
     return this.request('/auth/logout', {
       method: 'POST',
+      body: JSON.stringify({}),
     });
   }
 }

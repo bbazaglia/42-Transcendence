@@ -58,6 +58,7 @@ class LobbyService {
     try {
       const response = await apiService.request<LobbyState>('/lobby/create', {
         method: 'POST',
+        body: JSON.stringify({}),
       });
 
       if (response.error) {

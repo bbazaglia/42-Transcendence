@@ -163,4 +163,23 @@ export default async function (fastify, opts) {
     fastify.get('/2fa/enable', async (request, reply) => {
         // Enable 2FA check logic
     });
+
+    // ROUTE: Logs out the user by clearing the authentication cookie.
+    fastify.post('/logout', async (request, reply) => {
+        try {
+            // Clear the authentication cookie
+            reply.clearCookie('token', {
+                path: '/',
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax'
+            });
+
+            return { message: 'Logout successful' };
+
+        } catch (error) {
+            fastify.log.error(error, 'Logout failed');
+            return reply.internalServerError('An unexpected error occurred during logout.');
+        }
+    });
 }

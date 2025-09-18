@@ -15,5 +15,4 @@ export default fp(async function (fastify) {
     callbackUri: process.env.GOOGLE_CALLBACK_URL,
     scope: ['openid', 'profile', 'email'],
   });
-
 });

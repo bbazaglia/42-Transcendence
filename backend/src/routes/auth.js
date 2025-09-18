@@ -1,6 +1,7 @@
 import { privatePrisma } from '../lib/prismaClients.js';
 import { publicUserSelect } from '../lib/prismaSelects.js';
 import bcrypt from 'bcrypt';
+import { generateUsername } from '../utils/generateRandomName.js';
 
 export default async function (fastify, opts) {
     // ROUTE: Creates a new user account.
@@ -134,58 +135,78 @@ export default async function (fastify, opts) {
         }
     });
 
-    // ROUTE: Redirects the user to the Google sign-in page.
-
     // ROUTE: The route Google redirects back to after a user authorizes the app.
-    fastify.get('/google/callback', async (request, reply) => {
+    fastify.get('/google/callback', {
+      schema: {
+        response: {
+          201: { $ref: 'publicUser#' },
+          409: { $ref: 'httpError#' },
+          500: { $ref: 'httpError#' }
+        },
+      },
+    }, async (request, reply) => {
       try {
-        // Exchange authorization code for access token
-        const url = process.env.GOOGLE_OAUTH_TOKEN_URL;
+        const { token } = await fastify.googleOAuth2.getAccessTokenFromAuthorizationCodeFlow(request);
 
-        const params = new URLSearchParams({
-          code: request.query.code,
-          client_id: process.env.GOOGLE_CLIENT_ID,
-          client_secret: process.env.GOOGLE_CLIENT_SECRET,
-          redirect_uri: process.env.GOOGLE_CALLBACK_URL,
-          grant_type: "authorization_code",
-        });
-
-        const res = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: params.toString(),
-        });
-
-        const token = await res.json();
-
-        // const token = await fastify.fastifyOauth2.getAccessTokenFromAuthorizationCodeFlow(request);
-
-        // Get user information from Google
         const userResponse = await fetch(process.env.GOOGLE_OAUTH_USER_INFO_URL, {
           headers: {
             'Authorization': `Bearer ${token.access_token}`,
           },
         });
 
-        const googleUserData = await userResponse.json();
+        let googleData = await userResponse.json();
 
-          // NEW USER - REGISTRATION
+        const existingUserByDisplayName = await fastify.prisma.user.findFirst({
+          where: {
+            displayName: {
+              equals: googleData.displayName
+            }
+          }
+        });
+
+        if (existingUserByDisplayName) {
+          googleData.name = generateUsername();
+        }
+
+        const existingUserByEmail = await fastify.prisma.user.findUnique({
+          where: { email: googleData.email.toLowerCase() },
+          select: { id: true }
+        });
+
+        if (!existingUserByEmail) {
           await fastify.prisma.user.create({
             data: {
-                displayName: googleUserData.name,
-                email: googleUserData.email,
-                googleId: googleUserData.id,
+              displayName: googleData.name,
+              email: googleData.email,
+              googleId: googleData.id,
+              avatarUrl: googleData.picture, //implement logic to download image from google?
             }
           });
+        }
 
-          reply.code(201);
+        const jwt_signed_token = fastify.jwt.sign({ id: googleData.id, displayName: googleData.name }); //chang from googledata.id to db.id
 
-      } catch (error) {
-        fastify.log.error('OAuth callback error:', error);
-        console.log(error);
-        reply.redirect('/?error=oauth_failed');
-      }
+        reply.setCookie('transcendence-tok', jwt_signed_token, {
+            path: '/',
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 60 * 60 * 24 * 7
+        });
+
+        reply.code(201);
+
+        //redirect to logged area
+
+        } catch (error) {
+          fastify.log.error(error, 'Oauth Registration failed');
+          if (error && error.statusCode) {
+            return reply.send(error);
+          }
+          return reply.internalServerError('An unexpected error occurred during oauth registration.');
+        }
     });
+
 
     // ROUTE: Generates a new secret and QR code for setting up 2FA.
     fastify.post('/2fa/generate', async (request, reply) => {

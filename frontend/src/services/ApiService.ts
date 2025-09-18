@@ -158,9 +158,9 @@ class ApiService {
    */
   async checkAuth(): Promise<boolean> {
     try {
-      // Tries to get the current user profile
+      // Tries to get the health endpoint which requires authentication
       // If it fails, it means the user is not authenticated
-      const response = await this.request('/users/1'); // ID temporário
+      const response = await this.request('/health');
       return response.status === 200;
     } catch (error) {
       // If it's a 401 error (not authenticated), it's not a real error
@@ -201,6 +201,15 @@ class ApiService {
    */
   async searchUsers(query: string): Promise<ApiResponse<User[]>> {
     return this.request<User[]>(`/users/search?q=${encodeURIComponent(query)}`);
+  }
+
+  /**
+   * Logs out the user
+   */
+  async logout(): Promise<ApiResponse> {
+    return this.request('/auth/logout', {
+      method: 'POST',
+    });
   }
 }
 

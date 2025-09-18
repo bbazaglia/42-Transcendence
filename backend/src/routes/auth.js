@@ -109,7 +109,7 @@ export default async function (fastify, opts) {
             const payload = { id: hostWithSecrets.id, displayName: hostWithSecrets.displayName };
             const token = fastify.jwt.sign({ payload });
 
-            reply.setCookie('token', token, {
+            reply.setCookie('token', token, { //TODO check this token name
                 path: '/', // The cookie is available to our entire site
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production', // Only send over HTTPS in production
@@ -173,9 +173,10 @@ export default async function (fastify, opts) {
           create: { ...user },
         });
 
-        const jwt_signed_token = fastify.jwt.sign({ id: dbUser.id, displayName: dbUser.displayName });
+        const { payload } = { id: dbUser.id, displayName: dbUser.displayName };
+        const jwt_signed_token = fastify.jwt.sign({ payload });
 
-        reply.setCookie('transcendence-tok', jwt_signed_token, {
+        reply.setCookie('token', jwt_signed_token, { //TODO check this token name
             path: '/',
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',

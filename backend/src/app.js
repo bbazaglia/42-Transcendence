@@ -40,7 +40,7 @@ async function app(fastify, opts) {
     await fastify.register(prismaPlugin);
 
     // Register routes
-    await fastify.register(authRoutes, { prefix: '/auth' });
+    await fastify.register(authRoutes, { prefix: '/api/auth' });
     await fastify.register(lobbyRoutes, { prefix: '/api/lobby' });
     await fastify.register(friendsRoutes, { prefix: '/api/friends' });
     await fastify.register(healthRoutes, { prefix: '/api/health' });

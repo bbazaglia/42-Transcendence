@@ -11,7 +11,7 @@ export default fp(async function (fastify) {
       },
       auth: fastifyOauth2.GOOGLE_CONFIGURATION
     },
-    startRedirectPath: '/auth/google',
+    startRedirectPath: process.env.GOOGLE_OAUTH_START_REDIRECT_PATH,
     callbackUri: process.env.GOOGLE_CALLBACK_URL,
     scope: ['openid', 'profile', 'email'],
   });

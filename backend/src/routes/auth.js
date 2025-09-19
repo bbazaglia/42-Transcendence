@@ -106,7 +106,7 @@ export default async function (fastify, opts) {
 
             // Create the JWT payload and sign the token.
             const payload = { id: hostWithSecrets.id, displayName: hostWithSecrets.displayName };
-            const token = fastify.jwt.sign({ payload });
+            const token = fastify.jwt.sign(payload);
 
             reply.setCookie('token', token, {
                 path: '/', // The cookie is available to our entire site
@@ -145,13 +145,36 @@ export default async function (fastify, opts) {
     });
 
     // ROUTE: Generates a new secret and QR code for setting up 2FA.
-    fastify.post('/2fa/generate', async (request, reply) => {
-        // Generate 2FA secret and QR code logic
+    fastify.post('/2fa/setup', {
+        schema: {
+            response: {
+                200: {
+                    type: 'object',
+                    properties: {
+                        qrCode: { type: 'string', description: 'Data URL of the QR code for 2FA setup' }
+                    }
+                },
+                401: { $ref: 'httpError#' },
+                500: { $ref: 'httpError#' }
+            }
+        },
+        preHandler: [fastify.authenticate], // Ensure the user is authenticated
+    },async (request, reply) => {
+        const totpInstance = fastify.totp.setup(request.user.email);
+
+        const secret = totpInstance.secret.base32;
+        await fastify.prisma.user.update({
+            where: { id: request.user.id },
+            data: { twoFaSecret: secret, isTwoFaEnabled: false },
+        });
+
+        const qrCodeDataURL = await fastify.totp.generateQRCode(totpInstance);
+
+        return { qrCode: qrCodeDataURL };
     });
 
     // ROUTE: Verifies a 2FA code and enables it for a user.
     fastify.post('/2fa/verify', async (request, reply) => {
-        // Verify 2FA logic
     });
 
     // ROUTE: Disables 2FA for a user.
@@ -159,8 +182,4 @@ export default async function (fastify, opts) {
         // Disable 2FA logic
     });
 
-    // ROUTE: Checks if 2FA is enabled for a user.
-    fastify.get('/2fa/enable', async (request, reply) => {
-        // Enable 2FA check logic
-    });
 }

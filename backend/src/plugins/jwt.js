@@ -1,7 +1,7 @@
 import fp from 'fastify-plugin';
 import jwt from '@fastify/jwt';
 
-export default fp(async function (fastify, opts) {
+async function jwtPlugin(fastify, opts) {
     fastify.register(jwt, {
         secret: process.env.JWT_SECRET,
         cookie: {
@@ -21,4 +21,6 @@ export default fp(async function (fastify, opts) {
             return reply.unauthorized('The host must be authenticated to access this resource.');
         }
     });
-});
+};
+
+export default fp(jwtPlugin);

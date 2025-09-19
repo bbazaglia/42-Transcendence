@@ -3,7 +3,7 @@ import { matchDetailSelect } from "../lib/prismaSelects.js";
 export default async function (fastify, opts) {
     // All routes in this file require authentication
     fastify.addHook('preHandler', fastify.authenticate);
-    fastify.addHook('preHandler', fastify.lobbyAuth);
+    fastify.addHook('preHandler', fastify.lobby.auth);
 
     const AI_PLAYER_ID = fastify.AI_PLAYER_ID;
 
@@ -22,7 +22,12 @@ export default async function (fastify, opts) {
                 required: ['playerOneId', 'playerTwoId', 'playerOneScore', 'playerTwoScore', 'winnerId']
             },
             response: {
-                201: { $ref: 'matchDetail#' },
+                201: {
+                    type: 'object',
+                    properties: {
+                        match: { $ref: 'matchDetail#' }
+                    }
+                },
                 403: { $ref: 'httpError#' },
                 500: { $ref: 'httpError#' }
             }
@@ -37,7 +42,7 @@ export default async function (fastify, opts) {
                 winnerId
             } = request.body;
 
-            const lobby = fastify.getLobby();
+            const lobby = fastify.lobby.get();
 
             // Ensure both players are part of the lobby participants
             const isPlayerOneValid = lobby.participants.has(playerOneId);
@@ -87,7 +92,7 @@ export default async function (fastify, opts) {
                     });
                 }
 
-                return createdMatch;
+                return { match: createdMatch };
             });
 
             reply.code(201);

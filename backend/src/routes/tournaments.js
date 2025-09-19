@@ -5,15 +5,20 @@ import { tournamentDetailSelect } from '../lib/prismaSelects.js';
 export default async function (fastify, opts) {
     // All routes in this file require authentication
     fastify.addHook('preHandler', fastify.authenticate);
-    fastify.addHook('preHandler', fastify.lobbyAuth);
+    fastify.addHook('preHandler', fastify.lobby.auth);
 
     // ROUTE: Gets a list of all tournaments.
     fastify.get('/', {
         schema: {
             response: {
                 200: {
-                    type: 'array',
-                    items: { $ref: 'tournamentDetail#' }
+                    type: 'object',
+                    properties: {
+                        tournaments: {
+                            type: 'array',
+                            items: { $ref: 'tournamentDetail#' }
+                        }
+                    }
                 },
             },
             500: { $ref: 'httpError#' }
@@ -31,7 +36,7 @@ export default async function (fastify, opts) {
             tournaments.forEach(t => {
                 t.participants = t.participants.map(p => p.user);
             });
-            return tournaments;
+            return { trounaments: tournaments };
 
         } catch (error) {
             fastify.log.error(error, 'Failed to fetch tournaments');
@@ -50,7 +55,12 @@ export default async function (fastify, opts) {
                 required: ['id']
             },
             response: {
-                200: { $ref: 'tournamentDetail#' },
+                200: {
+                    type: 'object',
+                    properties: {
+                        tournament: { $ref: 'tournamentDetail#' }
+                    }
+                },
                 404: { $ref: 'httpError#' },
                 500: { $ref: 'httpError#' }
             }
@@ -70,7 +80,7 @@ export default async function (fastify, opts) {
 
             // Map participants to include only user details
             tournament.participants = tournament.participants.map(p => p.user);
-            return tournament;
+            return { tournament: tournament };
 
         } catch (error) {
             fastify.log.error(error, `Failed to fetch tournament with id ${tournamentId}`);
@@ -93,7 +103,12 @@ export default async function (fastify, opts) {
                 required: ['name', 'maxParticipants']
             },
             response: {
-                201: { $ref: 'tournamentDetail#' },
+                201: {
+                    type: 'object',
+                    properties: {
+                        tournament: { $ref: 'tournamentDetail#' }
+                    }
+                },
                 500: { $ref: 'httpError#' }
             }
         }
@@ -111,7 +126,7 @@ export default async function (fastify, opts) {
 
             newTournament.participants = newTournament.participants.map(p => p.user);
             reply.code(201);
-            return newTournament;
+            return { tournament: newTournament };
 
         } catch (error) {
             fastify.log.error(error, 'Failed to create tournament');
@@ -137,7 +152,12 @@ export default async function (fastify, opts) {
                 required: ['userId']
             },
             response: {
-                200: { $ref: 'tournamentDetail#' },
+                200: {
+                    type: 'object',
+                    properties: {
+                        tournament: { $ref: 'tournamentDetail#' }
+                    }
+                },
                 403: { $ref: 'httpError#' },
                 404: { $ref: 'httpError#' },
                 409: { $ref: 'httpError#' },
@@ -148,7 +168,7 @@ export default async function (fastify, opts) {
         try {
             const tournamentId = request.params.id;
             const { userId } = request.body;
-            const lobby = fastify.getLobby();
+            const lobby = fastify.lobby.get();
 
             // Check if user is authenticated
             if (!lobby.participants.has(userId)) {
@@ -193,10 +213,11 @@ export default async function (fastify, opts) {
                 });
 
                 // Fetch the updated tournament with all necessary details for the response
-                return prisma.tournament.findUnique({
+                const tournament = prisma.tournament.findUnique({
                     where: { id: tournamentId },
                     select: tournamentDetailSelect
                 });
+                return { tournament: tournament };
             });
 
             updatedTournament.participants = updatedTournament.participants.map(p => p.user);
@@ -222,7 +243,12 @@ export default async function (fastify, opts) {
                 required: ['id']
             },
             response: {
-                200: { $ref: 'tournamentDetail#' },
+                200: {
+                    type: 'object',
+                    properties: {
+                        tournament: { $ref: 'tournamentDetail#' }
+                    }
+                },
                 403: { $ref: 'httpError#' },
                 404: { $ref: 'httpError#' },
                 500: { $ref: 'httpError#' }
@@ -238,7 +264,7 @@ export default async function (fastify, opts) {
                 select: { userId: true }
             });
 
-            const lobby = fastify.getLobby();
+            const lobby = fastify.lobby.get();
             for (const participant of tournamentParticipants) {
                 if (!lobby.participants.has(participant.userId)) {
                     throw reply.forbidden('All tournament participants must be present in the lobby to start the tournament.');
@@ -301,10 +327,11 @@ export default async function (fastify, opts) {
                 });
 
                 // 5. Fetch the complete tournament data for the response
-                return prisma.tournament.findUnique({
+                const tournament = prisma.tournament.findUnique({
                     where: { id: tournamentId },
                     select: tournamentDetailSelect
                 });
+                return { tournament: tournament }
             });
 
             // Map participants to include only user details
@@ -341,7 +368,12 @@ export default async function (fastify, opts) {
                 required: ['playerOneScore', 'playerTwoScore', 'winnerId']
             },
             response: {
-                200: { $ref: 'tournamentDetail#' },
+                200: {
+                    type: 'object',
+                    properties: {
+                        tournament: { $ref: 'tournamentDetail#' }
+                    }
+                },
                 403: { $ref: 'httpError#' },
                 404: { $ref: 'httpError#' },
                 500: { $ref: 'httpError#' }
@@ -410,10 +442,11 @@ export default async function (fastify, opts) {
                 }
 
                 // 6. Return the full, updated tournament state
-                return prisma.tournament.findUnique({
+                const tournament = prisma.tournament.findUnique({
                     where: { id: tournamentId },
                     select: tournamentDetailSelect
                 });
+                return { tournament: tournament }
             });
 
             updatedTournament.participants = updatedTournament.participants.map(p => p.user);
@@ -439,7 +472,12 @@ export default async function (fastify, opts) {
                 required: ['id']
             },
             response: {
-                200: { $ref: 'tournamentDetail#' },
+                200: {
+                    type: 'object',
+                    properties: {
+                        tournament: { $ref: 'tournamentDetail#' }
+                    }
+                },
                 404: { $ref: 'httpError#' },
                 500: { $ref: 'httpError#' }
             }
@@ -466,7 +504,7 @@ export default async function (fastify, opts) {
             });
 
             tournament.participants = tournament.participants.map(p => p.user);
-            return tournament;
+            return { tournament: tournament };
 
         } catch (error) {
             fastify.log.error(error, `Failed to cancel tournament ${tournamentId}`);

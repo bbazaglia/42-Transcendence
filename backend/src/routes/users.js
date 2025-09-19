@@ -3,7 +3,7 @@ import { publicUserSelect } from '../lib/prismaSelects.js';
 export default async function (fastify, opts) {
     // Apply authentication hook to all routes in this plugin
     fastify.addHook('preHandler', fastify.authenticate);
-    fastify.addHook('preHandler', fastify.lobbyAuth);
+    fastify.addHook('preHandler', fastify.lobby.auth);
 
     // ROUTE: Gets the public profile (stats, display name) of any user by their ID.
     fastify.get('/:id', {
@@ -17,7 +17,12 @@ export default async function (fastify, opts) {
             }
         },
         response: {
-            200: { $ref: 'publicUser#' },
+            200: {
+                type: 'object',
+                properties: {
+                    user: { $ref: 'publicUser#' }
+                }
+            },
             404: { $ref: 'httpError#' },
             500: { $ref: 'httpError#' }
         }
@@ -34,7 +39,7 @@ export default async function (fastify, opts) {
                 throw fastify.httpErrors.notFound(`User ${userId} not found`);
             }
 
-            return user;
+            return { user: user };
 
         } catch (error) {
             fastify.log.error(error, `Error fetching user profile for ID ${request.params.id}`);
@@ -57,7 +62,15 @@ export default async function (fastify, opts) {
             }
         },
         response: {
-            200: { type: 'array', items: { $ref: 'matchDetail#' } },
+            200: {
+                type: 'object',
+                properties: {
+                    matches: {
+                        type: 'array',
+                        items: { $ref: 'matchDetail#' }
+                    }
+                }
+            },
             500: { $ref: 'httpError#' }
         }
     }, async (request, reply) => {
@@ -77,7 +90,7 @@ export default async function (fastify, opts) {
                 }
             });
 
-            return matches;
+            return { matches: matches };
 
         } catch (error) {
             fastify.log.error(error, `Error fetching match history for user ID ${request.params.id}`);
@@ -94,34 +107,43 @@ export default async function (fastify, opts) {
             querystring: {
                 type: 'object',
                 properties: {
-                    q: { type: 'string', minLength: 1, maxLength: 50 }
+                    search: { type: 'string', minLength: 1, maxLength: 50 }
                 },
-                required: ['q']
+                required: ['search']
             },
             response: {
-                200: { type: 'array', items: { $ref: 'publicUser#' } },
+                200: {
+                    type: 'object',
+                    properties: {
+                        users: {
+                            type: 'array',
+                            items: { $ref: 'publicUser#' }
+                        }
+                    }
+                },
                 400: { $ref: 'httpError#' },
                 500: { $ref: 'httpError#' }
             }
         }
     }, async (request, reply) => {
         try {
-            const { q } = request.query;
+            const { search } = request.query;
 
             const users = await fastify.prisma.user.findMany({
                 where: {
                     displayName: {
-                        contains: q
+                        contains: search,
+                        mode: 'insensitive'
                     }
                 },
                 select: publicUserSelect,
                 take: 10 // Limit to 10 results
             });
 
-            return users;
+            return { users: users };
 
         } catch (error) {
-            fastify.log.error(error, `Error searching users with query: ${request.query.q}`);
+            fastify.log.error(error, `Error searching users with query: ${request.query.search}`);
             if (error && error.statusCode) {
                 return reply.send(error);
             }
@@ -148,7 +170,12 @@ export default async function (fastify, opts) {
                 additionalProperties: false
             },
             response: {
-                200: { $ref: 'publicUser#' },
+                200: {
+                    type: 'object',
+                    properties: {
+                        user: { $ref: 'publicUser#' }
+                    }
+                },
                 400: { $ref: 'httpError#' },
                 403: { $ref: 'httpError#' },
                 404: { $ref: 'httpError#' },
@@ -189,13 +216,13 @@ export default async function (fastify, opts) {
             const updatedUser = await fastify.prisma.user.update({
                 where: { id: userId },
                 data: {
-                    ...(displayName && { displayName }),
-                    ...(avatarUrl && { avatarUrl })
+                    ...(displayName && { displayName: displayName }),
+                    ...(avatarUrl && { avatarUrl: avatarUrl })
                 },
                 select: publicUserSelect
             });
 
-            return updatedUser;
+            return { user: updatedUser };
 
         } catch (error) {
             fastify.log.error(error, `Error updating user profile for ID ${request.params.id}`);

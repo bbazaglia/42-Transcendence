@@ -1,40 +1,47 @@
 import fp from 'fastify-plugin';
 
-export default fp(async function (fastify, opts) {
+async function lobbySetup(fastify, opts) {
+    // This state is now private to this plugin's scope.
     let activeLobby = null;
-    const AI_PLAYER_ID = 0;
-    const AI_CREATED_AT = new Date();
-    const AI_PLAYER = {
-        id: AI_PLAYER_ID,
-        displayName: 'AI Bot',
-        avatarUrl: '/avatars/ai-avatar.png',
-        wins: 0,
-        losses: 0,
-        createdAt: AI_CREATED_AT
+
+    // Define the single service object that will be decorated.
+    const lobbyService = {
+        // Constants
+        AI_PLAYER_ID: 0,
+        AI_PLAYER: {
+            id: 0,
+            displayName: 'AI Bot',
+            avatarUrl: '/avatars/ai-avatar.png',
+            wins: 0,
+            losses: 0,
+            createdAt: new Date()
+        },
+
+        // Methods
+        get() {
+            return activeLobby;
+        },
+
+        set(lobby) {
+            activeLobby = lobby;
+        },
+
+        async auth(request, reply) {
+            const lobby = this.get();
+            if (!lobby) {
+                return reply.forbidden('No active lobby session.');
+            }
+
+            if (lobby.host.id !== request.user.id) {
+                return reply.forbidden('You are not the host of the active lobby.');
+            }
+        }
     };
 
-    function getLobby() {
-        return activeLobby;
-    }
+    // TODO: Implement function to authenticate lobby participants and call we needed routes
 
-    function setLobby(lobby) {
-        activeLobby = lobby;
-    }
+    // Decorate the fastify instance with the single service object.
+    fastify.decorate('lobby', lobbyService);
+};
 
-    async function lobbyAuth(request, reply) {
-        const lobby = fastify.getLobby();
-        if (!lobby) {
-            return reply.forbidden('No active lobby session.');
-        }
-        if (lobby.host.id !== request.user.id) {
-            return reply.forbidden('You are not the host of the active lobby.');
-        }
-    }
-
-    // expose decorators globally (safe single source of truth)
-    fastify.decorate('getLobby', getLobby);
-    fastify.decorate('setLobby', setLobby);
-    fastify.decorate('lobbyAuth', lobbyAuth);
-    fastify.decorate('AI_PLAYER_ID', AI_PLAYER_ID);
-    fastify.decorate('AI_PLAYER', AI_PLAYER);
-});
+export default fp(lobbySetup);

@@ -1,7 +1,6 @@
 import { privatePrisma } from '../lib/prismaClients.js';
 import { publicUserSelect } from '../lib/prismaSelects.js';
 import bcrypt from 'bcrypt';
-import { generateUsername } from '../utils/generateRandomName.js';
 
 export default async function (fastify, opts) {
     // ROUTE: Creates a new user account.
@@ -167,10 +166,17 @@ export default async function (fastify, opts) {
           where: { email: user.email.toLowerCase() }
         });
 
+        const generateUsername = (base = "user") => {
+          const randomPart = Math.floor(100000 + Math.random() * 900000);
+          return `${base}_${randomPart}`;
+        };
+
         if (!existingUser) {
           user.displayName = (await fastify.prisma.user.findFirst({
             where: { displayName: user.displayName }
           })) ? generateUsername() : user.displayName;
+        } else {
+          user.displayName = existingUser.displayName;
         }
 
         const dbUser = await fastify.prisma.user.upsert({

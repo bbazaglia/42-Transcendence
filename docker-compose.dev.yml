@@ -4,6 +4,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     init: true
+    entrypoint: []
     command: npm run dev
     volumes:
       - ./backend/src:/app/src
@@ -11,8 +12,11 @@ services:
     ports:
       # Exposing the backend API for development
       - "3000:3000"
-    env_file:
-      - ./.env
+    environment:
+      - NODE_ENV=development
+      - DATABASE_PATH=file:/app/data/database.sqlite
+      - JWT_SECRET=dev-jwt-secret-replace-in-prod
+      - COOKIE_SECRET=dev-cookie-secret-replace-in-prod
     restart: unless-stopped
     networks:
       - app-network

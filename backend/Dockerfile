@@ -14,7 +14,10 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate --schema=./src/schemas/schema.prisma
 
+COPY prod-entrypoint.sh .
+RUN chmod +x prod-entrypoint.sh
+ENTRYPOINT ["./prod-entrypoint.sh"]
+
 EXPOSE 3000
 
-# Command to run the server for production
 CMD [ "node", "src/server.js" ]

@@ -1,7 +1,4 @@
-.PHONY: up down build logs frontend-backend-down clean dev help setup-check
-
-# Check if database exists (for setup detection)
-DB_EXISTS := $(shell docker volume ls -q | grep -q "42-transcendence_db_data" && echo "true" || echo "false")
+.PHONY: up down build logs frontend-backend-down clean dev help
 
 # Production commands
 up:
@@ -14,24 +11,11 @@ build:
 	docker-compose build
 
 # Development commands
-dev: setup-check
+dev: 
 	docker-compose -f docker-compose.dev.yml up --build
 
 dev-down:
 	docker-compose -f docker-compose.dev.yml down
-
-# Setup check - runs migrations if needed
-setup-check:
-	@echo "🔍 Checking if database setup is needed..."
-	@if [ "$(DB_EXISTS)" = "false" ]; then \
-		echo "First time setup detected - running database migrations..."; \
-		docker-compose -f docker-compose.dev.yml up -d backend; \
-		sleep 5; \
-		docker-compose -f docker-compose.dev.yml exec backend npx prisma migrate dev --name init --schema=src/schemas/schema.prisma; \
-		echo "Database setup complete!"; \
-	else \
-		echo "Database already exists - skipping setup"; \
-	fi
 
 # Utility commands
 logs:
@@ -100,7 +84,7 @@ help:
 	@echo ""
 	@echo "Database:"
 	@echo "  db-migrate Run database migrations"
-	@echo "  db-reset   Reset database (⚠️  deletes all data)"
+	@echo "  db-reset   Reset database (⚠️ deletes all data)"
 	@echo "  db-studio  Open Prisma Studio (database GUI)"
 	@echo "  db-status  Check database migration status"
 	@echo ""

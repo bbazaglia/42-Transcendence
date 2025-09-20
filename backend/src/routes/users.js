@@ -1,5 +1,3 @@
-import { userDetailSelect } from '../lib/prismaSelects.js';
-
 export default async function (fastify, opts) {
     // Apply authentication hook to all routes in this plugin
     fastify.addHook('preHandler', fastify.authenticate);
@@ -21,7 +19,8 @@ export default async function (fastify, opts) {
                 type: 'object',
                 properties: {
                     user: { $ref: 'publicUser#' }
-                }
+                },
+                required: ['user']
             },
             404: { $ref: 'httpError#' },
             500: { $ref: 'httpError#' }
@@ -32,7 +31,6 @@ export default async function (fastify, opts) {
 
             const user = await fastify.prisma.user.findUnique({
                 where: { id: userId },
-                select: userDetailSelect
             });
 
             if (!user) {
@@ -69,7 +67,8 @@ export default async function (fastify, opts) {
                         type: 'array',
                         items: { $ref: 'matchDetail#' }
                     }
-                }
+                },
+                required: ['matches']
             },
             500: { $ref: 'httpError#' }
         }
@@ -119,7 +118,8 @@ export default async function (fastify, opts) {
                             type: 'array',
                             items: { $ref: 'publicUser#' }
                         }
-                    }
+                    },
+                    required: ['users']
                 },
                 400: { $ref: 'httpError#' },
                 500: { $ref: 'httpError#' }
@@ -132,11 +132,9 @@ export default async function (fastify, opts) {
             const users = await fastify.prisma.user.findMany({
                 where: {
                     displayName: {
-                        contains: search,
-                        mode: 'insensitive'
+                        contains: search
                     }
                 },
-                select: userDetailSelect,
                 take: 10 // Limit to 10 results
             });
 
@@ -174,7 +172,8 @@ export default async function (fastify, opts) {
                     type: 'object',
                     properties: {
                         user: { $ref: 'publicUser#' }
-                    }
+                    },
+                    required: ['user']
                 },
                 400: { $ref: 'httpError#' },
                 403: { $ref: 'httpError#' },
@@ -218,8 +217,7 @@ export default async function (fastify, opts) {
                 data: {
                     ...(displayName && { displayName: displayName }),
                     ...(avatarUrl && { avatarUrl: avatarUrl })
-                },
-                select: userDetailSelect
+                }
             });
 
             return { user: updatedUser };

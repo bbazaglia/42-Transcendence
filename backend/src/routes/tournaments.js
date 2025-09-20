@@ -1,6 +1,6 @@
 import pkg from '@prisma/client';
 const { TournamentStatus } = pkg;
-import { tournamentDetailSelect } from '../lib/prismaSelects.js';
+import { tournamentQueryTemplate } from '../lib/prismaQueryTemplates.js';
 
 export default async function (fastify, opts) {
     // All routes in this file require authentication
@@ -18,7 +18,8 @@ export default async function (fastify, opts) {
                             type: 'array',
                             items: { $ref: 'tournamentDetail#' }
                         }
-                    }
+                    },
+                    required: ['tournaments']
                 },
             },
             500: { $ref: 'httpError#' }
@@ -26,7 +27,7 @@ export default async function (fastify, opts) {
     }, async (request, reply) => {
         try {
             const tournaments = await fastify.prisma.tournament.findMany({
-                select: tournamentDetailSelect,
+                select: tournamentQueryTemplate,
                 orderBy: {
                     createdAt: 'desc'
                 }
@@ -59,7 +60,8 @@ export default async function (fastify, opts) {
                     type: 'object',
                     properties: {
                         tournament: { $ref: 'tournamentDetail#' }
-                    }
+                    },
+                    required: ['tournament']
                 },
                 404: { $ref: 'httpError#' },
                 500: { $ref: 'httpError#' }
@@ -71,7 +73,7 @@ export default async function (fastify, opts) {
 
             const tournament = await fastify.prisma.tournament.findUnique({
                 where: { id: tournamentId },
-                select: tournamentDetailSelect
+                select: tournamentQueryTemplate
             });
 
             if (!tournament) {
@@ -107,7 +109,8 @@ export default async function (fastify, opts) {
                     type: 'object',
                     properties: {
                         tournament: { $ref: 'tournamentDetail#' }
-                    }
+                    },
+                    required: ['tournament']
                 },
                 500: { $ref: 'httpError#' }
             }
@@ -121,7 +124,7 @@ export default async function (fastify, opts) {
                     name,
                     maxParticipants,
                 },
-                select: tournamentDetailSelect
+                select: tournamentQueryTemplate
             });
 
             newTournament.participants = newTournament.participants.map(p => p.user);
@@ -156,7 +159,8 @@ export default async function (fastify, opts) {
                     type: 'object',
                     properties: {
                         tournament: { $ref: 'tournamentDetail#' }
-                    }
+                    },
+                    required: ['tournament']
                 },
                 403: { $ref: 'httpError#' },
                 404: { $ref: 'httpError#' },
@@ -171,7 +175,7 @@ export default async function (fastify, opts) {
             const lobby = fastify.lobby.get();
 
             // Check if user is authenticated
-            if (!lobby.participants.has(userId)) {
+            if (!lobby.isParticipant(userId)) {
                 throw reply.forbidden('User must be logged in to join a tournament.');
             }
 
@@ -215,7 +219,7 @@ export default async function (fastify, opts) {
                 // Fetch the updated tournament with all necessary details for the response
                 const tournament = prisma.tournament.findUnique({
                     where: { id: tournamentId },
-                    select: tournamentDetailSelect
+                    select: tournamentQueryTemplate
                 });
                 return { tournament: tournament };
             });
@@ -247,7 +251,8 @@ export default async function (fastify, opts) {
                     type: 'object',
                     properties: {
                         tournament: { $ref: 'tournamentDetail#' }
-                    }
+                    },
+                    required: ['tournament']
                 },
                 403: { $ref: 'httpError#' },
                 404: { $ref: 'httpError#' },
@@ -266,7 +271,7 @@ export default async function (fastify, opts) {
 
             const lobby = fastify.lobby.get();
             for (const participant of tournamentParticipants) {
-                if (!lobby.participants.has(participant.userId)) {
+                if (!lobby.isParticipant(participant.userId)) {
                     throw reply.forbidden('All tournament participants must be present in the lobby to start the tournament.');
                 }
             }
@@ -329,14 +334,14 @@ export default async function (fastify, opts) {
                 // 5. Fetch the complete tournament data for the response
                 const tournament = prisma.tournament.findUnique({
                     where: { id: tournamentId },
-                    select: tournamentDetailSelect
+                    select: tournamentQueryTemplate
                 });
                 return { tournament: tournament }
             });
 
             // Map participants to include only user details
             tournament.participants = tournament.participants.map(p => p.user);
-            return tournament;
+            return { tournament: tournament };
 
         } catch (error) {
             fastify.log.error(error, 'Failed to start tournament');
@@ -372,7 +377,8 @@ export default async function (fastify, opts) {
                     type: 'object',
                     properties: {
                         tournament: { $ref: 'tournamentDetail#' }
-                    }
+                    },
+                    required: ['tournament']
                 },
                 403: { $ref: 'httpError#' },
                 404: { $ref: 'httpError#' },
@@ -444,13 +450,13 @@ export default async function (fastify, opts) {
                 // 6. Return the full, updated tournament state
                 const tournament = prisma.tournament.findUnique({
                     where: { id: tournamentId },
-                    select: tournamentDetailSelect
+                    select: tournamentQueryTemplate
                 });
                 return { tournament: tournament }
             });
 
             updatedTournament.participants = updatedTournament.participants.map(p => p.user);
-            return updatedTournament;
+            return { tournament: updatedTournament };
 
         } catch (error) {
             fastify.log.error(error, `Failed to update tournament match ${request.params.matchId} for tournament ${request.params.id}`);
@@ -476,7 +482,8 @@ export default async function (fastify, opts) {
                     type: 'object',
                     properties: {
                         tournament: { $ref: 'tournamentDetail#' }
-                    }
+                    },
+                    required: ['tournament']
                 },
                 404: { $ref: 'httpError#' },
                 500: { $ref: 'httpError#' }
@@ -499,7 +506,7 @@ export default async function (fastify, opts) {
                 return prisma.tournament.update({
                     where: { id: tournamentId },
                     data: { status: TournamentStatus.CANCELLED },
-                    select: tournamentDetailSelect
+                    select: tournamentQueryTemplate
                 });
             });
 

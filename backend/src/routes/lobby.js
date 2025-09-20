@@ -1,5 +1,3 @@
-import { privatePrisma } from '../lib/prismaClients.js';
-import { userDetailSelect } from '../lib/prismaSelects.js';
 import bcrypt from 'bcrypt';
 
 export default async function (fastify, opts) {
@@ -22,7 +20,8 @@ export default async function (fastify, opts) {
                     type: 'object',
                     properties: {
                         lobby: { $ref: 'lobbyState#' }
-                    }
+                    },
+                    required: ['lobby']
                 },
                 409: { $ref: 'httpError#' }
             }
@@ -36,7 +35,6 @@ export default async function (fastify, opts) {
 
             const hostUser = await fastify.prisma.user.findUnique({
                 where: { id: request.user.id },
-                select: userDetailSelect
             });
 
             const newLobby = {
@@ -81,7 +79,8 @@ export default async function (fastify, opts) {
                                 { type: 'null' }
                             ]
                         }
-                    }
+                    },
+                    required: ['lobby']
                 },
                 401: { $ref: 'httpError#' }
             }
@@ -94,7 +93,7 @@ export default async function (fastify, opts) {
         }
 
         // If a lobby exists, check if the requester is part of it.
-        if (!lobby.participants.has(request.user.id)) {
+        if (!lobby.isParticipant(request.user.id)) {
             // This could happen in a weird edge case of stale JWTs.
             return reply.code(200).send({ lobby: null });
         }
@@ -125,6 +124,7 @@ export default async function (fastify, opts) {
         return reply.code(204).send(); // No Content
     });
 
+    // TODO: Include 2fa logic
     // ROUTE: A guest joins the lobby.
     fastify.post('/join', {
         schema: {
@@ -141,7 +141,8 @@ export default async function (fastify, opts) {
                     type: 'object',
                     properties: {
                         lobby: { $ref: 'lobbyState#' }
-                    }
+                    },
+                    required: ['lobby']
                 },
                 401: { $ref: 'httpError#' },
                 409: { $ref: 'httpError#' }
@@ -154,8 +155,9 @@ export default async function (fastify, opts) {
             const lobby = fastify.lobby.get();
 
             // Use the PRIVATE client to fetch the user with their password hash for validation.
-            const guestUserWithSecrets = await privatePrisma.user.findUnique({
-                where: { email: email.toLowerCase() }
+            const guestUserWithSecrets = await fastify.prisma.user.findUnique({
+                where: { email: email.toLowerCase() },
+                omit: { passwordHash: false } // Explicitly include passwordHash
             });
 
             const isPasswordValid = guestUserWithSecrets && await bcrypt.compare(password, guestUserWithSecrets.passwordHash);
@@ -167,10 +169,9 @@ export default async function (fastify, opts) {
             // Now that validation is done, get the public version of the user.
             const guestUser = await fastify.prisma.user.findUnique({
                 where: { id: guestUserWithSecrets.id },
-                select: userDetailSelect
             });
 
-            if (guestUser.id === lobby.host.id || lobby.participants.has(guestUser.id)) {
+            if (guestUser.id === lobby.host.id || lobby.isParticipant(guestUser.id)) {
                 throw fastify.httpErrors.conflict('User is already in the lobby.');
             }
 
@@ -194,6 +195,11 @@ export default async function (fastify, opts) {
         }
     });
 
+    // TODO: Implement 2FA logic
+    // ROUTE: A guest joins the lobby with 2FA.
+    fastify.post('/join/2fa', async (request, reply) => {
+    });
+
     // TODO: update host if host leaves
     // ROUTE: A participant leaves the lobby.
     fastify.post('/leave', {
@@ -210,7 +216,8 @@ export default async function (fastify, opts) {
                     type: 'object',
                     properties: {
                         lobby: { $ref: 'lobbyState#' }
-                    }
+                    },
+                    required: ['lobby']
                 },
                 400: { $ref: 'httpError#' }
             }
@@ -221,7 +228,7 @@ export default async function (fastify, opts) {
             const { userId } = request.body;
 
             const lobby = fastify.lobby.get();
-            if (userId === lobby.host.id || userId === AI_PLAYER_ID || !lobby.participants.has(userId)) {
+            if (userId === lobby.host.id || userId === AI_PLAYER_ID || !lobby.isParticipant(userId)) {
                 throw fastify.httpErrors.badRequest('Participant cannot be removed.');
             }
 
@@ -267,7 +274,8 @@ export default async function (fastify, opts) {
                     type: 'object',
                     properties: {
                         lobby: { $ref: 'lobbyState#' }
-                    }
+                    },
+                    required: ['lobby']
                 },
                 400: { $ref: 'httpError#' },
                 404: { $ref: 'httpError#' }
@@ -278,7 +286,7 @@ export default async function (fastify, opts) {
         try {
             const userId = request.params.id;
             const lobby = fastify.lobby.get();
-            if (userId === AI_PLAYER_ID || !lobby.participants.has(userId)) {
+            if (userId === AI_PLAYER_ID || !lobby.isParticipant(userId)) {
                 throw fastify.httpErrors.notFound('Participant not found or cannot be updated.');
             }
 
@@ -291,7 +299,6 @@ export default async function (fastify, opts) {
             const updatedUser = await fastify.prisma.user.update({
                 where: { id: userId },
                 data: { displayName, avatarUrl }, // Prisma handles undefined fields
-                select: userDetailSelect
             });
 
             lobby.participants.set(userId, updatedUser);

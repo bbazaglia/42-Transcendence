@@ -1,4 +1,4 @@
-import { publicUserSelect } from '../lib/prismaSelects.js';
+import { userDetailSelect } from '../lib/prismaSelects.js';
 
 export default async function (fastify, opts) {
     // Apply authentication hook to all routes in this plugin
@@ -32,7 +32,7 @@ export default async function (fastify, opts) {
 
             const user = await fastify.prisma.user.findUnique({
                 where: { id: userId },
-                select: publicUserSelect
+                select: userDetailSelect
             });
 
             if (!user) {
@@ -136,7 +136,7 @@ export default async function (fastify, opts) {
                         mode: 'insensitive'
                     }
                 },
-                select: publicUserSelect,
+                select: userDetailSelect,
                 take: 10 // Limit to 10 results
             });
 
@@ -219,7 +219,7 @@ export default async function (fastify, opts) {
                     ...(displayName && { displayName: displayName }),
                     ...(avatarUrl && { avatarUrl: avatarUrl })
                 },
-                select: publicUserSelect
+                select: userDetailSelect
             });
 
             return { user: updatedUser };

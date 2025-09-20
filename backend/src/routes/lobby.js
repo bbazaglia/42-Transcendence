@@ -1,13 +1,10 @@
 import { privatePrisma } from '../lib/prismaClients.js';
-import { publicUserSelect } from '../lib/prismaSelects.js';
+import { userDetailSelect } from '../lib/prismaSelects.js';
 import bcrypt from 'bcrypt';
 
 export default async function (fastify, opts) {
     // Ensure decorators plugin is registered before routes (avoid soft dependency).
-    if (
-        typeof fastify.hasDecorator !== 'function' ||
-        !fastify.hasDecorator('lobby')
-    ) {
+    if (typeof fastify.hasDecorator !== 'function' || !fastify.hasDecorator('lobby')) {
         throw new Error('lobbySetup plugin must be registered before lobby routes');
     }
 
@@ -39,7 +36,7 @@ export default async function (fastify, opts) {
 
             const hostUser = await fastify.prisma.user.findUnique({
                 where: { id: request.user.id },
-                select: publicUserSelect
+                select: userDetailSelect
             });
 
             const newLobby = {
@@ -170,7 +167,7 @@ export default async function (fastify, opts) {
             // Now that validation is done, get the public version of the user.
             const guestUser = await fastify.prisma.user.findUnique({
                 where: { id: guestUserWithSecrets.id },
-                select: publicUserSelect
+                select: userDetailSelect
             });
 
             if (guestUser.id === lobby.host.id || lobby.participants.has(guestUser.id)) {
@@ -294,7 +291,7 @@ export default async function (fastify, opts) {
             const updatedUser = await fastify.prisma.user.update({
                 where: { id: userId },
                 data: { displayName, avatarUrl }, // Prisma handles undefined fields
-                select: publicUserSelect
+                select: userDetailSelect
             });
 
             lobby.participants.set(userId, updatedUser);

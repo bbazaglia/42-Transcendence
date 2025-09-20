@@ -1,8 +1,7 @@
 import pkg from '@prisma/client';
 const { FriendshipStatus } = pkg;
-import { userDetailSelect } from '../lib/prismaSelects.js';
 
-async function getFriendsForUser(prisma, userId, status, onlineUserIds = new Set()) {
+async function getFriendshipsForUser(prisma, userId, status, onlineUserIds = new Set(), requestType = 'INCOMING') {
     const whereClause = {
         status,
         OR: [
@@ -11,33 +10,39 @@ async function getFriendsForUser(prisma, userId, status, onlineUserIds = new Set
         ]
     };
 
-    // Filter for only received requests if we're looking for pending requests
     if (status === FriendshipStatus.PENDING) {
-        whereClause.NOT = {
-            actionUserId: userId
-        };
+        if (requestType === 'INCOMING') {
+            whereClause.NOT = {
+                actionUserId: userId
+            };
+        } else if (requestType === 'SENT') {
+            whereClause.actionUserId = userId;
+        }
     }
 
-    const friendships = await prisma.friendship.findMany({
+    const friendshipsFromDb = await prisma.friendship.findMany({
         where: whereClause,
-        select: {
-            userOne: { select: userDetailSelect },
-            userTwo: { select: userDetailSelect },
-            userOneId: true,
-            userTwoId: true
+        include: {
+            userOne: true,
+            userTwo: true
         }
     });
 
-    const friends = friendships.map(friendship => {
-        const friend = friendship.userOneId === userId ? friendship.userTwo : friendship.userOne;
-        // Add the isOnline flag before returning
+    const friendships = friendshipsFromDb.map(friendship => {
+        const friendUserObject = friendship.userOneId === userId ? friendship.userTwo : friendship.userOne;
+
         return {
-            ...friend,
-            isOnline: onlineUserIds.has(friend.id)
-        }
+            friendshipId: friendship.id,
+            status: friendship.status,
+            createdAt: friendship.createdAt,
+            user: {
+                ...friendUserObject,
+                isOnline: onlineUserIds.has(friendUserObject.id)
+            }
+        };
     });
 
-    return friends;
+    return friendships;
 }
 
 export default async function (fastify, opts) {
@@ -46,36 +51,38 @@ export default async function (fastify, opts) {
     fastify.addHook('preHandler', fastify.lobby.auth);
 
     // ROUTE: Gets a list of the current user's friends and their status.
-    fastify.get('/:id', {
+    fastify.get('/:userId', {
         schema: {
             params: {
                 type: 'object',
-                properties: { id: { type: 'integer' } },
-                required: ['id']
+                properties: { userId: { type: 'integer' } },
+                required: ['userId']
             },
             response: {
                 200: {
                     type: 'object',
                     properties: {
-                        users: {
+                        friendships: {
                             type: 'array',
-                            items: { $ref: 'publicUser#' }
+                            items: { $ref: 'friendshipDetail#' }
                         }
-                    }
+                    },
+                    required: ['friendships']
                 },
                 500: { $ref: 'httpError#' }
             }
         }
     }, async (request, reply) => {
         try {
-            const userId = request.params.id;
-            const onlineUserIds = new Set(fastify.lobby.get().participants.keys());
+            const userId = request.params.userId;
+            const lobby = fastify.lobby.get();
+            const onlineUserIds = new Set(lobby.participants.keys());
 
-            const friends = await getFriendsForUser(fastify.prisma, userId, FriendshipStatus.ACCEPTED, onlineUserIds);
-            return { users: friends };
+            const friendships = await getFriendshipsForUser(fastify.prisma, userId, FriendshipStatus.ACCEPTED, onlineUserIds);
+            return { friendships: friendships };
 
         } catch (error) {
-            fastify.log.error(error, `Error fetching friends for user ${userId}`);
+            fastify.log.error(error, `Error fetching friends for user ${request.params.id}`);
             if (error && error.statusCode) {
                 return reply.send(error);
             }
@@ -83,41 +90,85 @@ export default async function (fastify, opts) {
         }
     });
 
-    fastify.get('/pending/:id', {
+    fastify.get('/pending/incoming/:userId', {
         schema: {
             params: {
                 type: 'object',
-                properties: { id: { type: 'integer' } },
-                required: ['id']
+                properties: { userId: { type: 'integer' } },
+                required: ['userId']
             },
             response: {
                 200: {
                     type: 'object',
                     properties: {
-                        users: {
+                        friendships: {
                             type: 'array',
-                            items: { $ref: 'publicUser#' }
+                            items: { $ref: 'friendshipDetail#' }
                         }
-                    }
+                    },
+                    required: ['friendships']
                 },
                 500: { $ref: 'httpError#' }
             }
         }
     }, async (request, reply) => {
         try {
-            const userId = request.params.id;
+            const userId = request.params.userId;
             const lobby = fastify.lobby.get();
             const onlineUserIds = new Set(lobby.participants.keys());
 
-            if (!lobby.participants.has(userId)) {
+            if (!lobby.isParticipant(userId)) {
                 throw fastify.httpErrors.forbidden('User must be in the lobby to view pending requests.');
             }
 
-            const requests = await getFriendsForUser(fastify.prisma, userId, FriendshipStatus.PENDING, onlineUserIds);
-            return { users: requests };
+            const pendingFriendships = await getFriendshipsForUser(fastify.prisma, userId, FriendshipStatus.PENDING, onlineUserIds, 'INCOMING');
+            return { friendships: pendingFriendships };
 
         } catch (error) {
-            fastify.log.error(error, `Error fetching pending requests for user ${userId}`);
+            fastify.log.error(error, `Error fetching pending requests for user ${request.params.userId}`);
+            if (error && error.statusCode) {
+                return reply.send(error);
+            }
+            return reply.internalServerError('An unexpected error occurred while fetching pending requests.');
+        }
+    });
+
+    fastify.get('/pending/sent/:userId', {
+        schema: {
+            params: {
+                type: 'object',
+                properties: { userId: { type: 'integer' } },
+                required: ['userId']
+            },
+            response: {
+                200: {
+                    type: 'object',
+                    properties: {
+                        friendships: {
+                            type: 'array',
+                            items: { $ref: 'friendshipDetail#' }
+                        }
+                    },
+                    required: ['friendships']
+                },
+                500: { $ref: 'httpError#' }
+            }
+        }
+    }, async (request, reply) => {
+        try {
+            const userId = request.params.userId;
+            const lobby = fastify.lobby.get();
+            const onlineUserIds = new Set(lobby.participants.keys());
+
+            if (!lobby.isParticipant(userId)) {
+                throw fastify.httpErrors.forbidden('User must be in the lobby to view pending requests.');
+            }
+
+            const pendingFriendships = await getFriendshipsForUser(fastify.prisma, userId, FriendshipStatus.PENDING, onlineUserIds, 'SENT');
+            return { friendships: pendingFriendships };
+
+        } catch (error) {
+            fastify.log.error(error, `Error fetching pending requests for user ${request.params.userId}`);
             if (error && error.statusCode) {
                 return reply.send(error);
             }
@@ -140,14 +191,9 @@ export default async function (fastify, opts) {
                 201: {
                     type: 'object',
                     properties: {
-                        friendship: {
-                            userOneId: { type: 'integer' },
-                            userTwoId: { type: 'integer' },
-                            status: { type: 'string', enum: [FriendshipStatus.PENDING] },
-                            actionUserId: { type: 'integer' },
-                            createdAt: { type: 'string', format: 'date-time' }
-                        }
-                    }
+                        friendship: { $ref: 'friendshipDetail#' }
+                    },
+                    required: ['friendship']
                 },
                 400: { $ref: 'httpError#' },
                 403: { $ref: 'httpError#' },
@@ -160,7 +206,7 @@ export default async function (fastify, opts) {
             const { actorId, friendId } = request.body;
             const lobby = fastify.lobby.get();
 
-            if (!lobby.participants.has(actorId)) {
+            if (!lobby.isParticipant(actorId)) {
                 throw fastify.httpErrors.forbidden('User must be logged in to send a friend request.');
             }
 
@@ -171,23 +217,33 @@ export default async function (fastify, opts) {
             const userOneId = Math.min(actorId, friendId);
             const userTwoId = Math.max(actorId, friendId);
 
-            const newFriendship = await fastify.prisma.friendship.create({
+            const newFriendshipFromDb = await fastify.prisma.friendship.create({
                 data: {
                     userOneId, // Always the smaller ID
                     userTwoId,  // Always the larger ID
                     actionUserId: actorId // The user initiating the friendship
                 },
-                select: {
-                    userOneId: true,
-                    userTwoId: true,
-                    status: true,
-                    actionUserId: true,
-                    createdAt: true
+                include: {
+                    userOne: true,
+                    userTwo: true
                 }
             });
 
+            // Find the user object of the person who is NOT the actor.
+            const friendUserObject = newFriendshipFromDb.userOneId === actorId
+                ? newFriendshipFromDb.userTwo
+                : newFriendshipFromDb.userOne;
+
+            // Format the response to match the 'friendshipDetail#' schema.
+            const friendshipResponse = {
+                friendshipId: newFriendshipFromDb.id,
+                status: newFriendshipFromDb.status,
+                createdAt: newFriendshipFromDb.createdAt,
+                user: friendUserObject
+            };
+
             reply.code(201);
-            return { friendship: newFriendship };
+            return { friendship: friendshipResponse };
 
         } catch (error) {
             fastify.log.error(error, 'Error creating friendship for user', actorId);
@@ -203,25 +259,27 @@ export default async function (fastify, opts) {
     });
 
     // ROUTE: Accepts a pending friend request.
-    fastify.patch('/accept', {
+    fastify.patch('/:friendshipId/accept', {
         schema: {
+            params: {
+                type: 'object',
+                properties: { friendshipId: { type: 'integer' } },
+                required: ['friendshipId']
+            },
             body: {
                 type: 'object',
                 properties: {
-                    actorId: { type: 'integer' }, // The user ACCEPTING the request
-                    senderId: { type: 'integer' } // The user who SENT the request
+                    actorId: { type: 'integer' } // The user ACCEPTING the request
                 },
-                required: ['actorId', 'senderId']
+                required: ['actorId']
             },
             response: {
                 200: {
                     type: 'object',
                     properties: {
-                        users: {
-                            type: 'array',
-                            items: { $ref: 'publicUser#' }
-                        }
-                    }
+                        friendship: { $ref: 'friendshipDetail#' }
+                    },
+                    required: ['friendship']
                 },
                 403: { $ref: 'httpError#' },
                 404: { $ref: 'httpError#' }
@@ -229,29 +287,39 @@ export default async function (fastify, opts) {
         }
     }, async (request, reply) => {
         try {
-            const { actorId, senderId } = request.body;
+            const { friendshipId } = request.params;
+            const { actorId } = request.body;
             const lobby = fastify.lobby.get();
-            const onlineUserIds = new Set(lobby.participants.keys());
 
-            if (!lobby.participants.has(actorId)) {
+            if (!lobby.isParticipant(actorId)) {
                 throw fastify.httpErrors.forbidden('User must be logged in to accept a friend request.');
             }
 
-            const userOneId = Math.min(actorId, senderId);
-            const userTwoId = Math.max(actorId, senderId);
-
-            await fastify.prisma.friendship.update({
+            const updatedFriendship = await fastify.prisma.friendship.update({
                 where: {
-                    userOneId_userTwoId: { userOneId, userTwoId },
+                    id: friendshipId,
                     status: FriendshipStatus.PENDING,
-                    actionUserId: senderId
+                    NOT: { actionUserId: actorId }
                 },
                 data: {
                     status: FriendshipStatus.ACCEPTED
+                },
+                include: {
+                    userOne: true,
+                    userTwo: true
                 }
             });
-            const friends = await getFriendsForUser(fastify.prisma, actorId, FriendshipStatus.ACCEPTED, onlineUserIds);
-            return { users: friends };
+
+            // Format the response to return the single updated friendship object
+            const friendUserObject = updatedFriendship.userOneId === actorId ? updatedFriendship.userTwo : updatedFriendship.userOne;
+            const friendshipResponse = {
+                friendshipId: updatedFriendship.id,
+                status: updatedFriendship.status,
+                createdAt: updatedFriendship.createdAt,
+                user: friendUserObject
+            };
+
+            return { friendship: friendshipResponse };
 
         } catch (error) {
             fastify.log.error(error, 'Error accepting friendship for user', actorId);
@@ -267,26 +335,22 @@ export default async function (fastify, opts) {
     });
 
     // ROUTE: Removes a friendship between two participants.
-    fastify.delete('/', {
+    fastify.delete('/:friendshipId', {
         schema: {
+            params: {
+                type: 'object',
+                properties: { friendshipId: { type: 'integer' } },
+                required: ['friendshipId']
+            },
             body: {
                 type: 'object',
                 properties: {
-                    actorId: { type: 'integer' },          // The user INITIATING the removal
-                    friendIdToRemove: { type: 'integer' } // The friend being removed
+                    actorId: { type: 'integer' } // The user INITIATING the removal
                 },
-                required: ['actorId', 'friendIdToRemove']
+                required: ['actorId']
             },
             response: {
-                200: {
-                    type: 'object',
-                    properties: {
-                        users: {
-                            type: 'array',
-                            items: { $ref: 'publicUser#' }
-                        }
-                    }
-                },
+                204: { type: 'null' },
                 403: { $ref: 'httpError#' },
                 404: { $ref: 'httpError#' },
                 500: { $ref: 'httpError#' }
@@ -294,26 +358,26 @@ export default async function (fastify, opts) {
         }
     }, async (request, reply) => {
         try {
-            const { actorId, friendIdToRemove } = request.body;
+            const { friendshipId } = request.params;
+            const { actorId } = request.body;
             const lobby = fastify.lobby.get();
-            const onlineUserIds = new Set(lobby.participants.keys());
 
-            if (!lobby.participants.has(actorId)) {
-                throw fastify.httpErrors.forbidden('User must be logged in to delete a friendship.');
+            if (!lobby.isParticipant(actorId)) {
+                throw fastify.httpErrors.forbidden('User must be logged in to modify a friendship.');
             }
-
-            const userOneId = Math.min(actorId, friendIdToRemove);
-            const userTwoId = Math.max(actorId, friendIdToRemove);
 
             await fastify.prisma.friendship.delete({
                 where: {
-                    userOneId_userTwoId: { userOneId, userTwoId },
-                    // userOneId_userTwoId is a composite key based on the @@unique constraint created by prisma
+                    id: friendshipId,
+                    OR: [
+                        { userOneId: actorId },
+                        { userTwoId: actorId }
+                    ]
                 }
             });
 
-            const friends = await getFriendsForUser(fastify.prisma, actorId, FriendshipStatus.ACCEPTED, onlineUserIds);
-            return { users: friends };
+            // On successful deletion, return a 204 No Content response.
+            reply.code(204);
 
         } catch (error) {
             fastify.log.error(error, 'Error deleting friendship');

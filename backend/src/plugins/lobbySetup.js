@@ -35,10 +35,22 @@ async function lobbySetup(fastify, opts) {
             if (lobby.host.id !== request.user.id) {
                 return reply.forbidden('You are not the host of the active lobby.');
             }
+        },
+
+        isParticipant(userId) {
+            const lobby = this.get();
+            if (!lobby) {
+                fastify.log.warn('No active lobby when checking participant.');
+                return false;
+            }
+
+            if (lobby.host.id === userId) {
+                return true;
+            }
+
+            return lobby.participants.some(p => p.id === userId);
         }
     };
-
-    // TODO: Implement function to authenticate lobby participants and call we needed routes
 
     // Decorate the fastify instance with the single service object.
     fastify.decorate('lobby', lobbyService);

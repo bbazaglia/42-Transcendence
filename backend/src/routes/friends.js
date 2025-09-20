@@ -1,6 +1,6 @@
 import pkg from '@prisma/client';
 const { FriendshipStatus } = pkg;
-import { publicUserSelect } from '../lib/prismaSelects.js';
+import { userDetailSelect } from '../lib/prismaSelects.js';
 
 async function getFriendsForUser(prisma, userId, status, onlineUserIds = new Set()) {
     const whereClause = {
@@ -21,8 +21,8 @@ async function getFriendsForUser(prisma, userId, status, onlineUserIds = new Set
     const friendships = await prisma.friendship.findMany({
         where: whereClause,
         select: {
-            userOne: { select: publicUserSelect },
-            userTwo: { select: publicUserSelect },
+            userOne: { select: userDetailSelect },
+            userTwo: { select: userDetailSelect },
             userOneId: true,
             userTwoId: true
         }

@@ -1,4 +1,4 @@
-export const publicUserSelect = {
+export const userDetailSelect = {
     id: true,
     displayName: true,
     avatarUrl: true,
@@ -12,9 +12,9 @@ export const matchDetailSelect = {
     playerOneScore: true,
     playerTwoScore: true,
     playedAt: true,
-    playerOne: { select: publicUserSelect },
-    playerTwo: { select: publicUserSelect },
-    winner: { select: publicUserSelect },
+    playerOne: true,
+    playerTwo: true,
+    winner: true,
     tournamentId: true
 };
 
@@ -24,7 +24,7 @@ export const tournamentDetailSelect = {
     status: true,
     maxParticipants: true,
     createdAt: true,
-    winner: { select: publicUserSelect },
-    participants: { select: { user: { select: publicUserSelect } } },
-    matches: { select: matchDetailSelect }
+    winner: true,
+    participants: { select: { user: true } },
+    matches: true
 };

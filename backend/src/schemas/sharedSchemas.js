@@ -17,6 +17,18 @@ async function sharedSchemas(fastify, opts) {
         required: ['id', 'displayName', 'avatarUrl', 'wins', 'losses', 'createdAt']
     });
 
+    fastify.addSchema({
+        $id: 'friendshipDetail',
+        type: 'object',
+        properties: {
+            friendshipId: { type: 'integer' },
+            status: { type: 'string', enum: ['PENDING', 'ACCEPTED', 'BLOCKED'] },
+            createdAt: { type: 'string', format: 'date-time' },
+            user: { $ref: 'publicUser#' }
+        },
+        required: ['friendshipId', 'status', 'createdAt', 'user']
+    });
+
     // The schema for the entire lobby state object.
     fastify.addSchema({
         $id: 'lobbyState',

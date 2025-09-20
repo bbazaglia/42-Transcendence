@@ -73,30 +73,17 @@ export default async function (fastify, opts) {
                 200: {
                     type: 'object',
                     properties: {
-                        lobby: {
-                            anyOf: [
-                                { $ref: 'lobbyState#' },
-                                { type: 'null' }
-                            ]
-                        }
+                        lobby: { $ref: 'lobbyState#' }
                     },
                     required: ['lobby']
                 },
-                401: { $ref: 'httpError#' }
+                401: { $ref: 'httpError#' },
+                403: { $ref: 'httpError#' }
             }
-        }
+        },
+        preHandler: [fastify.lobby.auth]
     }, async (request, reply) => {
         const lobby = fastify.lobby.get();
-
-        if (!lobby) {
-            return reply.code(200).send({ lobby: null });
-        }
-
-        // If a lobby exists, check if the requester is part of it.
-        if (!lobby.isParticipant(request.user.id)) {
-            // This could happen in a weird edge case of stale JWTs.
-            return reply.code(200).send({ lobby: null });
-        }
 
         return {
             lobby: {
@@ -154,7 +141,6 @@ export default async function (fastify, opts) {
             const { email, password } = request.body;
             const lobby = fastify.lobby.get();
 
-            // Use the PRIVATE client to fetch the user with their password hash for validation.
             const guestUserWithSecrets = await fastify.prisma.user.findUnique({
                 where: { email: email.toLowerCase() },
                 omit: { passwordHash: false } // Explicitly include passwordHash

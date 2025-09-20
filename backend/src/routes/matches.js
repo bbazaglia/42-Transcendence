@@ -1,4 +1,4 @@
-import { matchDetailSelect } from "../lib/prismaSelects.js";
+import { matchQueryTemplate } from "../lib/prismaQueryTemplates.js";
 
 export default async function (fastify, opts) {
     // All routes in this file require authentication
@@ -26,7 +26,8 @@ export default async function (fastify, opts) {
                     type: 'object',
                     properties: {
                         match: { $ref: 'matchDetail#' }
-                    }
+                    },
+                    required: ['match']
                 },
                 403: { $ref: 'httpError#' },
                 500: { $ref: 'httpError#' }
@@ -45,8 +46,8 @@ export default async function (fastify, opts) {
             const lobby = fastify.lobby.get();
 
             // Ensure both players are part of the lobby participants
-            const isPlayerOneValid = lobby.participants.has(playerOneId);
-            const isPlayerTwoValid = lobby.participants.has(playerTwoId);
+            const isPlayerOneValid = lobby.isParticipant(playerOneId);
+            const isPlayerTwoValid = lobby.isParticipant(playerTwoId);
 
             if (!isPlayerOneValid || !isPlayerTwoValid) {
                 throw fastify.httpErrors.forbidden('Match cannot be reported. One or both players are not verified in the current lobby.');
@@ -71,7 +72,7 @@ export default async function (fastify, opts) {
                         playerTwoScore,
                         winnerId
                     },
-                    select: matchDetailSelect
+                    select: matchQueryTemplate
                 });
 
                 const loserId = winnerId === playerOneId ? playerTwoId : playerOneId;

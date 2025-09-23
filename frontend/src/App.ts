@@ -4,11 +4,12 @@ import { GameManager } from './managers/GameManager'
 import { GameCustomization } from './managers/GameCustomization'
 import { AuthModal } from './components/AuthModal'
 import { InsightsModal } from './components/InsightsModal'
+import { Navbar } from './components/Navbar'
+import { Lobby } from './components/Lobby'
 import { authService } from './services/AuthService'
 import { matchService } from './services/MatchService'
 import { friendsService } from './services/FriendsService'
 import { tournamentService } from './services/TournamentService'
-import { lobbyService } from './services/LobbyService'
 import { apiService } from './services/ApiService'
 
 export class App {
@@ -17,6 +18,8 @@ export class App {
   private gameManager: GameManager
   private customization: GameCustomization
   private authModal: AuthModal
+  private navbar: Navbar
+  private lobby: Lobby
   private rootElement: HTMLElement
 
   constructor() {
@@ -25,6 +28,8 @@ export class App {
     this.gameManager = new GameManager()
     this.customization = GameCustomization.getInstance()
     this.authModal = new AuthModal()
+    this.navbar = new Navbar(this.authModal)
+    this.lobby = new Lobby(this.authModal)
     this.rootElement = document.getElementById('root')!
   }
 
@@ -107,7 +112,7 @@ export class App {
     this.router.navigate(currentPath)
     
     // Setup auth bar listeners after rendering
-    this.setupAuthBarListeners()
+    this.setupNavbarListeners()
     
     // Always render the lobby dropdown after auth bar setup
     this.renderLobbyDropdown()
@@ -123,7 +128,7 @@ export class App {
     // Create navbar
     navbar = document.createElement('div')
     navbar.id = 'navbar'
-    navbar.innerHTML = this.renderAuthBar()
+    navbar.innerHTML = this.navbar.render()
 
     // Add to body
     document.body.appendChild(navbar)
@@ -1406,93 +1411,6 @@ export class App {
     // This method is kept for potential future use
   }
 
-  private renderAuthBar(): string {
-    const isAuthenticated = authService.isAuthenticated()
-    
-    return `
-      <!-- Auth Bar -->
-      <div class="fixed top-0 left-0 right-0 z-50 bg-black/20 backdrop-blur-md border-b border-white/10">
-        <div class="max-w-7xl mx-auto px-4 py-3">
-          <div class="flex items-center justify-between">
-            <!-- Logo/Brand -->
-            <div class="flex items-center space-x-3">
-              <h1 class="text-xl font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent orbitron-font">
-                Pong Tournament
-              </h1>
-            </div>
-            
-            <!-- Desktop Navigation -->
-            <div class="hidden md:flex items-center space-x-6">
-              <a href="/" class="nav-link text-white hover:text-cyan-400 transition-colors font-medium">Home</a>
-              <a href="/tournament" class="nav-link text-white hover:text-cyan-400 transition-colors font-medium">Tournament</a>
-              <a href="/quick-game" class="nav-link text-white hover:text-cyan-400 transition-colors font-medium">Quick Game</a>
-            </div>
-            
-            <!-- Mobile Menu Button -->
-            <div class="md:hidden">
-              <button id="mobile-menu-btn" class="text-white hover:text-cyan-400 transition-colors p-2">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                </svg>
-              </button>
-            </div>
-            
-            <!-- Auth Status -->
-            <div id="auth-status" class="hidden md:flex items-center space-x-4">
-              <!-- Always show Sign In button -->
-              <button id="login-btn" class="px-4 py-2 bg-black/60 text-white font-medium rounded-lg border border-white/20 hover:bg-white/10 hover:border-white/40 transition-all duration-300 text-sm transform hover:scale-105">
-                Sign In
-              </button>
-              
-              ${isAuthenticated ? `
-                <!-- Authenticated User -->
-                <div class="flex items-center space-x-3">
-                  <button id="desktop-profile-btn" class="px-3 py-1 bg-cyan-600/20 text-white border border-cyan-500/30 text-sm rounded hover:bg-cyan-600/30 transition-colors">
-                    Profile
-                  </button>
-                  <button id="logout-btn" class="px-3 py-1 bg-red-600/20 text-white border border-red-500/30 text-sm rounded hover:bg-red-600/30 transition-colors">
-                    Logout
-                  </button>
-                </div>
-              ` : ''}
-            </div>
-          </div>
-        </div>
-        
-        <!-- Mobile Menu -->
-        <div id="mobile-menu" class="md:hidden hidden bg-black/40 backdrop-blur-md border-t border-white/10">
-          <div class="px-4 py-4 space-y-4">
-            <!-- Mobile Navigation Links -->
-            <div class="space-y-3">
-              <a href="/" class="block text-white hover:text-cyan-400 transition-colors font-medium py-2">🏠 Home</a>
-              <a href="/tournament" class="block text-white hover:text-cyan-400 transition-colors font-medium py-2">🏆 Tournament</a>
-              <a href="/quick-game" class="block text-white hover:text-cyan-400 transition-colors font-medium py-2">⚡ Quick Game</a>
-            </div>
-            
-            <!-- Mobile Auth Status -->
-            <div class="border-t border-white/20 pt-4">
-              <!-- Always show Sign In button -->
-              <button id="mobile-login-btn" class="w-full px-4 py-2 bg-black/60 text-white font-medium rounded-lg border border-white/20 hover:bg-white/10 hover:border-white/40 transition-all duration-300 text-sm transform hover:scale-105 mb-3">
-                Sign In
-              </button>
-              
-              ${isAuthenticated ? `
-                <!-- Mobile Authenticated User -->
-                <div class="space-y-3">
-                  <button id="mobile-nav-profile-btn" class="w-full px-4 py-2 bg-cyan-600/20 text-white border border-cyan-500/30 text-sm rounded-lg hover:bg-cyan-600/30 transition-colors">
-                    Profile
-                  </button>
-                  <button id="mobile-logout-btn" class="w-full px-4 py-2 bg-red-600/20 text-white border border-red-500/30 text-sm rounded-lg hover:bg-red-600/30 transition-colors">
-                    Logout
-                  </button>
-                </div>
-              ` : ''}
-            </div>
-          </div>
-        </div>
-      </div>
-    `
-  }
 
   private renderLobbyDropdown(): void {
     // Check if lobby dropdown already exists
@@ -1504,454 +1422,44 @@ export class App {
     // Create lobby dropdown
     lobbyDropdown = document.createElement('div')
     lobbyDropdown.id = 'lobby-dropdown'
-    
-    const isAuthenticated = authService.isAuthenticated()
-    
-    if (isAuthenticated) {
-      // Render authenticated lobby dropdown
-      lobbyDropdown.innerHTML = this.renderAuthenticatedLobbyDropdown()
-    } else {
-      // Render guest lobby dropdown
-      lobbyDropdown.innerHTML = this.renderGuestLobbyDropdown()
-    }
+    lobbyDropdown.innerHTML = this.lobby.render()
 
     // Add to body
     document.body.appendChild(lobbyDropdown)
 
     // Setup lobby listeners
-    this.setupLobbyListeners()
+    this.lobby.setupEventListeners()
     
     // Load initial data if authenticated
-    if (isAuthenticated) {
-      this.loadLobbyData()
+    if (authService.isAuthenticated()) {
+      this.lobby.loadData()
     }
   }
 
-  private renderAuthenticatedLobbyDropdown(): string {
-    return `
-      <!-- Lobby Dropdown -->
-      <div class="fixed bottom-4 right-4 z-50">
-        <!-- Lobby Toggle Button -->
-        <button id="lobby-toggle" 
-                class="w-14 h-14 bg-gradient-to-r from-cyan-600 to-purple-600 rounded-full shadow-2xl hover:shadow-cyan-500/25 transition-all duration-300 transform hover:scale-110 flex items-center justify-center group">
-          <svg class="w-6 h-6 text-white group-hover:rotate-12 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-          </svg>
-        </button>
 
-        <!-- Lobby Panel -->
-        <div id="lobby-panel" class="hidden absolute bottom-16 right-0 w-80 bg-black/90 backdrop-blur-md rounded-xl border border-white/20 shadow-2xl">
-          <!-- Header -->
-          <div class="p-4 border-b border-white/10">
-            <div class="flex items-center justify-between">
-              <h3 class="text-lg font-semibold text-white">Lobby</h3>
-              <div class="flex items-center space-x-2">
-                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span class="text-xs text-gray-400" id="online-count">0 online</span>
-              </div>
-            </div>
-          </div>
 
-          <!-- Content -->
-          <div class="p-4">
-            <!-- Host Status -->
-            <div id="lobby-host-status" class="mb-4 hidden">
-              <div class="bg-green-500/20 border border-green-500/30 rounded-lg p-3">
-                <div class="flex items-center space-x-2">
-                  <span class="text-green-400 text-lg">👑</span>
-                  <span class="text-green-400 font-medium text-sm">You are the Host</span>
-                </div>
-              </div>
-            </div>
 
-            <!-- Joined Status -->
-            <div id="lobby-joined-status" class="mb-4 hidden">
-              <div class="bg-blue-500/20 border border-blue-500/30 rounded-lg p-3">
-                <div class="flex items-center space-x-2">
-                  <span class="text-blue-400 text-lg">✅</span>
-                  <span class="text-blue-400 font-medium text-sm">You joined the lobby</span>
-                </div>
-              </div>
-            </div>
 
-            <!-- Online Users -->
-            <div class="mb-4">
-              <h4 class="text-sm font-medium text-gray-300 mb-2">Online Users</h4>
-              <div id="online-users-list" class="space-y-2 max-h-40 overflow-y-auto">
-                <!-- Users will be loaded here -->
-              </div>
-            </div>
 
-            <!-- Lobby Actions -->
-            <div class="space-y-2">
-              <button id="leave-lobby-btn" 
-                      class="w-full px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors text-sm hidden">
-                Leave Lobby
-              </button>
-              <button id="lobby-login-btn" 
-                      class="w-full px-4 py-2 bg-cyan-600 text-white font-medium rounded-lg hover:bg-cyan-700 transition-colors text-sm">
-                Sign In
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    `
-  }
 
-  private renderGuestLobbyDropdown(): string {
-    return `
-      <!-- Guest Lobby Dropdown -->
-      <div class="fixed bottom-4 right-4 z-50">
-        <!-- Lobby Toggle Button -->
-        <button id="lobby-toggle" 
-                class="w-14 h-14 bg-gradient-to-r from-gray-600 to-gray-700 rounded-full shadow-2xl hover:shadow-gray-500/25 transition-all duration-300 transform hover:scale-110 flex items-center justify-center group">
-          <svg class="w-6 h-6 text-white group-hover:rotate-12 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-          </svg>
-        </button>
 
-        <!-- Lobby Panel -->
-        <div id="lobby-panel" class="hidden absolute bottom-16 right-0 w-80 bg-black/90 backdrop-blur-md rounded-xl border border-white/20 shadow-2xl">
-          <!-- Header -->
-          <div class="p-4 border-b border-white/10">
-            <div class="flex items-center justify-between">
-              <h3 class="text-lg font-semibold text-white">Lobby</h3>
-              <div class="flex items-center space-x-2">
-                <div class="w-2 h-2 bg-gray-500 rounded-full"></div>
-                <span class="text-xs text-gray-400">Login Required</span>
-              </div>
-            </div>
-          </div>
 
-          <!-- Content -->
-          <div class="p-4">
-            <!-- Login Required Message -->
-            <div class="mb-4">
-              <div class="bg-gray-500/20 border border-gray-500/30 rounded-lg p-4 text-center">
-                <div class="text-gray-300 text-sm mb-3">
-                  <span class="text-2xl mb-2 block">🔒</span>
-                  <p>Sign in to join the lobby and play with other users!</p>
-                </div>
-              </div>
-            </div>
-
-            <!-- Login Button -->
-            <div class="space-y-2">
-              <button id="lobby-login-btn" 
-                      class="w-full px-4 py-3 bg-cyan-600 text-white font-medium rounded-lg hover:bg-cyan-700 transition-colors text-sm">
-                Sign In to Join Lobby
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    `
-  }
-
-  private setupLobbyListeners(): void {
-    // Toggle lobby panel
-    document.getElementById('lobby-toggle')?.addEventListener('click', () => {
-      const panel = document.getElementById('lobby-panel')
-      if (panel) {
-        panel.classList.toggle('hidden')
-      }
-    })
-
-    // Leave lobby
-    document.getElementById('leave-lobby-btn')?.addEventListener('click', async () => {
-      try {
-        const result = await lobbyService.leaveLobby()
-        if (result.success) {
-          console.log('Successfully left lobby')
-          this.updateLobbyJoinStatus(false)
-          this.updateLobbyStatus(false)
-        } else {
-          console.error('Failed to leave lobby:', result.error)
-          alert('Failed to leave lobby. Please try again.')
-        }
-      } catch (error) {
-        console.error('Error leaving lobby:', error)
-        alert('Error leaving lobby. Please try again.')
-      }
-    })
-
-    // Lobby login button
-    document.getElementById('lobby-login-btn')?.addEventListener('click', (e) => {
-      e.preventDefault()
-      this.authModal.show('login')
-    })
-  }
-
-  private async loadLobbyData(): Promise<void> {
-    try {
-      // Load friends (online users)
-      await friendsService.getFriends()
-      const friends = friendsService.getLocalFriends()
-      
-      // Update online users list
-      this.updateOnlineUsersList(friends)
-      
-      // Auto-join lobby when user logs in
-      await this.autoJoinLobby()
-      
-    } catch (error) {
-      console.error('Error loading lobby data:', error)
-    }
-  }
-
-  private async autoJoinLobby(): Promise<void> {
-    try {
-      // Check if this is the first user (no lobby exists yet)
-      const createResult = await lobbyService.createLobby()
-      if (createResult.success) {
-        console.log('Created lobby and became host')
-        this.updateLobbyStatus(true)
-        this.updateLobbyJoinStatus(true)
-      } else {
-        // If create fails with 409, lobby already exists
-        if (createResult.error && createResult.error.includes('already in session')) {
-          console.log('Lobby already exists - user joins as participant')
-          // For now, just show that user is in the lobby
-          // In a real implementation, you would call the join endpoint
-          this.updateLobbyJoinStatus(true)
-          this.updateLobbyStatus(false) // Not the host
-        } else {
-          console.log('Failed to create or join lobby:', createResult.error)
-          this.updateLobbyJoinStatus(false)
-        }
-      }
-    } catch (error) {
-      console.error('Error auto-joining lobby:', error)
-      // If there's an error, assume user is not in lobby
-      this.updateLobbyJoinStatus(false)
-    }
-  }
-
-  private updateOnlineUsersList(friends: any[]): void {
-    const usersList = document.getElementById('online-users-list')
-    const onlineCount = document.getElementById('online-count')
-    
-    if (!usersList || !onlineCount) return
-
-    // Clear existing users
-    usersList.innerHTML = ''
-
-    // Add current user
-    const currentUser = authService.getCurrentUser()
-    if (currentUser) {
-      const userElement = document.createElement('div')
-      userElement.className = 'flex items-center space-x-3 p-2 bg-cyan-500/20 border border-cyan-500/30 rounded-lg cursor-pointer hover:bg-cyan-500/30 transition-colors'
-      userElement.innerHTML = `
-        <div class="w-8 h-8 bg-gradient-to-br from-cyan-400 to-purple-600 rounded-full flex items-center justify-center">
-          <span class="text-xs font-bold text-white">${currentUser.displayName.charAt(0).toUpperCase()}</span>
-        </div>
-        <div class="flex-1">
-          <div class="text-white text-sm font-medium hover:text-cyan-400 transition-colors" id="current-user-name">${currentUser.displayName} (You)</div>
-          <div class="text-cyan-400 text-xs">🟢 Online</div>
-        </div>
-      `
-      // Add click listener to go to profile
-      userElement.addEventListener('click', () => {
-        window.history.pushState({}, '', '/profile')
-        this.render()
-      })
-      usersList.appendChild(userElement)
-    }
-
-    // Add friends
-    friends.forEach(friend => {
-      const userElement = document.createElement('div')
-      userElement.className = 'flex items-center space-x-3 p-2 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors'
-      userElement.innerHTML = `
-        <div class="w-8 h-8 bg-gradient-to-br from-purple-400 to-pink-600 rounded-full flex items-center justify-center">
-          <span class="text-xs font-bold text-white">${friend.displayName.charAt(0).toUpperCase()}</span>
-        </div>
-        <div class="flex-1">
-          <div class="text-white text-sm font-medium">${friend.displayName}</div>
-          <div class="text-gray-400 text-xs">${friend.isOnline ? '🟢 Online' : '🔴 Offline'}</div>
-        </div>
-        ${friend.isOnline ? '<button class="text-cyan-400 hover:text-cyan-300 text-xs">Invite</button>' : ''}
-      `
-      usersList.appendChild(userElement)
-    })
-
-    // Update online count
-    const onlineUsers = friends.filter(friend => friend.isOnline).length + (currentUser ? 1 : 0)
-    onlineCount.textContent = `${onlineUsers} online`
-  }
-
-  private updateLobbyStatus(isHost: boolean): void {
-    const hostStatus = document.getElementById('lobby-host-status')
-    if (hostStatus) {
-      if (isHost) {
-        hostStatus.classList.remove('hidden')
-      } else {
-        hostStatus.classList.add('hidden')
-      }
-    }
-  }
-
-  private updateLobbyJoinStatus(isJoined: boolean): void {
-    const joinedStatus = document.getElementById('lobby-joined-status')
-    const leaveBtn = document.getElementById('leave-lobby-btn')
-    
-    if (joinedStatus) {
-      if (isJoined) {
-        joinedStatus.classList.remove('hidden')
-      } else {
-        joinedStatus.classList.add('hidden')
-      }
-    }
-    
-    if (leaveBtn) {
-      if (isJoined) {
-        leaveBtn.classList.remove('hidden')
-      } else {
-        leaveBtn.classList.add('hidden')
-      }
-    }
-  }
-
-  private setupAuthBarListeners(): void {
-    // Remove existing listeners to prevent duplicates
-    this.removeAuthBarListeners()
-
+  private setupNavbarListeners(): void {
     // Update auth status first
     this.updateAuthStatus()
 
-    // Desktop Auth button listeners
-    document.getElementById('login-btn')?.addEventListener('click', (e) => {
-      e.preventDefault()
-      this.authModal.show('login')
-    })
-
-    // Desktop logout button listener
-    document.getElementById('logout-btn')?.addEventListener('click', async (e) => {
-      e.preventDefault()
-      await this.handleLogout()
-    })
-
-    // Mobile Auth button listeners
-    document.getElementById('mobile-login-btn')?.addEventListener('click', (e) => {
-      e.preventDefault()
-      this.authModal.show('login')
-    })
-
-    // Mobile logout button listener
-    document.getElementById('mobile-logout-btn')?.addEventListener('click', async (e) => {
-      e.preventDefault()
-      this.closeMobileMenu()
-      await this.handleLogout()
-    })
-
-    // Mobile menu toggle
-    document.getElementById('mobile-menu-btn')?.addEventListener('click', (e) => {
-      e.preventDefault()
-      this.toggleMobileMenu()
-    })
-
-    // Navigation link listeners
-    document.querySelectorAll('.nav-link').forEach(link => {
-      link.addEventListener('click', (e) => {
-        e.preventDefault()
-        const href = (link as HTMLAnchorElement).getAttribute('href')
-        if (href) {
-          window.history.pushState({}, '', href)
-          this.render()
-        }
-      })
-    })
-
-    // Desktop profile button listener
-    document.getElementById('desktop-profile-btn')?.addEventListener('click', (e) => {
-      e.preventDefault()
-      if (authService.isAuthenticated()) {
-        window.history.pushState({}, '', '/profile')
+    // Setup navbar event listeners
+    this.navbar.setupEventListeners(
+      (path: string) => {
+        window.history.pushState({}, '', path)
         this.render()
-      } else {
-        this.authModal.show('login')
+      },
+      async () => {
+        await this.handleLogout()
       }
-    })
-
-    // Mobile navigation link listeners
-    document.querySelectorAll('#mobile-menu a').forEach(link => {
-      link.addEventListener('click', (e) => {
-        e.preventDefault()
-        const href = (link as HTMLAnchorElement).getAttribute('href')
-        if (href) {
-          this.closeMobileMenu()
-          window.history.pushState({}, '', href)
-          this.render()
-        }
-      })
-    })
-
-    // Mobile profile button listener
-    document.getElementById('mobile-nav-profile-btn')?.addEventListener('click', (e) => {
-      e.preventDefault()
-      this.closeMobileMenu()
-      if (authService.isAuthenticated()) {
-        window.history.pushState({}, '', '/profile')
-        this.render()
-      } else {
-        this.authModal.show('login')
-      }
-    })
-
-    // Close mobile menu when clicking outside
-    document.addEventListener('click', (e) => {
-      const mobileMenu = document.getElementById('mobile-menu')
-      const mobileMenuBtn = document.getElementById('mobile-menu-btn')
-      
-      if (mobileMenu && !mobileMenu.contains(e.target as Node) && !mobileMenuBtn?.contains(e.target as Node)) {
-        this.closeMobileMenu()
-      }
-    })
+    )
   }
 
-  private removeAuthBarListeners(): void {
-    // Remove all existing event listeners by cloning and replacing elements
-    const elementsToClean = [
-      'login-btn', 'logout-btn',
-      'mobile-login-btn', 'mobile-logout-btn',
-      'mobile-menu-btn', 'desktop-profile-btn', 'mobile-nav-profile-btn'
-    ]
-
-    elementsToClean.forEach(id => {
-      const element = document.getElementById(id)
-      if (element) {
-        const newElement = element.cloneNode(true)
-        element.parentNode?.replaceChild(newElement, element)
-      }
-    })
-
-    // Remove navigation link listeners
-    document.querySelectorAll('.nav-link').forEach(link => {
-      const newLink = link.cloneNode(true)
-      link.parentNode?.replaceChild(newLink, link)
-    })
-
-    // Remove mobile menu link listeners
-    document.querySelectorAll('#mobile-menu a').forEach(link => {
-      const newLink = link.cloneNode(true)
-      link.parentNode?.replaceChild(newLink, link)
-    })
-  }
-
-  private toggleMobileMenu(): void {
-    const mobileMenu = document.getElementById('mobile-menu')
-    if (mobileMenu) {
-      mobileMenu.classList.toggle('hidden')
-    }
-  }
-
-  private closeMobileMenu(): void {
-    const mobileMenu = document.getElementById('mobile-menu')
-    if (mobileMenu) {
-      mobileMenu.classList.add('hidden')
-    }
-  }
 
   /**
    * Handles user logout

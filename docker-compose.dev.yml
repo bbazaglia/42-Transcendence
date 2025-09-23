@@ -14,6 +14,8 @@ services:
     env_file:
       - ./.env
     restart: unless-stopped
+    networks:
+      - app-network
 
   frontend:
     build:
@@ -23,11 +25,18 @@ services:
     volumes:
       - ./frontend/src:/app/src
       - ./frontend/vite.config.ts:/app/vite.config.ts
+      - ./frontend/index.html:/app/index.html
     ports:
       - "5173:5173"
     depends_on:
       - backend
     restart: unless-stopped
+    networks:
+      - app-network
 
 volumes:
   db_data:
+
+networks:
+  app-network:
+    driver: bridge

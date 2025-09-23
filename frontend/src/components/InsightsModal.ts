@@ -60,33 +60,32 @@ export class InsightsModal {
                             </div>
                         </div>
 
-                        <!-- Performance Insights -->
-                        <div class="bg-white/5 rounded-xl p-6 border border-white/10 mb-8">
-                            <h3 class="text-xl font-bold text-cyan-400 mb-4 orbitron-font">Performance Insights</h3>
-                            <div id="performance-insights" class="space-y-2">
-                                <!-- Insights will be populated here -->
-                            </div>
-                        </div>
 
                         <!-- Charts Grid -->
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                             <!-- Performance Over Time Chart -->
-                            <div class="bg-white/5 rounded-xl p-6 border border-white/10">
-                                <h3 class="text-xl font-bold text-cyan-400 mb-4 orbitron-font">Performance Over Time</h3>
-                                <canvas id="performance-chart" width="400" height="200"></canvas>
+                            <div class="bg-white/5 rounded-xl p-4 border border-white/10">
+                                <h3 class="text-lg font-bold text-cyan-400 mb-3 orbitron-font">Performance Over Time</h3>
+                                <div class="relative h-48">
+                                    <canvas id="performance-chart"></canvas>
+                                </div>
                             </div>
 
                             <!-- Win/Loss Distribution Chart -->
-                            <div class="bg-white/5 rounded-xl p-6 border border-white/10">
-                                <h3 class="text-xl font-bold text-cyan-400 mb-4 orbitron-font">Win/Loss Distribution</h3>
-                                <canvas id="winloss-chart" width="400" height="200"></canvas>
+                            <div class="bg-white/5 rounded-xl p-4 border border-white/10">
+                                <h3 class="text-lg font-bold text-cyan-400 mb-3 orbitron-font">Win/Loss Distribution</h3>
+                                <div class="relative h-48">
+                                    <canvas id="winloss-chart"></canvas>
+                                </div>
                             </div>
                         </div>
 
                         <!-- Score Distribution Chart -->
-                        <div class="bg-white/5 rounded-xl p-6 border border-white/10 mb-8">
-                            <h3 class="text-xl font-bold text-cyan-400 mb-4 orbitron-font">Score Distribution</h3>
-                            <canvas id="score-chart" width="800" height="300"></canvas>
+                        <div class="bg-white/5 rounded-xl p-4 border border-white/10 mb-6">
+                            <h3 class="text-lg font-bold text-cyan-400 mb-3 orbitron-font">Score Distribution</h3>
+                            <div class="relative h-64">
+                                <canvas id="score-chart"></canvas>
+                            </div>
                         </div>
 
                         <!-- Opponent Analysis -->
@@ -201,8 +200,6 @@ export class InsightsModal {
         // Update overview cards
         this.updateOverviewCards(overview);
 
-        // Render performance insights
-        this.renderPerformanceInsights();
 
         // Create charts
         this.createPerformanceChart(performanceOverTime);
@@ -228,21 +225,6 @@ export class InsightsModal {
         if (playTimeEl) playTimeEl.textContent = analyticsService.formatPlayTime(overview.totalPlayTime);
     }
 
-    private renderPerformanceInsights(): void {
-        if (!this.analytics) return;
-
-        const insights = analyticsService.getPerformanceInsights(this.analytics);
-        const container = this.modal.querySelector('#performance-insights');
-        
-        if (container) {
-            container.innerHTML = insights.map(insight => 
-                `<div class="flex items-start space-x-3">
-                    <div class="w-2 h-2 bg-cyan-400 rounded-full mt-2 flex-shrink-0"></div>
-                    <p class="text-gray-300">${insight}</p>
-                </div>`
-            ).join('');
-        }
-    }
 
     private createPerformanceChart(performanceOverTime: any[]): void {
         const canvas = this.modal.querySelector('#performance-chart') as HTMLCanvasElement;
@@ -261,7 +243,10 @@ export class InsightsModal {
                     borderColor: '#06b6d4',
                     backgroundColor: 'rgba(6, 182, 212, 0.1)',
                     tension: 0.4,
-                    fill: true
+                    fill: true,
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    pointHoverRadius: 5
                 }]
             },
             options: {
@@ -269,16 +254,22 @@ export class InsightsModal {
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
-                        labels: { color: '#9ca3af' }
+                        display: false
                     }
                 },
                 scales: {
                     x: {
-                        ticks: { color: '#9ca3af' },
+                        ticks: { 
+                            color: '#9ca3af',
+                            maxTicksLimit: 6
+                        },
                         grid: { color: 'rgba(255, 255, 255, 0.1)' }
                     },
                     y: {
-                        ticks: { color: '#9ca3af' },
+                        ticks: { 
+                            color: '#9ca3af',
+                            maxTicksLimit: 5
+                        },
                         grid: { color: 'rgba(255, 255, 255, 0.1)' },
                         min: 0,
                         max: 100
@@ -304,7 +295,8 @@ export class InsightsModal {
                 datasets: [{
                     data: [overview.wins, overview.losses],
                     backgroundColor: ['#10b981', '#ef4444'],
-                    borderWidth: 0
+                    borderWidth: 0,
+                    hoverOffset: 4
                 }]
             },
             options: {
@@ -313,7 +305,11 @@ export class InsightsModal {
                 plugins: {
                     legend: {
                         position: 'bottom',
-                        labels: { color: '#9ca3af' }
+                        labels: { 
+                            color: '#9ca3af',
+                            padding: 15,
+                            usePointStyle: true
+                        }
                     }
                 }
             }
@@ -342,7 +338,9 @@ export class InsightsModal {
                     data: scoreRanges.map(range => range.count),
                     backgroundColor: 'rgba(139, 92, 246, 0.6)',
                     borderColor: '#8b5cf6',
-                    borderWidth: 1
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    borderSkipped: false
                 }]
             },
             options: {
@@ -350,16 +348,22 @@ export class InsightsModal {
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
-                        labels: { color: '#9ca3af' }
+                        display: false
                     }
                 },
                 scales: {
                     x: {
-                        ticks: { color: '#9ca3af' },
+                        ticks: { 
+                            color: '#9ca3af',
+                            maxTicksLimit: 8
+                        },
                         grid: { color: 'rgba(255, 255, 255, 0.1)' }
                     },
                     y: {
-                        ticks: { color: '#9ca3af' },
+                        ticks: { 
+                            color: '#9ca3af',
+                            maxTicksLimit: 6
+                        },
                         grid: { color: 'rgba(255, 255, 255, 0.1)' },
                         beginAtZero: true
                     }

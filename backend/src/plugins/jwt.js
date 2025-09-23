@@ -16,6 +16,11 @@ export default fp(async function (fastify, opts) {
             // This verifies the token from the Authorization header.
             // If valid, it attaches the decoded user info to `request.user`.
             await request.jwtVerify();
+            
+            // Flatten the nested payload structure for easier access
+            if (request.user && request.user.payload) {
+                request.user = request.user.payload;
+            }
         } catch (error) {
             // If the token is missing or invalid, send a 401 Unauthorized error.
             return reply.unauthorized('The host must be authenticated to access this resource.');

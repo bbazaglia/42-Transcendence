@@ -3,6 +3,7 @@ import { TournamentManager } from './managers/TournamentManager'
 import { GameManager } from './managers/GameManager'
 import { GameCustomization } from './managers/GameCustomization'
 import { AuthModal } from './components/AuthModal'
+import { InsightsModal } from './components/InsightsModal'
 import { authService } from './services/AuthService'
 import { matchService } from './services/MatchService'
 import { friendsService } from './services/FriendsService'
@@ -545,7 +546,16 @@ export class App {
               <!-- Stats Card -->
               <div class="lg:col-span-2">
                 <div class="bg-white/10 backdrop-blur-xl rounded-2xl p-8 border border-white/20 shadow-2xl">
-                  <h3 class="text-2xl font-bold text-cyan-400 mb-6 orbitron-font">Statistics</h3>
+                  <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-2xl font-bold text-cyan-400 orbitron-font">Statistics</h3>
+                    <button id="view-insights-btn" 
+                            class="px-4 py-2 bg-gradient-to-r from-cyan-600/20 to-purple-600/20 text-white border border-cyan-500/30 rounded-lg hover:from-cyan-600/30 hover:to-purple-600/30 transition-all duration-300 text-sm font-medium flex items-center space-x-2">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                      </svg>
+                      <span>View Insights</span>
+                    </button>
+                  </div>
                   <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
                     <div class="text-center">
                       <div class="text-3xl font-bold text-emerald-400">${user.wins}</div>
@@ -777,6 +787,12 @@ export class App {
       this.showEditProfileModal()
     })
 
+    // View insights button
+    document.getElementById('view-insights-btn')?.addEventListener('click', (e) => {
+      e.preventDefault()
+      this.showInsightsModal()
+    })
+
     // Play first game button
     document.getElementById('play-first-game-btn')?.addEventListener('click', (e) => {
       e.preventDefault()
@@ -955,6 +971,21 @@ export class App {
 
   private closeEditProfileModal(): void {
     document.getElementById('edit-profile-modal')?.remove()
+  }
+
+  private async showInsightsModal(): Promise<void> {
+    const currentUser = authService.getCurrentUser()
+    console.log('Current user:', currentUser)
+    
+    if (!currentUser) {
+      console.error('No current user found - user not authenticated')
+      alert('Please log in to view your analytics')
+      return
+    }
+
+    console.log('Opening insights modal for user:', currentUser.id)
+    const insightsModal = new InsightsModal(currentUser.id)
+    await insightsModal.show()
   }
 
   private showAddFriendModal(): void {

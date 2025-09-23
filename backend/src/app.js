@@ -13,6 +13,7 @@ import lobbySetup from './plugins/lobbySetup.js';
 import jwt from './plugins/jwt.js';
 import prismaPlugin from './plugins/prisma.js';
 
+import analyticsRoutes from './routes/analytics.js';
 import authRoutes from './routes/auth.js';
 import friendsRoutes from './routes/friends.js';
 import healthRoutes from './routes/health.js';
@@ -38,6 +39,7 @@ async function app(fastify, opts) {
     await fastify.register(prismaPlugin);
 
     // Register routes
+    await fastify.register(analyticsRoutes, { prefix: '/api/analytics' });
     await fastify.register(authRoutes, { prefix: '/api/auth' });
     await fastify.register(lobbyRoutes, { prefix: '/api/lobby' });
     await fastify.register(friendsRoutes, { prefix: '/api/friends' });

@@ -90,8 +90,9 @@ export class App {
   private setupRouting(): void {
     this.router.addRoute('/', () => this.showHomePage())
     this.router.addRoute('/tournament', () => this.showTournamentPage())
-    this.router.addRoute('/game', () => this.showGamePage(false)) // Tournament game
-    this.router.addRoute('/quick-game', () => this.showGamePage(true)) // Quick game
+    this.router.addRoute('/game', () => this.showGamePage(false, false)) // Tournament game
+    this.router.addRoute('/quick-game', () => this.showGamePage(true, false)) // Quick game
+    this.router.addRoute('/play-ai', () => this.showGamePage(true, true)) // AI game
     this.router.addRoute('/register', () => this.showRegistrationPage())
     this.router.addRoute('/profile', () => this.showProfilePage())
 
@@ -196,7 +197,8 @@ export class App {
     this.afterRenderTournamentPage()
   }
 
-  private showGamePage(isQuickGame: boolean): void {
+  private showGamePage(isQuickGame: boolean, isAIGame: boolean = false): void {
+    /*
     // Check if user is authenticated
     if (!authService.isAuthenticated()) {
       this.rootElement.innerHTML = `
@@ -215,6 +217,7 @@ export class App {
       `
       return
     }
+    */
 
     this.rootElement.innerHTML = `
       <div class="min-h-screen mesh-gradient relative overflow-hidden">
@@ -223,7 +226,7 @@ export class App {
         <div class="relative z-10 flex items-center justify-center min-h-screen px-4 pt-20">
           <div class="text-center">
             <h2 class="text-5xl font-black mb-6 text-cyan-400 orbitron-font">
-              ${isQuickGame ? 'Quick Game' : 'Tournament Match'}
+              ${isAIGame ? 'Player vs AI' : (isQuickGame ? 'Quick Game' : 'Tournament Match')}
             </h2>
             <div class="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 shadow-2xl relative">
               <canvas id="gameCanvas" width="800" height="400" class="border-2 border-white/30 rounded-lg shadow-2xl"></canvas>
@@ -263,8 +266,8 @@ export class App {
     
     if (isQuickGame) {
       // Quick game - start without tournament manager
-      console.log('Starting quick game without tournament')
-      this.gameManager.startGame(undefined, undefined, this.customization)
+      console.log(`Starting quick game. Is AI game: ${isAIGame}`)
+      this.gameManager.startGame(undefined, undefined, this.customization, isAIGame)
       
       // Set up game over button handlers for quick games
       this.setupQuickGameButtons()
@@ -282,13 +285,14 @@ export class App {
           player1: nextMatch.player1,
           player2: nextMatch.player2
         })
+        // Tournament games are never AI games for now
         this.gameManager.startGame(this.tournamentManager, {
           player1: nextMatch.player1!,
           player2: nextMatch.player2!
-        }, this.customization)
+        }, this.customization, false)
       } else {
         console.log('No next match found, starting game without tournament')
-        this.gameManager.startGame(undefined, undefined, this.customization)
+        this.gameManager.startGame(undefined, undefined, this.customization, false)
       }
     }
 

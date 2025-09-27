@@ -198,7 +198,7 @@ export class App {
   }
 
   private showGamePage(isQuickGame: boolean, isAIGame: boolean = false): void {
-    /*
+    
     // Check if user is authenticated
     if (!authService.isAuthenticated()) {
       this.rootElement.innerHTML = `
@@ -217,7 +217,7 @@ export class App {
       `
       return
     }
-    */
+    
 
     this.rootElement.innerHTML = `
       <div class="min-h-screen mesh-gradient relative overflow-hidden">

@@ -10,6 +10,8 @@ RUN npm install
 # Stage 2: Run the application
 FROM node:lts-alpine3.22
 WORKDIR /app
+
+RUN apk add --no-cache openssl
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate --schema=./src/schemas/schema.prisma

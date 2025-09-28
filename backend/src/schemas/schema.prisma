@@ -27,7 +27,7 @@ model User {
     wins           Int      @default(0)
     losses         Int      @default(0)
     googleId       String?  @map("google_id")
-    twoFaSecret    String?  @map("two_fa_secret")
+    totpSecret     String?  @map("two_fa_secret")
     isTwoFaEnabled Boolean  @default(false) @map("is_two_fa_enabled")
     createdAt      DateTime @default(now()) @map("created_at")
 

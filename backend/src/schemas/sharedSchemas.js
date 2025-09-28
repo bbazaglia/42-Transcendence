@@ -17,6 +17,7 @@ async function sharedSchemas(fastify, opts) {
         required: ['id', 'displayName', 'avatarUrl', 'wins', 'losses', 'createdAt']
     });
 
+    // The schema for a friendship object.
     fastify.addSchema({
         $id: 'friendshipDetail',
         type: 'object',
@@ -29,18 +30,17 @@ async function sharedSchemas(fastify, opts) {
         required: ['friendshipId', 'status', 'createdAt', 'user']
     });
 
-    // The schema for the entire lobby state object.
+    // The schema for the entire session state object.
     fastify.addSchema({
-        $id: 'lobbyState',
+        $id: 'sessionState',
         type: 'object',
         properties: {
-            host: { $ref: 'publicUser#' },
             participants: {
                 type: 'array',
                 items: { $ref: 'publicUser#' }
             }
         },
-        required: ['host', 'participants']
+        required: ['participants']
     });
 
     // The schema for a single match within a tournament.

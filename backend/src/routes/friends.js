@@ -46,9 +46,13 @@ async function getFriendshipsForUser(prisma, userId, status, onlineUserIds = new
 }
 
 export default async function (fastify, opts) {
+    // Ensure the sessionManager plugin is registered.
+    if (!fastify.hasDecorator('session')) {
+        throw new Error('sessionManager plugin must be registered before this file');
+    }
+
     // All routes in this file require authentication
-    fastify.addHook('preHandler', fastify.authenticate);
-    fastify.addHook('preHandler', fastify.lobby.auth);
+    fastify.addHook('preHandler', fastify.session.authorize);
 
     // ROUTE: Gets a list of the current user's friends and their status.
     fastify.get('/:userId', {
@@ -185,7 +189,8 @@ export default async function (fastify, opts) {
                     actorId: { type: 'integer' },
                     friendId: { type: 'integer' }
                 },
-                required: ['actorId', 'friendId']
+                required: ['actorId', 'friendId'],
+                additionalProperties: false
             },
             response: {
                 201: {
@@ -271,7 +276,8 @@ export default async function (fastify, opts) {
                 properties: {
                     actorId: { type: 'integer' } // The user ACCEPTING the request
                 },
-                required: ['actorId']
+                required: ['actorId'],
+                additionalProperties: false
             },
             response: {
                 200: {
@@ -347,7 +353,8 @@ export default async function (fastify, opts) {
                 properties: {
                     actorId: { type: 'integer' } // The user INITIATING the removal
                 },
-                required: ['actorId']
+                required: ['actorId'],
+                additionalProperties: false
             },
             response: {
                 204: { type: 'null' },

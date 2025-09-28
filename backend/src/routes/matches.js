@@ -1,9 +1,13 @@
 import { matchQueryTemplate } from "../lib/prismaQueryTemplates.js";
 
 export default async function (fastify, opts) {
+    // Ensure the sessionManager plugin is registered.
+    if (!fastify.hasDecorator('session')) {
+        throw new Error('sessionManager plugin must be registered before this file');
+    }
+
     // All routes in this file require authentication
-    fastify.addHook('preHandler', fastify.authenticate);
-    fastify.addHook('preHandler', fastify.lobby.auth);
+    fastify.addHook('preHandler', fastify.session.authorize);
 
     const AI_PLAYER_ID = fastify.AI_PLAYER_ID;
 
@@ -19,7 +23,8 @@ export default async function (fastify, opts) {
                     playerTwoScore: { type: 'integer' },
                     winnerId: { type: 'integer' },
                 },
-                required: ['playerOneId', 'playerTwoId', 'playerOneScore', 'playerTwoScore', 'winnerId']
+                required: ['playerOneId', 'playerTwoId', 'playerOneScore', 'playerTwoScore', 'winnerId'],
+                additionalProperties: false
             },
             response: {
                 201: {

@@ -52,7 +52,7 @@ export default async function (fastify, opts) {
     }
 
     // All routes in this file require authentication
-    fastify.addHook('preHandler', fastify.session.authorize);
+    fastify.addHook('preHandler', fastify.session.authorizeParticipant);
 
     // ROUTE: Gets a list of the current user's friends and their status.
     fastify.get('/:userId', {
@@ -79,14 +79,14 @@ export default async function (fastify, opts) {
     }, async (request, reply) => {
         try {
             const userId = request.params.userId;
-            const lobby = fastify.lobby.get();
-            const onlineUserIds = new Set(lobby.participants.keys());
+            const session = fastify.session.get();
+            const onlineUserIds = new Set(session.participants.keys());
 
             const friendships = await getFriendshipsForUser(fastify.prisma, userId, FriendshipStatus.ACCEPTED, onlineUserIds);
             return { friendships: friendships };
 
         } catch (error) {
-            fastify.log.error(error, `Error fetching friends for user ${request.params.id}`);
+            fastify.log.error(error, `Error fetching friends for user ${request.params.userId}`);
             if (error && error.statusCode) {
                 return reply.send(error);
             }
@@ -94,6 +94,7 @@ export default async function (fastify, opts) {
         }
     });
 
+    // ROUTE: Gets a list of INCOMING pending friend requests for the current user.
     fastify.get('/pending/incoming/:userId', {
         schema: {
             params: {
@@ -118,12 +119,8 @@ export default async function (fastify, opts) {
     }, async (request, reply) => {
         try {
             const userId = request.params.userId;
-            const lobby = fastify.lobby.get();
-            const onlineUserIds = new Set(lobby.participants.keys());
-
-            if (!lobby.isParticipant(userId)) {
-                throw fastify.httpErrors.forbidden('User must be in the lobby to view pending requests.');
-            }
+            const session = fastify.session.get();
+            const onlineUserIds = new Set(session.participants.keys());
 
             const pendingFriendships = await getFriendshipsForUser(fastify.prisma, userId, FriendshipStatus.PENDING, onlineUserIds, 'INCOMING');
             return { friendships: pendingFriendships };
@@ -137,6 +134,7 @@ export default async function (fastify, opts) {
         }
     });
 
+    // ROUTE: Gets a list of SENT pending friend requests for the current user.
     fastify.get('/pending/sent/:userId', {
         schema: {
             params: {
@@ -161,12 +159,8 @@ export default async function (fastify, opts) {
     }, async (request, reply) => {
         try {
             const userId = request.params.userId;
-            const lobby = fastify.lobby.get();
-            const onlineUserIds = new Set(lobby.participants.keys());
-
-            if (!lobby.isParticipant(userId)) {
-                throw fastify.httpErrors.forbidden('User must be in the lobby to view pending requests.');
-            }
+            const session = fastify.session.get();
+            const onlineUserIds = new Set(session.participants.keys());
 
             const pendingFriendships = await getFriendshipsForUser(fastify.prisma, userId, FriendshipStatus.PENDING, onlineUserIds, 'SENT');
             return { friendships: pendingFriendships };
@@ -209,14 +203,18 @@ export default async function (fastify, opts) {
     }, async (request, reply) => {
         try {
             const { actorId, friendId } = request.body;
-            const lobby = fastify.lobby.get();
-
-            if (!lobby.isParticipant(actorId)) {
-                throw fastify.httpErrors.forbidden('User must be logged in to send a friend request.');
-            }
+            const session = fastify.session.get();
 
             if (actorId === friendId) {
                 throw fastify.httpErrors.badRequest('A user cannot send a friend request to themselves.');
+            }
+
+            const friendExists = await fastify.prisma.user.findUnique({
+                where: { id: friendId }
+            });
+
+            if (!friendExists) {
+                throw fastify.httpErrors.notFound('The user you are trying to add as a friend does not exist.');
             }
 
             const userOneId = Math.min(actorId, friendId);
@@ -295,11 +293,7 @@ export default async function (fastify, opts) {
         try {
             const { friendshipId } = request.params;
             const { actorId } = request.body;
-            const lobby = fastify.lobby.get();
-
-            if (!lobby.isParticipant(actorId)) {
-                throw fastify.httpErrors.forbidden('User must be logged in to accept a friend request.');
-            }
+            const session = fastify.session.get();
 
             const updatedFriendship = await fastify.prisma.friendship.update({
                 where: {
@@ -367,11 +361,6 @@ export default async function (fastify, opts) {
         try {
             const { friendshipId } = request.params;
             const { actorId } = request.body;
-            const lobby = fastify.lobby.get();
-
-            if (!lobby.isParticipant(actorId)) {
-                throw fastify.httpErrors.forbidden('User must be logged in to modify a friendship.');
-            }
 
             await fastify.prisma.friendship.delete({
                 where: {
@@ -388,9 +377,9 @@ export default async function (fastify, opts) {
 
         } catch (error) {
             fastify.log.error(error, 'Error deleting friendship');
-            // If no friendship exists, Prisma will throw an error.
+            // If no friendship exists or the user is not part of it, Prisma will throw an error.
             if (error.code === 'P2025') { // Prisma's record not found code
-                return reply.notFound('Friendship not found for requesting user.');
+                return reply.notFound('Friendship not found or you do not have permission to modify it.');
             }
             if (error && error.statusCode) {
                 return reply.send(error);

@@ -6,10 +6,8 @@ export default async function (fastify, opts) {
         throw new Error('sessionManager plugin must be registered before this file');
     }
 
-    // All routes in this file require authentication
+    // All routes in this file require session authentication
     fastify.addHook('preHandler', fastify.session.authorize);
-
-    const AI_PLAYER_ID = fastify.AI_PLAYER_ID;
 
     // ROUTE: Creates a new quick match record after a game is finished.
     fastify.post('/', {
@@ -48,28 +46,27 @@ export default async function (fastify, opts) {
                 winnerId
             } = request.body;
 
-            const lobby = fastify.lobby.get();
+            const session = fastify.session.get();
 
-            // Ensure both players are part of the lobby participants
-            const isPlayerOneValid = lobby.isParticipant(playerOneId);
-            const isPlayerTwoValid = lobby.isParticipant(playerTwoId);
+            const isPlayerOneValid = fastify.session.isParticipant(playerOneId);
+            const isPlayerTwoValid = fastify.session.isParticipant(playerTwoId);
 
             if (!isPlayerOneValid || !isPlayerTwoValid) {
-                throw fastify.httpErrors.forbidden('Match cannot be reported. One or both players are not verified in the current lobby.');
+                throw fastify.httpErrors.forbidden('Match cannot be reported. One or both players are not verified in the current session.');
             }
 
             if (playerOneId === playerTwoId) {
                 throw fastify.httpErrors.forbidden('A player cannot play against themselves.');
             }
 
-            if (winnerId !== playerOneId && winnerId !== playerTwoId && winnerId !== AI_PLAYER_ID) {
+            if (winnerId !== playerOneId && winnerId !== playerTwoId) {
                 throw fastify.httpErrors.forbidden('Winner must be one of the players in the match');
             }
 
             // Execute all operations in a single, safe transaction
-            const newMatch = await fastify.prisma.$transaction(async (prisma) => {
+            const createdMatch = await fastify.prisma.$transaction(async (prisma) => {
                 // Create the match record
-                const createdMatch = await prisma.match.create({
+                const match = await prisma.match.create({
                     data: {
                         playerOneId,
                         playerTwoId,
@@ -77,32 +74,30 @@ export default async function (fastify, opts) {
                         playerTwoScore,
                         winnerId
                     },
-                    select: matchQueryTemplate
+                    ...matchQueryTemplate
                 });
 
                 const loserId = winnerId === playerOneId ? playerTwoId : playerOneId;
 
                 // Update winner stats
-                if (winnerId !== AI_PLAYER_ID) {
-                    await prisma.user.update({
-                        where: { id: winnerId },
-                        data: { wins: { increment: 1 } }
-                    });
-                }
+                await prisma.user.update({
+                    where: { id: winnerId },
+                    data: { wins: { increment: 1 } }
+                });
+
 
                 // Update loser stats
-                if (loserId !== AI_PLAYER_ID) {
-                    await prisma.user.update({
-                        where: { id: loserId },
-                        data: { losses: { increment: 1 } }
-                    });
-                }
+                await prisma.user.update({
+                    where: { id: loserId },
+                    data: { losses: { increment: 1 } }
+                });
 
-                return { match: createdMatch };
+
+                return match;
             });
 
             reply.code(201);
-            return newMatch;
+            return { match: createdMatch };
 
         } catch (error) {
             fastify.log.error(error, 'Error creating match record');

@@ -1,24 +1,24 @@
 import fastifyCookie from '@fastify/cookie';
 import fastifyCors from '@fastify/cors';
-import fastifyMultipart from '@fastify/multipart';
+//import fastifyMultipart from '@fastify/multipart';
 import fastifyPlugin from 'fastify-plugin';
 import fastifySensible from '@fastify/sensible';
-import fastifyStatic from '@fastify/static';
+//import fastifyStatic from '@fastify/static';
+//TODO: change avatar from URL to file upload
 
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 import sharedSchemas from './schemas/sharedSchemas.js'
-import lobbySetup from './plugins/lobbySetup.js';
+import sessionManager from './plugins/sessionManager.js';
 import jwtPlugin from './plugins/jwt.js';
 import prismaPlugin from './plugins/prisma.js';
 import totpPlugin from './plugins/totp.js';
 
-import authRoutes from './routes/auth.js';
 import friendsRoutes from './routes/friends.js';
 import healthRoutes from './routes/health.js';
-import lobbyRoutes from './routes/lobby.js';
 import matchesRoutes from './routes/matches.js';
+import sessionRoutes from './routes/session.js';
 import tournamentsRoutes from './routes/tournaments.js';
 import usersRoutes from './routes/users.js';
 
@@ -30,21 +30,20 @@ async function app(fastify, opts) {
     // Register plugins
     await fastify.register(fastifyCors, { origin: ["http://localhost:5173", "http://localhost:8443"] });
     await fastify.register(fastifyCookie, { secret: process.env.COOKIE_SECRET });
-    await fastify.register(fastifyMultipart);
+    //await fastify.register(fastifyMultipart);
     await fastify.register(fastifySensible, { sharedSchemaId: 'httpError' });
-    await fastify.register(fastifyStatic, { root: path.join(__dirname, '..', 'public'), prefix: '/', });
+    //await fastify.register(fastifyStatic, { root: path.join(__dirname, '..', 'public'), prefix: '/', });
     await fastify.register(sharedSchemas);
-    await fastify.register(lobbySetup);
+    await fastify.register(sessionManager);
     await fastify.register(jwtPlugin);
-    await fastify.register(totpPlugin, { issuer: 'ft_transcendence'});
+    await fastify.register(totpPlugin, { issuer: 'ft_transcendence' });
     await fastify.register(prismaPlugin);
 
     // Register routes
-    await fastify.register(authRoutes, { prefix: '/api/auth' });
-    await fastify.register(lobbyRoutes, { prefix: '/api/lobby' });
     await fastify.register(friendsRoutes, { prefix: '/api/friends' });
     await fastify.register(healthRoutes, { prefix: '/api/health' });
     await fastify.register(matchesRoutes, { prefix: '/api/matches' });
+    await fastify.register(sessionRoutes, { prefix: '/api/session' });
     await fastify.register(tournamentsRoutes, { prefix: '/api/tournaments' });
     await fastify.register(usersRoutes, { prefix: '/api/users' });
 }

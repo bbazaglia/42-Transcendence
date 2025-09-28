@@ -3,9 +3,13 @@ const { TournamentStatus } = pkg;
 import { tournamentQueryTemplate } from '../lib/prismaQueryTemplates.js';
 
 export default async function (fastify, opts) {
+    // Ensure the sessionManager plugin is registered.
+    if (!fastify.hasDecorator('session')) {
+        throw new Error('sessionManager plugin must be registered before this file');
+    }
+
     // All routes in this file require authentication
-    fastify.addHook('preHandler', fastify.authenticate);
-    fastify.addHook('preHandler', fastify.lobby.auth);
+    fastify.addHook('preHandler', fastify.session.authorize);
 
     // ROUTE: Gets a list of all tournaments.
     fastify.get('/', {
@@ -46,14 +50,14 @@ export default async function (fastify, opts) {
     });
 
     // ROUTE: Gets the details and status of a specific tournament, including the match bracket.
-    fastify.get('/:id', {
+    fastify.get('/:tournamentId', {
         schema: {
             params: {
                 type: 'object',
                 properties: {
-                    id: { type: 'integer' }
+                    tournamentId: { type: 'integer' }
                 },
-                required: ['id']
+                required: ['tournamentId']
             },
             response: {
                 200: {
@@ -69,7 +73,7 @@ export default async function (fastify, opts) {
         }
     }, async (request, reply) => {
         try {
-            const tournamentId = request.params.id;
+            const tournamentId = request.params.tournamentId;
 
             const tournament = await fastify.prisma.tournament.findUnique({
                 where: { id: tournamentId },
@@ -102,7 +106,8 @@ export default async function (fastify, opts) {
                     name: { type: 'string', minLength: 3, maxLength: 100 },
                     maxParticipants: { type: 'integer', minimum: 2, maximum: 16 }
                 },
-                required: ['name', 'maxParticipants']
+                required: ['name', 'maxParticipants'],
+                additionalProperties: false
             },
             response: {
                 201: {
@@ -138,21 +143,22 @@ export default async function (fastify, opts) {
     });
 
     // ROUTE: Allows a user to join an existing tournament.
-    fastify.post('/:id/join', {
+    fastify.post('/:tournamentId/join', {
         schema: {
             params: {
                 type: 'object',
                 properties: {
-                    id: { type: 'integer' }
+                    tournamentId: { type: 'integer' }
                 },
-                required: ['id']
+                required: ['tournamentId']
             },
             body: {
                 type: 'object',
                 properties: {
-                    userId: { type: 'integer' }
+                    actorId: { type: 'integer' }
                 },
-                required: ['userId']
+                required: ['actorId'],
+                additionalProperties: false
             },
             response: {
                 200: {
@@ -171,11 +177,11 @@ export default async function (fastify, opts) {
     }, async (request, reply) => {
         try {
             const tournamentId = request.params.id;
-            const { userId } = request.body;
+            const { actorId } = request.body;
             const lobby = fastify.lobby.get();
 
             // Check if user is authenticated
-            if (!lobby.isParticipant(userId)) {
+            if (!lobby.isParticipant(actorId)) {
                 throw reply.forbidden('User must be logged in to join a tournament.');
             }
 
@@ -204,7 +210,7 @@ export default async function (fastify, opts) {
                     throw fastify.httpErrors.forbidden('Tournament is full. You cannot join at this time.');
                 }
 
-                if (t.participants.some(p => p.userId === userId)) {
+                if (t.participants.some(p => p.userId === actorId)) {
                     throw fastify.httpErrors.conflict('You are already participating in this tournament.');
                 }
 
@@ -237,14 +243,14 @@ export default async function (fastify, opts) {
     });
 
     // ROUTE: Starts the tournament when the required number of participants have joined.
-    fastify.patch('/:id/start', {
+    fastify.patch('/:tournamentId/start', {
         schema: {
             params: {
                 type: 'object',
                 properties: {
-                    id: { type: 'integer' }
+                    tournamentId: { type: 'integer' }
                 },
-                required: ['id']
+                required: ['tournamentId']
             },
             response: {
                 200: {
@@ -261,7 +267,7 @@ export default async function (fastify, opts) {
         }
     }, async (request, reply) => {
         try {
-            const tournamentId = request.params.id;
+            const tournamentId = request.params.tournamentId;
 
             // Check if all participants are still in the lobby
             const tournamentParticipants = await fastify.prisma.tournamentParticipant.findMany({
@@ -353,15 +359,15 @@ export default async function (fastify, opts) {
     });
 
     // ROUTE: Updates a tournament match and advances the bracket if necessary.
-    fastify.patch('/:id/matches/:matchId', {
+    fastify.patch('/:tournamentId/matches/:matchId', {
         schema: {
             params: {
                 type: 'object',
                 properties: {
-                    id: { type: 'integer' },
+                    tournamentId: { type: 'integer' },
                     matchId: { type: 'integer' }
                 },
-                required: ['id', 'matchId']
+                required: ['tournamentId', 'matchId']
             },
             body: {
                 type: 'object',
@@ -370,7 +376,8 @@ export default async function (fastify, opts) {
                     playerTwoScore: { type: 'integer' },
                     winnerId: { type: 'integer' }
                 },
-                required: ['playerOneScore', 'playerTwoScore', 'winnerId']
+                required: ['playerOneScore', 'playerTwoScore', 'winnerId'],
+                additionalProperties: false
             },
             response: {
                 200: {
@@ -387,7 +394,7 @@ export default async function (fastify, opts) {
         }
     }, async (request, reply) => {
         try {
-            const { id: tournamentId, matchId } = request.params;
+            const { tournamentId, matchId } = request.params;
             const { playerOneScore, playerTwoScore, winnerId } = request.body;
 
             const updatedTournament = await fastify.prisma.$transaction(async (prisma) => {
@@ -468,14 +475,14 @@ export default async function (fastify, opts) {
     });
 
     // ROUTE: Cancels a tournament
-    fastify.delete('/:id/cancel', {
+    fastify.delete('/:tournamentId/cancel', {
         schema: {
             params: {
                 type: 'object',
                 properties: {
-                    id: { type: 'integer' }
+                    tournamentId: { type: 'integer' }
                 },
-                required: ['id']
+                required: ['tournamentId']
             },
             response: {
                 200: {
@@ -491,7 +498,7 @@ export default async function (fastify, opts) {
         }
     }, async (request, reply) => {
         try {
-            const tournamentId = request.params.id;
+            const tournamentId = request.params.tournamentId;
 
             const tournament = await fastify.prisma.$transaction(async (prisma) => {
                 const existing = await prisma.tournament.findFirst({
@@ -506,7 +513,7 @@ export default async function (fastify, opts) {
                 return prisma.tournament.update({
                     where: { id: tournamentId },
                     data: { status: TournamentStatus.CANCELLED },
-                    select: tournamentQueryTemplate
+                    ...tournamentQueryTemplate
                 });
             });
 

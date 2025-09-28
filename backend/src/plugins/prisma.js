@@ -8,7 +8,7 @@ async function prismaPlugin(fastify, opts) {
         omit: {
             user: {
                 passwordHash: true,
-                twoFaSecret: true,
+                totpSecret: true,
                 googleId: true,
             },
         },

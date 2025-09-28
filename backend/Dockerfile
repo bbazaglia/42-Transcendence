@@ -14,9 +14,9 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate --schema=./src/schemas/schema.prisma
 
-COPY prod-entrypoint.sh .
-RUN chmod +x prod-entrypoint.sh
-ENTRYPOINT ["./prod-entrypoint.sh"]
+COPY backend-entrypoint.sh .
+RUN chmod +x backend-entrypoint.sh
+ENTRYPOINT ["./backend-entrypoint.sh"]
 
 EXPOSE 3000
 

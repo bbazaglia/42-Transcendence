@@ -1,6 +1,7 @@
 import pkg from '@prisma/client';
 const { TournamentStatus } = pkg;
 import { tournamentQueryTemplate } from '../lib/prismaQueryTemplates.js';
+import xss from 'xss';
 
 export default async function (fastify, opts) {
     // Ensure the sessionManager plugin is registered.
@@ -30,22 +31,27 @@ export default async function (fastify, opts) {
         }
     }, async (request, reply) => {
         try {
-            const tournaments = await fastify.prisma.tournament.findMany({
-                select: tournamentQueryTemplate,
+            const tournamentsFromDb = await fastify.prisma.tournament.findMany({
+                ...tournamentQueryTemplate,
                 orderBy: {
                     createdAt: 'desc'
                 }
             });
 
-            // Map participants for each tournament to ensure a consistent response shape
-            tournaments.forEach(t => {
-                t.participants = t.participants.map(p => p.user);
-            });
-            return { trounaments: tournaments };
+            // Map participants to include only user details
+            const tournaments = tournamentsFromDb.map(t => ({
+                ...t,
+                participants: t.participants.map(p => p.user)
+            }));
+
+            return { tournaments: tournaments };
 
         } catch (error) {
             fastify.log.error(error, 'Failed to fetch tournaments');
-            return reply.internalServerError('An unexpected error occured when trying to fetch tournaments');
+            if (error && error.statusCode) {
+                return reply.send(error);
+            }
+            return reply.internalServerError('An unexpected error occurred when trying to fetch tournaments');
         }
     });
 
@@ -75,21 +81,25 @@ export default async function (fastify, opts) {
         try {
             const tournamentId = request.params.tournamentId;
 
-            const tournament = await fastify.prisma.tournament.findUnique({
+            const tournamentFromDb = await fastify.prisma.tournament.findUnique({
                 where: { id: tournamentId },
-                select: tournamentQueryTemplate
+                ...tournamentQueryTemplate
             });
 
-            if (!tournament) {
+            if (!tournamentFromDb) {
                 throw fastify.httpErrors.notFound('Tournament not found');
             }
 
             // Map participants to include only user details
-            tournament.participants = tournament.participants.map(p => p.user);
+            const tournament = {
+                ...tournamentFromDb,
+                participants: tournamentFromDb.participants.map(p => p.user)
+            };
+
             return { tournament: tournament };
 
         } catch (error) {
-            fastify.log.error(error, `Failed to fetch tournament with id ${tournamentId}`);
+            fastify.log.error(error, `Failed to fetch tournament with id ${request.params.tournamentId}`);
             if (error && error.statusCode) {
                 return reply.send(error);
             }
@@ -122,28 +132,37 @@ export default async function (fastify, opts) {
         }
     }, async (request, reply) => {
         try {
-            const { name, maxParticipants } = request.body;
+            const name = xss(request.body.name);
+            const { maxParticipants } = request.body;
 
-            const newTournament = await fastify.prisma.tournament.create({
+            const newTournamentFromDb = await fastify.prisma.tournament.create({
                 data: {
                     name,
                     maxParticipants,
                 },
-                select: tournamentQueryTemplate
+                ...tournamentQueryTemplate
             });
 
-            newTournament.participants = newTournament.participants.map(p => p.user);
+            const tournament = {
+                ...newTournamentFromDb,
+                participants: [] // A new tournament always starts with zero participants.
+            };
+
             reply.code(201);
-            return { tournament: newTournament };
+            return { tournament: tournament };
 
         } catch (error) {
             fastify.log.error(error, 'Failed to create tournament');
+            if (error && error.statusCode) {
+                return reply.send(error);
+            }
             return reply.internalServerError('An unexpected error occurred while creating the tournament.');
         }
     });
 
     // ROUTE: Allows a user to join an existing tournament.
     fastify.post('/:tournamentId/join', {
+        preHandler: [fastify.session.authorizeParticipant],
         schema: {
             params: {
                 type: 'object',
@@ -176,62 +195,55 @@ export default async function (fastify, opts) {
         }
     }, async (request, reply) => {
         try {
-            const tournamentId = request.params.id;
+            const tournamentId = request.params.tournamentId;
             const { actorId } = request.body;
-            const lobby = fastify.lobby.get();
-
-            // Check if user is authenticated
-            if (!lobby.isParticipant(actorId)) {
-                throw reply.forbidden('User must be logged in to join a tournament.');
-            }
 
             // Use a transaction to ensure data integrity
-            const updatedTournament = await fastify.prisma.$transaction(async (prisma) => {
+            const updatedTournamentFromDb = await fastify.prisma.$transaction(async (prisma) => {
                 // Fetch the tournament and its participants in a single query
-                const t = await prisma.tournament.findUnique({
+                const tournament = await prisma.tournament.findUnique({
                     where: { id: tournamentId },
-                    select: {
-                        id: true,
-                        status: true,
-                        maxParticipants: true,
-                        participants: { select: { userId: true } }
-                    }
+                    include: { participants: true }
                 });
 
-                if (!t) {
+                if (!tournament) {
                     throw fastify.httpErrors.notFound('Tournament not found.');
                 }
 
-                if (t.status !== TournamentStatus.PENDING) {
+                if (tournament.status !== TournamentStatus.PENDING) {
                     throw fastify.httpErrors.forbidden('Only pending tournaments can be started.');
                 }
 
-                if (t.participants.length >= t.maxParticipants) {
+                if (tournament.participants.length >= t.maxParticipants) {
                     throw fastify.httpErrors.forbidden('Tournament is full. You cannot join at this time.');
                 }
 
-                if (t.participants.some(p => p.userId === actorId)) {
+                if (tournament.participants.some(p => p.userId === actorId)) {
                     throw fastify.httpErrors.conflict('You are already participating in this tournament.');
                 }
 
                 // Add the user to the tournament
                 await prisma.tournamentParticipant.create({
                     data: {
-                        userId,
-                        tournamentId
+                        userId: actorId,
+                        tournamentId: tournamentId
                     }
                 });
 
                 // Fetch the updated tournament with all necessary details for the response
-                const tournament = prisma.tournament.findUnique({
+                const result = await prisma.tournament.findUnique({
                     where: { id: tournamentId },
-                    select: tournamentQueryTemplate
+                    ...tournamentQueryTemplate
                 });
-                return { tournament: tournament };
+                return result;
             });
 
-            updatedTournament.participants = updatedTournament.participants.map(p => p.user);
-            return updatedTournament;
+            // Map participants to include only user details
+            const tournamentResponse = {
+                ...updatedTournamentFromDb,
+                participants: updatedTournamentFromDb.participants.map(p => p.user)
+            };
+            return { tournament: tournamentResponse };
 
         } catch (error) {
             fastify.log.error(error, 'Failed to join tournament');
@@ -269,85 +281,75 @@ export default async function (fastify, opts) {
         try {
             const tournamentId = request.params.tournamentId;
 
-            // Check if all participants are still in the lobby
-            const tournamentParticipants = await fastify.prisma.tournamentParticipant.findMany({
-                where: { tournamentId },
-                select: { userId: true }
-            });
-
-            const lobby = fastify.lobby.get();
-            for (const participant of tournamentParticipants) {
-                if (!lobby.isParticipant(participant.userId)) {
-                    throw reply.forbidden('All tournament participants must be present in the lobby to start the tournament.');
-                }
-            }
-
-            const tournament = await fastify.prisma.$transaction(async (prisma) => {
-                // Fetch the tournament and its participants
-                const t = await prisma.tournament.findUnique({
+            const updatedTournamentFromDb = await fastify.prisma.$transaction(async (prisma) => {
+                const tournament = await prisma.tournament.findUnique({
                     where: { id: tournamentId },
-                    select: {
-                        id: true,
-                        status: true,
-                        maxParticipants: true,
-                        participants: { select: { userId: true } }
+                    include: {
+                        participants: {
+                            select: { userId: true }
+                        }
                     }
                 });
 
-                if (!t) {
+                if (!tournament) {
                     throw fastify.httpErrors.notFound('Tournament not found.');
                 }
 
-                if (t.status !== TournamentStatus.PENDING) {
-                    throw fastify.httpErrors.forbidden('Only pending tournaments can be started.');
+                if (tournament.status !== TournamentStatus.PENDING) {
+                    throw fastify.httpErrors.forbidden('Only PENDING tournaments can be started.');
                 }
 
-                if (t.participants.length != t.maxParticipants) {
+                if (tournament.participants.length !== tournament.maxParticipants) {
                     throw fastify.httpErrors.forbidden('Tournament must have the exact number of participants to be started.');
                 }
 
-                // 1. Shuffle participants for random pairing
-                const participantIds = t.participants.map(p => p.userId);
+                // Check if all participants are still in the main app session.
+                for (const participant of tournament.participants) {
+                    if (!fastify.session.isParticipant(participant.userId)) {
+                        throw fastify.httpErrors.forbidden('All tournament participants must be present in the session to start the tournament.');
+                    }
+                }
+
+                // Shuffle participants for random pairing.
+                const participantIds = tournament.participants.map(p => p.userId);
                 for (let i = participantIds.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
                     [participantIds[i], participantIds[j]] = [participantIds[j], participantIds[i]];
                 }
 
-                // 2. Create match data for the first round
+                // Create match data for the first round.
                 const matchesToCreate = [];
                 for (let i = 0; i < participantIds.length; i += 2) {
-                    if (i + 1 < participantIds.length) {
-                        matchesToCreate.push({
-                            playerOneId: participantIds[i],
-                            playerTwoId: participantIds[i + 1],
-                            tournamentId: t.id,
-                            // winnerId is implicitly null
-                        });
-                    }
+                    matchesToCreate.push({
+                        playerOneId: participantIds[i],
+                        playerTwoId: participantIds[i + 1],
+                        tournamentId: tournament.id,
+                        round: 1
+                    });
                 }
 
-                // 3. Create all first-round matches in the database
+                // Create all first-round matches and update tournament status.
                 await prisma.match.createMany({
                     data: matchesToCreate,
                 });
 
-                // 4. Update the tournament status to IN_PROGRESS
                 await prisma.tournament.update({
                     where: { id: tournamentId },
                     data: { status: TournamentStatus.IN_PROGRESS },
                 });
 
-                // 5. Fetch the complete tournament data for the response
-                const tournament = prisma.tournament.findUnique({
+                return await prisma.tournament.findUnique({
                     where: { id: tournamentId },
-                    select: tournamentQueryTemplate
+                    ...tournamentQueryTemplate
                 });
-                return { tournament: tournament }
             });
 
-            // Map participants to include only user details
-            tournament.participants = tournament.participants.map(p => p.user);
-            return { tournament: tournament };
+            const tournamentResponse = {
+                ...updatedTournamentFromDb,
+                participants: updatedTournamentFromDb.participants.map(p => p.user)
+            };
+
+            return { tournament: tournamentResponse };
 
         } catch (error) {
             fastify.log.error(error, 'Failed to start tournament');
@@ -397,7 +399,7 @@ export default async function (fastify, opts) {
             const { tournamentId, matchId } = request.params;
             const { playerOneScore, playerTwoScore, winnerId } = request.body;
 
-            const updatedTournament = await fastify.prisma.$transaction(async (prisma) => {
+            const updatedTournamentFromDb = await fastify.prisma.$transaction(async (prisma) => {
                 // 1. Validate match parameters
                 const matchToUpdate = await prisma.match.findUnique({
                     where: { id: matchId }
@@ -416,57 +418,65 @@ export default async function (fastify, opts) {
                 }
 
                 // 2. Update the completed match
-                const match = await prisma.match.update({
+                const updatedMatch = await prisma.match.update({
                     where: { id: matchId },
                     data: { playerOneScore, playerTwoScore, winnerId, playedAt: new Date() },
-                    select: { playerOneId: true, playerTwoId: true, winnerId: true }
                 });
 
                 // 3. Update player stats (wins/losses)
-                const loserId = winnerId === match.playerOneId ? match.playerTwoId : match.playerOneId;
+                const loserId = winnerId === updatedMatch.playerOneId ? updatedMatch.playerTwoId : updatedMatch.playerOneId;
                 await prisma.user.update({ where: { id: winnerId }, data: { wins: { increment: 1 } } });
                 await prisma.user.update({ where: { id: loserId }, data: { losses: { increment: 1 } } });
 
                 // 4. Check if the current round is over
-                const allMatches = await prisma.match.findMany({ where: { tournamentId } });
-                const pendingMatches = allMatches.filter(m => m.winnerId === null);
+                const currentRoundNumber = updatedMatch.round;
+                const currentRoundMatches = await prisma.match.findMany({
+                    where: { tournamentId, round: currentRoundNumber }
+                });
 
-                if (pendingMatches.length === 0) {
-                    const winners = allMatches.filter(m => m.winnerId !== null).map(m => m.winnerId);
+                const isRoundOver = currentRoundMatches.every(m => m.winnerId !== null);
+
+                if (isRoundOver) {
                     // 5. Check if the tournament is over or create the next round
-                    if (winners.length === 1) {
+                    const roundWinners = currentRoundMatches.map(m => m.winnerId);
+
+                    if (roundWinners.length === 1) {
+                        // This was the final match, the tournament is over.
                         await prisma.tournament.update({
                             where: { id: tournamentId },
-                            data: { status: TournamentStatus.COMPLETED, winnerId: winners[0] }
+                            data: { status: TournamentStatus.COMPLETED, winnerId: roundWinners[0] }
                         });
                     } else {
+                        // Create matches for the next round.
                         const nextRoundMatches = [];
-                        for (let i = 0; i < winners.length; i += 2) {
-                            if (i + 1 < winners.length) {
-                                nextRoundMatches.push({
-                                    playerOneId: winners[i],
-                                    playerTwoId: winners[i + 1],
-                                    tournamentId: tournamentId,
-                                });
-                            }
+                        for (let i = 0; i < roundWinners.length; i += 2) {
+                            nextRoundMatches.push({
+                                playerOneId: roundWinners[i],
+                                playerTwoId: roundWinners[i + 1],
+                                tournamentId: tournamentId,
+                                round: currentRoundNumber + 1 // Increment the round number
+                            });
                         }
                         await prisma.match.createMany({ data: nextRoundMatches });
                     }
                 }
 
                 // 6. Return the full, updated tournament state
-                const tournament = prisma.tournament.findUnique({
+                return await prisma.tournament.findUnique({
                     where: { id: tournamentId },
-                    select: tournamentQueryTemplate
+                    ...tournamentQueryTemplate
                 });
-                return { tournament: tournament }
             });
 
-            updatedTournament.participants = updatedTournament.participants.map(p => p.user);
-            return { tournament: updatedTournament };
+            // Map participants to include only user details
+            const tournamentResponse = {
+                ...updatedTournamentFromDb,
+                participants: updatedTournamentFromDb.participants.map(p => p.user)
+            };
+            return { tournament: tournamentResponse };
 
         } catch (error) {
-            fastify.log.error(error, `Failed to update tournament match ${request.params.matchId} for tournament ${request.params.id}`);
+            fastify.log.error(error, `Failed to update tournament match ${request.params.matchId} for tournament ${request.params.tournamentId}`);
             if (error && error.statusCode) {
                 return reply.send(error);
             }
@@ -475,7 +485,7 @@ export default async function (fastify, opts) {
     });
 
     // ROUTE: Cancels a tournament
-    fastify.delete('/:tournamentId/cancel', {
+    fastify.patch('/:tournamentId/cancel', {
         schema: {
             params: {
                 type: 'object',
@@ -500,7 +510,7 @@ export default async function (fastify, opts) {
         try {
             const tournamentId = request.params.tournamentId;
 
-            const tournament = await fastify.prisma.$transaction(async (prisma) => {
+            const updatedTournamentFromDb = await fastify.prisma.$transaction(async (prisma) => {
                 const existing = await prisma.tournament.findFirst({
                     where: { id: tournamentId, status: { notIn: [TournamentStatus.COMPLETED, TournamentStatus.CANCELLED] } },
                     select: { id: true }
@@ -510,18 +520,22 @@ export default async function (fastify, opts) {
                     throw fastify.httpErrors.notFound('Tournament not found or already completed/cancelled.');
                 }
 
-                return prisma.tournament.update({
+                return await prisma.tournament.update({
                     where: { id: tournamentId },
                     data: { status: TournamentStatus.CANCELLED },
                     ...tournamentQueryTemplate
                 });
             });
 
-            tournament.participants = tournament.participants.map(p => p.user);
-            return { tournament: tournament };
+            const tournamentResponse = {
+                ...updatedTournamentFromDb,
+                participants: updatedTournamentFromDb.participants.map(p => p.user)
+            };
+
+            return { tournament: tournamentResponse };
 
         } catch (error) {
-            fastify.log.error(error, `Failed to cancel tournament ${tournamentId}`);
+            fastify.log.error(error, `Failed to cancel tournament ${request.params.tournamentId}`);
             if (error && error.statusCode) {
                 return reply.send(error);
             }

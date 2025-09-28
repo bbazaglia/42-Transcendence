@@ -70,6 +70,7 @@ model Match {
     playerTwoScore Int      @map("player_two_score")
     winnerId       Int?     @map("winner_id")
     tournamentId   Int?     @map("tournament_id")
+    round          Int?
     playedAt       DateTime @default(now()) @map("played_at")
 
     // --- Foreign key relationships ---

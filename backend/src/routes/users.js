@@ -1,10 +1,11 @@
+import xss from 'xss';
+
 export default async function (fastify, opts) {
     // Ensure the sessionManager plugin is registered.
     if (!fastify.hasDecorator('session')) {
         throw new Error('sessionManager plugin must be registered before session routes');
     }
 
-    // TODO: sanitize inputs where necessary
     // ROUTE: Creates a new user account.
     fastify.post('/register', {
         schema: {
@@ -32,7 +33,8 @@ export default async function (fastify, opts) {
         }
     }, async (request, reply) => {
         try {
-            const { displayName, email, password } = request.body;
+            const displayName = xss(request.body.displayName);
+            const { email, password } = request.body;
 
             const existingUserByDisplayName = await fastify.prisma.user.findFirst({
                 where: {
@@ -449,7 +451,12 @@ export default async function (fastify, opts) {
     }, async (request, reply) => {
         try {
             const userId = request.params.userId;
-            const { displayName, avatarUrl } = request.body;
+            const displayName = request.body.displayName ? xss(request.body.displayName) : undefined;
+            const avatarUrl = request.body.avatarUrl ? xss(request.body.avatarUrl) : undefined;
+
+            if (!displayName && !avatarUrl) {
+                throw fastify.httpErrors.badRequest('No update data provided.');
+            }
 
             if (displayName) {
                 const nameExists = await fastify.prisma.user.findFirst({

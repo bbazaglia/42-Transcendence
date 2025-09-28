@@ -206,29 +206,38 @@ export default async function (fastify, opts) {
             }
         }
     }, async (request, reply) => {
-        const { userId } = request.body;
-        const session = fastify.session.get();
+        try {
+            const { userId } = request.body;
+            const session = fastify.session.get();
 
-        if (!fastify.session.isParticipant(userId)) {
-            throw fastify.httpErrors.notFound('User not found in current session.');
+            if (!fastify.session.isParticipant(userId)) {
+                throw fastify.httpErrors.notFound('User not found in current session.');
+            }
+
+            const loggedOutUser = session.participants.get(userId);
+            session.participants.delete(userId);
+            fastify.log.info(`User ${loggedOutUser.displayName} logged out of session ${session.sessionId}`);
+
+            // If the last participant has left, end the session.
+            if (session.participants.size === 0) {
+                fastify.session.set(null);
+                reply.clearCookie('token', { path: '/' });
+                fastify.log.info(`Session ${session.sessionId} ended as the last participant left.`);
+                return reply.code(204).send();
+            }
+
+            // Otherwise, just update the session
+            fastify.session.set(session);
+
+            return { participants: Array.from(session.participants.values()) };
+
+        } catch (error) {
+            fastify.log.error(error, 'Logout failed');
+            if (error && error.statusCode) {
+                return reply.send(error);
+            }
+            return reply.internalServerError('An unexpected error occurred during logout.');
         }
-
-        const loggedOutUser = session.participants.get(userId);
-        session.participants.delete(userId);
-        fastify.log.info(`User ${loggedOutUser.displayName} logged out of session ${session.sessionId}`);
-
-        // End the session if the last human participant leaves
-        if (session.participants.size === 1 && session.participants.has(fastify.session.AI_PLAYER_ID)) {
-            fastify.session.set(null);
-            reply.clearCookie('token', { path: '/' });
-            fastify.log.info(`Session ${session.sessionId} ended as the last human participant left.`);
-            return reply.code(204).send();
-        }
-
-        // Otherwise, just update the session
-        fastify.session.set(session);
-
-        return { participants: Array.from(session.participants.values()) };
     });
 
     // ROUTE: Gets the current participants of the session.

@@ -5,16 +5,6 @@ async function sessionManager(fastify, opts) {
     let activeSession = null;
 
     const sessionService = {
-        AI_PLAYER_ID: 0,
-        AI_PLAYER: {
-            id: 0,
-            displayName: 'AI Bot',
-            avatarUrl: '/avatars/ai-avatar.png',
-            wins: 0,
-            losses: 0,
-            createdAt: new Date()
-        },
-
         get() {
             return activeSession;
         },
@@ -28,7 +18,6 @@ async function sessionManager(fastify, opts) {
                 sessionId: randomUUID(),
                 participants: new Map()
             };
-            newSession.participants.set(this.AI_PLAYER_ID, this.AI_PLAYER);
             newSession.participants.set(firstUser.id, firstUser);
             activeSession = newSession;
             return activeSession;

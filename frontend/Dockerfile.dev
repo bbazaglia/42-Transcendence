@@ -15,8 +15,14 @@ RUN npm audit fix --force
 # Install dependencies
 RUN npm install
 
-# Copy source code
-COPY . .
+# Copy only necessary source files to avoid overwriting node_modules
+COPY src/ ./src/
+COPY public/ ./public/
+COPY index.html ./
+COPY vite.config.ts ./
+COPY tailwind.config.cjs ./
+COPY postcss.config.cjs ./
+COPY tsconfig.json ./
 
 # Expose Vite dev server port
 EXPOSE 5173

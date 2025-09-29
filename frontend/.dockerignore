@@ -1,0 +1,14 @@
+# Ignore Git and Docker specific files
+.git
+.gitignore
+.dockerignore
+Dockerfile
+
+# Ignore local dependencies, as they are installed inside the container
+node_modules
+
+# Ignore logs and temporary files
+npm-debug.log
+
+# Ignore environment files - these should be injected at runtime, not built into the image
+.env*

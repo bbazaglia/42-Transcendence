@@ -1,7 +1,7 @@
 import fp from 'fastify-plugin'
 import fastifyOauth2 from '@fastify/oauth2'
 
-export default fp(async function (fastify) {
+async function oauthPlugin(fastify, opts) {
   fastify.register(fastifyOauth2, {
     name: 'googleOAuth2',
     credentials: {
@@ -15,4 +15,6 @@ export default fp(async function (fastify) {
     callbackUri: process.env.GOOGLE_CALLBACK_URL,
     scope: ['openid', 'profile', 'email'],
   });
-});
+};
+
+export default fp(oauthPlugin);

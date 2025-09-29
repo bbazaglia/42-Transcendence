@@ -12,6 +12,8 @@ services:
     ports:
       # Exposing the backend API for development
       - "3000:3000"
+    env_file:
+      - ./.env
     environment:
       - NODE_ENV=development
       - DATABASE_PATH=file:/app/data/database.sqlite

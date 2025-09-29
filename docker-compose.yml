@@ -6,6 +6,8 @@ services:
     init: true
     volumes:
       - db_data:/app/data
+    env_file:
+      - ./.env
     environment:
       - NODE_ENV=production
       - DATABASE_PATH=file:/app/data/database.sqlite

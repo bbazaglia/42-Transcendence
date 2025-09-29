@@ -175,13 +175,83 @@ export default async function (fastify, opts) {
     //---------------------------------------------------------------------------
 
     // ROUTE: Redirects the user to the Google sign-in page.
-    fastify.get('/google', async (request, reply) => {
-        // Google OAuth logic
-    });
+    //fastify.get('/google', async (request, reply) => {
+    //    // Google OAuth logic
+    //});
 
     // ROUTE: The route Google redirects back to after a user authorizes the app.
-    fastify.get('/google/callback', async (request, reply) => {
-        // Google OAuth callback logic
+    fastify.get('/google/callback', {
+        schema: {
+            response: {
+                201: { $ref: 'publicUser#' },
+                409: { $ref: 'httpError#' },
+                500: { $ref: 'httpError#' }
+            },
+        },
+    }, async (request, reply) => {
+        try {
+            const { token } = await fastify.googleOAuth2.getAccessTokenFromAuthorizationCodeFlow(request);
+
+            const googleResponse = await fetch(process.env.GOOGLE_OAUTH_USER_INFO_URL, {
+                headers: {
+                    'Authorization': `Bearer ${token.access_token}`,
+                },
+            });
+
+            const googleData = await googleResponse.json();
+
+            let user = {
+                displayName: googleData.name,
+                email: googleData.email,
+                googleId: googleData.id,
+                avatarUrl: googleData.picture, //TODO dowload it from google URL and store it locally.
+            };
+
+            const existingUser = await fastify.prisma.user.findUnique({
+                where: { email: user.email.toLowerCase() }
+            });
+
+            const generateUsername = (base = "user") => {
+                const randomPart = Math.floor(100000 + Math.random() * 900000);
+                return `${base}_${randomPart}`;
+            };
+
+            if (!existingUser) {
+                user.displayName = (await fastify.prisma.user.findFirst({
+                    where: { displayName: user.displayName }
+                })) ? generateUsername() : user.displayName;
+            } else {
+                user.displayName = existingUser.displayName;
+            }
+
+            const dbUser = await fastify.prisma.user.upsert({
+                where: { email: user.email.toLowerCase() },
+                update: { ...user },
+                create: { ...user },
+            });
+
+            const payload = { id: dbUser.id, displayName: dbUser.displayName };
+            const jwt_signed_token = fastify.jwt.sign({ payload });
+
+            reply.setCookie('token', jwt_signed_token, { //TODO check this token name
+                path: '/',
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict',
+                maxAge: 60 * 60 * 24 * 7
+            });
+
+            reply.code(201);
+
+            //redirect to logged area
+
+        } catch (error) {
+            fastify.log.error(error, 'Oauth Registration failed');
+            if (error && error.statusCode) {
+                return reply.send(error);
+            }
+            return reply.internalServerError('An unexpected error occurred during oauth registration.');
+        }
     });
 
     //------ Session authentication required for all routes below this line ------

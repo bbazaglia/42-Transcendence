@@ -6,8 +6,8 @@ import fastifySensible from '@fastify/sensible';
 //import fastifyStatic from '@fastify/static';
 //TODO: change avatar from URL to file upload
 
-import path from 'path';
-import { fileURLToPath } from 'url';
+//import path from 'path';
+//import { fileURLToPath } from 'url';
 
 import sharedSchemas from './schemas/sharedSchemas.js'
 import sessionManager from './plugins/sessionManager.js';
@@ -26,8 +26,8 @@ import usersRoutes from './routes/users.js';
 
 // This function will contain all our application's setup logic
 async function app(fastify, opts) {
-    const __filename = fileURLToPath(import.meta.url);
-    const __dirname = path.dirname(__filename);
+    //const __filename = fileURLToPath(import.meta.url);
+    //const __dirname = path.dirname(__filename);
 
     // Register plugins
     await fastify.register(fastifyCors, { origin: ["http://localhost:5173", "http://localhost:8443"] });

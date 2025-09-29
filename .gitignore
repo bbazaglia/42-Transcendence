@@ -34,4 +34,12 @@ Thumbs.db
 *.db
 
 # Node modules (in case they're installed at root)
-node_modules/ 
+node_modules/
+
+# file not push
+AI_Implementation_Plan.md
+AI_Implementation_Plan_v2.md
+AI_Implementation_Plan_v3.md
+GEMINI.md
+log.md
+pdf/

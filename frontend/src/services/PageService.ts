@@ -52,6 +52,12 @@ export class PageService {
                 <span class="relative z-10 orbitron-font">⚡ Quick Game</span>
                 <div class="absolute inset-0 bg-gradient-to-r from-teal-700 to-cyan-600 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </button>
+
+              <button id="ai-game-btn" 
+                      class="group relative px-8 py-4 bg-gradient-to-r from-red-600 to-orange-500 text-white font-bold text-xl rounded-xl shadow-2xl hover:shadow-red-500/25 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1">
+                <span class="relative z-10 orbitron-font">🤖 Play vs AI</span>
+                <div class="absolute inset-0 bg-gradient-to-r from-red-700 to-orange-600 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              </button>
               
               <button onclick="openCustomizationMenu()" 
                       class="group relative px-8 py-4 bg-gradient-to-r from-pink-600 to-purple-500 text-white font-bold text-xl rounded-xl shadow-2xl hover:shadow-pink-500/25 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1">
@@ -131,6 +137,11 @@ export class PageService {
     document.getElementById('quick-game-btn')?.addEventListener('click', (e) => {
       e.preventDefault()
       onNavigate('/quick-game')
+    })
+
+    document.getElementById('ai-game-btn')?.addEventListener('click', (e) => {
+      e.preventDefault()
+      onNavigate('/play-ai')
     })
 
     document.getElementById('tournament-btn')?.addEventListener('click', (e) => {

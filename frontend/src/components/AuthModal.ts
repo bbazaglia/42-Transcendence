@@ -36,24 +36,24 @@ export class AuthModal {
             <!-- Form -->
             <form id="auth-form" class="space-y-6">
               <div id="display-name-field" class="hidden">
-                <label class="block text-white font-semibold mb-2">Nome de Usuário:</label>
+                <label class="block text-white font-semibold mb-2">User Name:</label>
                 <input type="text" id="displayName" 
                        class="w-full p-4 rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/50 focus:border-cyan-400 focus:outline-none transition-colors"
-                       placeholder="Seu nome de usuário" required>
+                       placeholder="Your user name" required>
               </div>
 
               <div>
                 <label class="block text-white font-semibold mb-2">Email:</label>
                 <input type="email" id="email" 
                        class="w-full p-4 rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/50 focus:border-cyan-400 focus:outline-none transition-colors"
-                       placeholder="seu@email.com" required>
+                       placeholder="your@email.com" required>
               </div>
 
               <div>
-                <label class="block text-white font-semibold mb-2">Senha:</label>
+                <label class="block text-white font-semibold mb-2">Password:</label>
                 <input type="password" id="password" 
                        class="w-full p-4 rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/50 focus:border-cyan-400 focus:outline-none transition-colors"
-                       placeholder="Sua senha" required>
+                       placeholder="Your password" required>
               </div>
 
               <button type="submit" id="auth-submit-btn"
@@ -146,16 +146,16 @@ export class AuthModal {
 
     if (this.isLoginMode) {
       title!.textContent = 'Login';
-      submitText!.textContent = 'Entrar';
-      toggleText!.textContent = 'Usuário novo?';
-      toggleBtn!.textContent = 'Crie uma conta';
+      submitText!.textContent = 'Sign In';
+      toggleText!.textContent = "Don't have an account?";
+      toggleBtn!.textContent = 'Create an account';
       displayNameField!.classList.add('hidden');
       displayNameInput!.required = false;
     } else {
-      title!.textContent = 'Criar Conta';
-      submitText!.textContent = 'Criar Conta';
-      toggleText!.textContent = 'Já tem uma conta?';
-      toggleBtn!.textContent = 'Faça login';
+      title!.textContent = 'Create Account';
+      submitText!.textContent = 'Create Account';
+      toggleText!.textContent = 'Already have an account?';
+      toggleBtn!.textContent = 'Sign in';
       displayNameField!.classList.remove('hidden');
       displayNameInput!.required = true;
     }

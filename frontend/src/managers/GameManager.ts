@@ -1,4 +1,5 @@
 import { matchService } from '../services/MatchService.js';
+import { AIOpponent } from './AIOpponent.js';
 
 interface Paddle {
   x: number
@@ -47,6 +48,10 @@ export class GameManager {
   // Customization integration
   private customization: any = null
 
+  // --- Integração da IA ---
+  private aiOpponent: AIOpponent;
+  private isAIGame: boolean = false;
+
   constructor() {
     this.leftPaddle = {
       x: 50,
@@ -75,10 +80,12 @@ export class GameManager {
       speed: 4
     }
 
+    this.aiOpponent = new AIOpponent();
+
     this.setupKeyboardControls()
   }
 
-  startGame(tournamentManager?: any, currentMatch?: { player1: string; player2: string }, customization?: any): void {
+  startGame(tournamentManager?: any, currentMatch?: { player1: string; player2: string }, customization?: any, isAIGame: boolean = false): void {
     // console.log('=== STARTING GAME ===')
     // console.log('Tournament manager passed:', !!tournamentManager)
     // console.log('Current match passed:', currentMatch)
@@ -93,6 +100,7 @@ export class GameManager {
     this.tournamentManager = tournamentManager || null
     this.currentMatch = currentMatch || null
     this.customization = customization
+    this.isAIGame = isAIGame; // Define se o jogo é contra a IA
     
     // console.log('Game initialized with:')
     // console.log('- Tournament manager:', !!this.tournamentManager)
@@ -100,6 +108,12 @@ export class GameManager {
     // console.log('- Customization:', !!this.customization)
 
     this.applyCustomizationSettings()
+
+    // Se for um jogo de IA, reduzimos um pouco a velocidade da raquete dela para ser mais justo
+    if (this.isAIGame) {
+      this.rightPaddle.speed *= 0.9;
+    }
+
     this.resetGame()
     this.gameRunning = true
     this.gameLoop()
@@ -237,7 +251,7 @@ export class GameManager {
     // Don't update paddles if game is paused
     if (this.gamePaused) return
     
-    // Player 1 controls (W/S keys)
+    // Player 1 controls (W/S keys) - Permanece o mesmo
     if (this.keys['w'] || this.keys['W']) {
       this.leftPaddle.dy = -this.leftPaddle.speed
     } else if (this.keys['s'] || this.keys['S']) {
@@ -246,7 +260,14 @@ export class GameManager {
       this.leftPaddle.dy = 0
     }
 
-    // Player 2 controls (Arrow keys)
+    // Lógica de controle do Jogador 2 ou da IA
+    if (this.isAIGame) {
+      // Se for um jogo de IA, a IA decide qual "tecla" apertar
+      this.aiOpponent.update(this.ball, this.rightPaddle, this.keys);
+    } 
+    // Se for um jogador humano, os event listeners do navegador já cuidaram de atualizar o objeto `keys`.
+
+    // A lógica de movimento da raquete direita agora funciona para ambos (IA e Humano)
     if (this.keys['ArrowUp']) {
       this.rightPaddle.dy = -this.rightPaddle.speed
     } else if (this.keys['ArrowDown']) {

@@ -12,9 +12,11 @@ import { fileURLToPath } from 'url';
 import sharedSchemas from './schemas/sharedSchemas.js'
 import sessionManager from './plugins/sessionManager.js';
 import jwtPlugin from './plugins/jwt.js';
+import oauth from './plugins/oauth.js';
 import prismaPlugin from './plugins/prisma.js';
 import totpPlugin from './plugins/totp.js';
 
+import analyticsRoutes from './routes/analytics.js';
 import friendsRoutes from './routes/friends.js';
 import healthRoutes from './routes/health.js';
 import matchesRoutes from './routes/matches.js';
@@ -37,9 +39,11 @@ async function app(fastify, opts) {
     await fastify.register(sessionManager);
     await fastify.register(jwtPlugin);
     await fastify.register(totpPlugin, { issuer: 'ft_transcendence' });
+    await fastify.register(oauth);
     await fastify.register(prismaPlugin);
 
     // Register routes
+    await fastify.register(analyticsRoutes, { prefix: '/api/analytics' });
     await fastify.register(friendsRoutes, { prefix: '/api/friends' });
     await fastify.register(healthRoutes, { prefix: '/api/health' });
     await fastify.register(matchesRoutes, { prefix: '/api/matches' });

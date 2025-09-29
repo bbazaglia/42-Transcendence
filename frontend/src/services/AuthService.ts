@@ -211,8 +211,15 @@ class AuthService {
   async logout(): Promise<void> {
     const userName = this.state.user?.displayName;
     
-    // Clears the cookie by making a logout request (if endpoint exists)
-    // For now, just clears local state
+    try {
+      // Make request to clear cookie on server
+      await apiService.logout();
+    } catch (error) {
+      console.error('Error during logout request:', error);
+      // Continue with local logout even if server request fails
+    }
+
+    // Clear local state
     this.setState({
       user: null,
       isAuthenticated: false,
@@ -223,9 +230,6 @@ class AuthService {
     localStorage.removeItem('authState');
 
     console.log(userName ? `Logout realizado. Até logo, ${userName}!` : 'Logout realizado com sucesso!');
-
-    // Optional: make request to clear cookie on server
-    // await apiService.logout();
   }
 
   /**

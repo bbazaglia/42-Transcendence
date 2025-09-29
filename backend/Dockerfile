@@ -1,6 +1,7 @@
 # Stage 1: Install dependencies
 FROM node:lts-alpine3.22 AS deps
 WORKDIR /app
+
 COPY package.json package-lock.json ./
 RUN npm install -g npm@latest
 RUN npm i --package-lock-only
@@ -14,6 +15,9 @@ WORKDIR /app
 RUN apk add --no-cache openssl
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+# Create data directory and generate Prisma client
+RUN mkdir -p ./data
 RUN npx prisma generate --schema=./src/schemas/schema.prisma
 
 COPY backend-entrypoint.sh .

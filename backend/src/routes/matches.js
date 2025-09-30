@@ -46,8 +46,6 @@ export default async function (fastify, opts) {
                 winnerId
             } = request.body;
 
-            const session = fastify.session.get();
-
             const isPlayerOneValid = fastify.session.isParticipant(playerOneId);
             const isPlayerTwoValid = fastify.session.isParticipant(playerTwoId);
 

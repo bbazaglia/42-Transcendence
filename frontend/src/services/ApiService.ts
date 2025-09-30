@@ -68,7 +68,7 @@ class ApiService {
   ): Promise<ApiResponse<T>> {
     try {
       const url = `${this.baseUrl}${endpoint}`;
-      
+
       const defaultOptions: RequestInit = {
         headers: {
           'Content-Type': 'application/json',
@@ -81,19 +81,19 @@ class ApiService {
       
       let data;
       const contentType = response.headers.get('content-type');
-      
+
       if (contentType && contentType.includes('application/json')) {
         data = await response.json();
       }
 
       if (!response.ok) {
         const errorMessage = data?.message || `HTTP ${response.status}: ${response.statusText}`;
-        
+
         // Don't show notification for 401 error (not authenticated) - this is normal
         if (response.status !== 401) {
           console.error('Erro na API:', errorMessage);
         }
-        
+
         return {
           error: errorMessage,
           status: response.status,
@@ -107,10 +107,10 @@ class ApiService {
     } catch (error) {
       console.error('API Request failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'Network error';
-      
+
       // Show network error notification
       console.error('Erro de Conexão:', errorMessage);
-      
+
       return {
         error: errorMessage,
         status: 0,
@@ -122,7 +122,7 @@ class ApiService {
    * Authentication - User registration
    */
   async register(userData: RegisterRequest): Promise<ApiResponse<User>> {
-    return this.request<User>('/auth/register', {
+    return this.request<User>('/users/register', {
       method: 'POST',
       body: JSON.stringify(userData),
     });
@@ -132,7 +132,7 @@ class ApiService {
    * Authentication - User login
    */
   async login(credentials: LoginRequest): Promise<ApiResponse<User>> {
-    return this.request<User>('/auth/login', {
+    return this.request<User>('/session/login', {
       method: 'POST',
       body: JSON.stringify(credentials),
     });
@@ -207,7 +207,7 @@ class ApiService {
    * Logs out the user
    */
   async logout(): Promise<ApiResponse> {
-    return this.request('/auth/logout', {
+    return this.request('/session/logout', {
       method: 'POST',
       body: JSON.stringify({}),
     });

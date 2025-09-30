@@ -1,4 +1,5 @@
 import xss from 'xss';
+import bcrypt from 'bcrypt';
 
 export default async function (fastify, opts) {
     // Ensure the sessionManager plugin is registered.

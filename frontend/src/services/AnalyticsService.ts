@@ -87,7 +87,7 @@ class AnalyticsService {
                 throw new Error(response.error);
             }
             
-            const analytics: UserAnalytics = response.data;
+            const analytics: UserAnalytics = response.data as UserAnalytics;
 
             // Cache the result
             this.cacheAnalytics(userId, analytics);
@@ -95,7 +95,8 @@ class AnalyticsService {
             return analytics;
         } catch (error) {
             console.error('Failed to fetch user analytics:', error);
-            throw new Error(`Failed to fetch analytics data: ${error.message || error}`);
+            const message = error instanceof Error ? error.message : String(error);
+            throw new Error(`Failed to fetch analytics data: ${message}`);
         }
     }
 

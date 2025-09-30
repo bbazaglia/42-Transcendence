@@ -5,7 +5,7 @@ import { analyticsService, UserAnalytics } from '../services/AnalyticsService';
 Chart.register(...registerables);
 
 export class InsightsModal {
-    private modal: HTMLElement;
+    private modal!: HTMLElement;
     private charts: Map<string, Chart> = new Map();
     private userId: number;
     private analytics: UserAnalytics | null = null;

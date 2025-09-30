@@ -21,7 +21,7 @@ export class ProfilePage {
     if (!currentUser) return ''
 
     // Show loading state
-    const loadingHTML = this.renderLoadingState()
+    this.renderLoadingState()
 
     // Load profile data
     const profileData = await this.loadProfileData()

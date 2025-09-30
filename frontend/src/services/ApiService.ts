@@ -91,7 +91,7 @@ class ApiService {
 
         // Don't show notification for 401 error (not authenticated) - this is normal
         if (response.status !== 401) {
-          console.error('Erro na API:', errorMessage);
+          console.error('API error:', errorMessage);
         }
 
         return {
@@ -109,7 +109,7 @@ class ApiService {
       const errorMessage = error instanceof Error ? error.message : 'Network error';
 
       // Show network error notification
-      console.error('Erro de Conexão:', errorMessage);
+      console.error('Connection error:', errorMessage);
 
       return {
         error: errorMessage,

@@ -174,11 +174,6 @@ export default async function (fastify, opts) {
 
     //---------------------------------------------------------------------------
 
-    // ROUTE: Redirects the user to the Google sign-in page.
-    //fastify.get('/google', async (request, reply) => {
-    //    // Google OAuth logic
-    //});
-
     // ROUTE: The route Google redirects back to after a user authorizes the app.
     fastify.get('/google/callback', {
         schema: {
@@ -204,7 +199,7 @@ export default async function (fastify, opts) {
                 displayName: googleData.name,
                 email: googleData.email,
                 googleId: googleData.id,
-                avatarUrl: googleData.picture, //TODO dowload it from google URL and store it locally.
+                avatarUrl: googleData.picture, //TODO download it from google URL and store it locally.
             };
 
             const existingUser = await fastify.prisma.user.findUnique({
@@ -242,8 +237,6 @@ export default async function (fastify, opts) {
             });
 
             reply.code(201);
-
-            //redirect to logged area
 
         } catch (error) {
             fastify.log.error(error, 'Oauth Registration failed');

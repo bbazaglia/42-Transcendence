@@ -45,7 +45,7 @@ async function sessionManager(fastify, opts) {
         },
 
         async authorizeParticipant(request, reply) {
-            await this.authorize(request, reply);
+            await sessionService.authorize(request, reply);
 
             const userId = request.params.userId ?? request.body.actorId;
 
@@ -55,7 +55,7 @@ async function sessionManager(fastify, opts) {
                 throw fastify.httpErrors.internalServerError();
             }
 
-            if (!this.isParticipant(parseInt(userId, 10))) {
+            if (!sessionService.isParticipant(parseInt(userId, 10))) {
                 throw fastify.httpErrors.forbidden('The specified user is not part of the current session.');
             }
         }

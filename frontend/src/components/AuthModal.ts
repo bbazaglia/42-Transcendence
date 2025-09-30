@@ -120,7 +120,7 @@ export class AuthModal {
     authService.subscribe((state) => {
       if (state.isAuthenticated) {
         this.hide();
-        this.showMessage('Login realizado com sucesso!', 'success');
+        this.showMessage('Logged in successfully!', 'success');
       }
     });
   }
@@ -182,7 +182,7 @@ export class AuthModal {
         result = await authService.login({ email, password });
       } else {
         if (!displayName.trim()) {
-          this.showMessage('Nome de usuário é obrigatório', 'error');
+          this.showMessage('Username is required.', 'error');
           this.setLoading(false);
           return;
         }
@@ -191,15 +191,15 @@ export class AuthModal {
 
       if (result.success) {
         this.showMessage(
-          this.isLoginMode ? 'Login realizado com sucesso!' : 'Conta criada com sucesso!',
+          this.isLoginMode ? 'Logged in successfully!!' : 'Account successfully created!',
           'success'
         );
         // The modal will be closed automatically by the authService listener
       } else {
-        this.showMessage(result.error || 'Erro na autenticação', 'error');
+        this.showMessage(result.error || 'Authentication error', 'error');
       }
     } catch (error) {
-      this.showMessage('Erro inesperado. Tente novamente.', 'error');
+      this.showMessage('Unexpected error. Try again.', 'error');
     } finally {
       this.setLoading(false);
     }

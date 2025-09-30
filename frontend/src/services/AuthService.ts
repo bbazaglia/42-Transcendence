@@ -194,7 +194,7 @@ class AuthService {
         isLoading: false,
       });
 
-      console.log(`Login realizado! Bem-vindo, ${response.data!.displayName}!`);
+      console.log(`Login successful! Welcome, ${response.data!.displayName}!`);
       return { success: true };
     } catch (error) {
       this.setState({ isLoading: false });
@@ -229,7 +229,7 @@ class AuthService {
     // Clear localStorage
     localStorage.removeItem('authState');
 
-    console.log(userName ? `Logout realizado. Até logo, ${userName}!` : 'Logout realizado com sucesso!');
+    console.log(userName ? `Logged out. See you later, ${userName}!` : 'Logout successful!');
   }
 
   /**

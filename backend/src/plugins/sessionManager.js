@@ -42,6 +42,8 @@ async function sessionManager(fastify, opts) {
             if (!session || request.user.sessionId !== session.sessionId) {
                 throw fastify.httpErrors.unauthorized('Invalid or expired session. Please log in.');
             }
+
+            fastify.log.info(`Session ${session.sessionId} authorized`);
         },
 
         async authorizeParticipant(request, reply) {
@@ -58,6 +60,8 @@ async function sessionManager(fastify, opts) {
             if (!sessionService.isParticipant(parseInt(userId, 10))) {
                 throw fastify.httpErrors.forbidden('The specified user is not part of the current session.');
             }
+
+            fastify.log.info(`User ${userId} authorized for session ${sessionService.get().sessionId}`);
         }
     };
 

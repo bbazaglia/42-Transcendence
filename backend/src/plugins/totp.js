@@ -24,6 +24,7 @@ async function totpPlugin(fastify, opts) {
     async function generateQRCode(totpInstance) {
         try {
             const url = totpInstance.toString();
+            fastify.log.info(`Generating QR code for TOTP URL: ${url}`);
             return await qrcode.toDataURL(url);
         } catch (error) {
             fastify.log.error(error, 'Error generating QR code:');
@@ -47,6 +48,7 @@ async function totpPlugin(fastify, opts) {
             });
 
             const delta = totp.validate({ token, window: TOTP_WINDOW });
+            fastify.log.info(`TOTP verification result for token ${token}: ${delta !== null}`);
             return delta !== null;
         } catch (error) {
             fastify.log.error(error, 'TOTP verification failed due to an unexpected error.');

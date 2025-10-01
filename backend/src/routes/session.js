@@ -81,6 +81,7 @@ export default async function (fastify, opts) {
     }, async (request, reply) => {
         try {
             const { email, password } = request.body;
+            fastify.log.debug(`Login attempt for email: ${email}`);
 
             const userWithSecrets = await fastify.prisma.user.findUnique({
                 where: { email: email.toLowerCase() },
@@ -109,6 +110,7 @@ export default async function (fastify, opts) {
             const session = await handleSuccessfulLogin(fastify, reply, publicUser);
 
             // Return the latest session state
+            fastify.log.debug(`User ${publicUser.displayName} logged in successfully without TOTP.`);
             return { participants: Array.from(session.participants.values()) };
 
         } catch (error) {
@@ -138,6 +140,7 @@ export default async function (fastify, opts) {
     }, async (request, reply) => {
         try {
             const decodedTempToken = await request.jwtVerify();
+            fastify.log.debug(`TOTP verification attempt for user ID: ${decodedTempToken.id}`);
 
             if (decodedTempToken.scope !== 'totp') {
                 throw fastify.httpErrors.unauthorized('Invalid token scope.');
@@ -161,6 +164,7 @@ export default async function (fastify, opts) {
             const session = await handleSuccessfulLogin(fastify, reply, publicUser);
 
             // Return the latest session state
+            fastify.log.debug(`User ${publicUser.displayName} passed TOTP verification and logged in successfully.`);
             return { participants: Array.from(session.participants.values()) };
 
         } catch (error) {
@@ -183,7 +187,9 @@ export default async function (fastify, opts) {
         },
     }, async (request, reply) => {
         try {
+            //TODO: add handleSuccessfulLogin here to manage session creation
             const { token } = await fastify.googleOAuth2.getAccessTokenFromAuthorizationCodeFlow(request);
+            fastify.log.debug('Received Google OAuth token');
 
             const googleResponse = await fetch(process.env.GOOGLE_OAUTH_USER_INFO_URL, {
                 headers: {
@@ -234,6 +240,8 @@ export default async function (fastify, opts) {
                 maxAge: 60 * 60 * 24 * 7
             });
 
+            fastify.log.info(`User ${dbUser.displayName} registered/logged in via Google OAuth`);
+            //TODO: redirect to frontend with 302 status (reply.redirect(frontendUrl)))
             reply.code(201);
 
         } catch (error) {
@@ -268,6 +276,7 @@ export default async function (fastify, opts) {
         try {
             const { userId } = request.body;
             const session = fastify.session.get();
+            fastify.log.debug(`Logout attempt for user ID: ${userId} from session ${session.sessionId}`);
 
             if (!fastify.session.isParticipant(userId)) {
                 throw fastify.httpErrors.notFound('User not found in current session.');

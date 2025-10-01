@@ -45,6 +45,7 @@ export default async function (fastify, opts) {
                 playerTwoScore,
                 winnerId
             } = request.body;
+            fastify.log.debug(`Attempting to create match record: Player One ID ${playerOneId}, Player Two ID ${playerTwoId}, Player One Score ${playerOneScore}, Player Two Score ${playerTwoScore}, Winner ID ${winnerId}`);
 
             const isPlayerOneValid = fastify.session.isParticipant(playerOneId);
             const isPlayerTwoValid = fastify.session.isParticipant(playerTwoId);
@@ -94,6 +95,7 @@ export default async function (fastify, opts) {
                 return match;
             });
 
+            fastify.log.debug(`Match record created successfully with ID ${createdMatch.id}`);
             reply.code(201);
             return { match: createdMatch };
 

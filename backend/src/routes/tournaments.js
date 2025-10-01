@@ -31,6 +31,7 @@ export default async function (fastify, opts) {
         }
     }, async (request, reply) => {
         try {
+            fastify.log.debug(`Fetching all tournaments for session ${request.user.sessionId}`);
             const tournamentsFromDb = await fastify.prisma.tournament.findMany({
                 ...tournamentQueryTemplate,
                 orderBy: {
@@ -44,6 +45,7 @@ export default async function (fastify, opts) {
                 participants: t.participants.map(p => p.user)
             }));
 
+            fastify.log.debug(`Fetched ${tournaments.length} tournaments`);
             return { tournaments: tournaments };
 
         } catch (error) {
@@ -80,6 +82,7 @@ export default async function (fastify, opts) {
     }, async (request, reply) => {
         try {
             const tournamentId = request.params.tournamentId;
+            fastify.log.debug(`Fetching tournament with id ${tournamentId} for session ${request.user.sessionId}`);
 
             const tournamentFromDb = await fastify.prisma.tournament.findUnique({
                 where: { id: tournamentId },
@@ -96,6 +99,7 @@ export default async function (fastify, opts) {
                 participants: tournamentFromDb.participants.map(p => p.user)
             };
 
+            fastify.log.debug(`Fetched tournament: ${tournament.name} with ${tournament.participants.length} participants`);
             return { tournament: tournament };
 
         } catch (error) {
@@ -134,6 +138,7 @@ export default async function (fastify, opts) {
         try {
             const name = xss(request.body.name);
             const { maxParticipants } = request.body;
+            fastify.log.debug(`Creating new tournament "${name}" with maxParticipants=${maxParticipants} for session ${request.user.sessionId}`);
 
             const newTournamentFromDb = await fastify.prisma.tournament.create({
                 data: {
@@ -148,6 +153,7 @@ export default async function (fastify, opts) {
                 participants: [] // A new tournament always starts with zero participants.
             };
 
+            fastify.log.info(`Created new tournament "${tournament.name}" with id ${tournament.id}`);
             reply.code(201);
             return { tournament: tournament };
 
@@ -197,6 +203,7 @@ export default async function (fastify, opts) {
         try {
             const tournamentId = request.params.tournamentId;
             const { actorId } = request.body;
+            fastify.log.debug(`User ${actorId} attempting to join tournament ${tournamentId} for session ${request.user.sessionId}`);
 
             // Use a transaction to ensure data integrity
             const updatedTournamentFromDb = await fastify.prisma.$transaction(async (prisma) => {
@@ -239,6 +246,7 @@ export default async function (fastify, opts) {
             });
 
             // Map participants to include only user details
+            fastify.log.debug(`User ${actorId} successfully joined tournament ${tournamentId}`);
             const tournamentResponse = {
                 ...updatedTournamentFromDb,
                 participants: updatedTournamentFromDb.participants.map(p => p.user)
@@ -280,6 +288,7 @@ export default async function (fastify, opts) {
     }, async (request, reply) => {
         try {
             const tournamentId = request.params.tournamentId;
+            fastify.log.debug(`Attempting to start tournament ${tournamentId} for session ${request.user.sessionId}`);
 
             const updatedTournamentFromDb = await fastify.prisma.$transaction(async (prisma) => {
                 const tournament = await prisma.tournament.findUnique({
@@ -348,7 +357,7 @@ export default async function (fastify, opts) {
                 ...updatedTournamentFromDb,
                 participants: updatedTournamentFromDb.participants.map(p => p.user)
             };
-
+            fastify.log.info(`Tournament ${tournamentResponse.name} started successfully`);
             return { tournament: tournamentResponse };
 
         } catch (error) {
@@ -398,6 +407,7 @@ export default async function (fastify, opts) {
         try {
             const { tournamentId, matchId } = request.params;
             const { playerOneScore, playerTwoScore, winnerId } = request.body;
+            fastify.log.debug(`Updating match ${matchId} in tournament ${tournamentId} with winner ${winnerId} for session ${request.user.sessionId}`);
 
             const updatedTournamentFromDb = await fastify.prisma.$transaction(async (prisma) => {
                 // 1. Validate match parameters
@@ -469,6 +479,7 @@ export default async function (fastify, opts) {
             });
 
             // Map participants to include only user details
+            fastify.log.debug(`Match ${matchId} in tournament ${tournamentId} updated successfully`);
             const tournamentResponse = {
                 ...updatedTournamentFromDb,
                 participants: updatedTournamentFromDb.participants.map(p => p.user)
@@ -509,6 +520,7 @@ export default async function (fastify, opts) {
     }, async (request, reply) => {
         try {
             const tournamentId = request.params.tournamentId;
+            fastify.log.debug(`Attempting to cancel tournament ${tournamentId} for session ${request.user.sessionId}`);
 
             const updatedTournamentFromDb = await fastify.prisma.$transaction(async (prisma) => {
                 const existing = await prisma.tournament.findFirst({
@@ -540,11 +552,11 @@ export default async function (fastify, opts) {
                 });
             });
 
+            fastify.log.info(`Tournament ${updatedTournamentFromDb.name} cancelled successfully`);
             const tournamentResponse = {
                 ...updatedTournamentFromDb,
                 participants: updatedTournamentFromDb.participants.map(p => p.user)
             };
-
             return { tournament: tournamentResponse };
 
         } catch (error) {

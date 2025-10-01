@@ -36,6 +36,7 @@ export default async function (fastify, opts) {
         try {
             const displayName = xss(request.body.displayName);
             const { email, password } = request.body;
+            fastify.log.debug(`Attempting to register user with email: ${email} and displayName: ${displayName}`);
 
             const existingUserByDisplayName = await fastify.prisma.user.findFirst({
                 where: {
@@ -68,6 +69,7 @@ export default async function (fastify, opts) {
                 }
             });
 
+            fastify.log.info(`New user registered with ID: ${newUser.id}, email: ${newUser.email}, displayName: ${newUser.displayName}`);
             reply.code(201);
             return { user: newUser };
 
@@ -111,6 +113,7 @@ export default async function (fastify, opts) {
     }, async (request, reply) => {
         try {
             const { search } = request.query;
+            fastify.log.debug(`Searching users with query: ${search}`);
 
             const users = await fastify.prisma.user.findMany({
                 where: {
@@ -121,6 +124,7 @@ export default async function (fastify, opts) {
                 take: 10 // Limit to 10 results
             });
 
+            fastify.log.debug(`Found ${users.length} users matching query: ${search}`);
             return { users: users };
 
         } catch (error) {
@@ -158,6 +162,7 @@ export default async function (fastify, opts) {
     }, async (request, reply) => {
         try {
             const userId = request.params.userId;
+            fastify.log.debug(`Fetching profile for user ID: ${userId}`);
 
             const user = await fastify.prisma.user.findUnique({
                 where: { id: userId },
@@ -167,6 +172,7 @@ export default async function (fastify, opts) {
                 throw fastify.httpErrors.notFound(`User ${userId} not found`);
             }
 
+            fastify.log.debug(`Fetched profile for user ID: ${userId}, displayName: ${user.displayName}`);
             return { user: user };
 
         } catch (error) {
@@ -206,6 +212,7 @@ export default async function (fastify, opts) {
     }, async (request, reply) => {
         try {
             const userId = request.params.userId;
+            fastify.log.debug(`Fetching match history for user ID: ${userId}`);
 
             const matches = await fastify.prisma.match.findMany({
                 where: {
@@ -220,6 +227,7 @@ export default async function (fastify, opts) {
                 }
             });
 
+            fastify.log.debug(`Fetched ${matches.length} matches for user ID: ${userId}`);
             return { matches: matches };
 
         } catch (error) {
@@ -258,6 +266,7 @@ export default async function (fastify, opts) {
     }, async (request, reply) => {
         try {
             const { userId } = request.params;
+            fastify.log.debug(`Setting up TOTP for user ID: ${userId}`);
 
             const user = await fastify.prisma.user.findUnique({
                 where: { id: userId },
@@ -276,6 +285,7 @@ export default async function (fastify, opts) {
                 data: { totpSecret: secret, isTwoFaEnabled: false },
             });
 
+            fastify.log.debug(`TOTP setup complete for user ID: ${userId}`);
             const qrCodeDataURL = await fastify.totp.generateQRCode(totpInstance);
             return { qrCodeUrl: qrCodeDataURL };
 
@@ -321,6 +331,7 @@ export default async function (fastify, opts) {
         try {
             const userId = request.params.userId;
             const { token } = request.body;
+            fastify.log.debug(`Verifying TOTP for user ID: ${userId}`);
 
             const user = await fastify.prisma.user.findUnique({
                 where: { id: userId },
@@ -342,6 +353,7 @@ export default async function (fastify, opts) {
                 data: { isTwoFaEnabled: true },
             });
 
+            fastify.log.info(`TOTP verified and enabled for user ID: ${userId}`);
             return { user: updatedUser };
 
         } catch (error) {
@@ -385,6 +397,7 @@ export default async function (fastify, opts) {
         try {
             const userId = request.params.userId;
             const { password } = request.body;
+            fastify.log.debug(`Disabling TOTP for user ID: ${userId}`);
 
             const user = await fastify.prisma.user.findUnique({
                 where: { id: userId },
@@ -405,6 +418,7 @@ export default async function (fastify, opts) {
                 data: { isTwoFaEnabled: false, totpSecret: null },
             });
 
+            fastify.log.info(`TOTP disabled for user ID: ${userId}`);
             return { user: updatedUser };
 
         } catch (error) {
@@ -455,6 +469,7 @@ export default async function (fastify, opts) {
             const userId = request.params.userId;
             const displayName = request.body.displayName ? xss(request.body.displayName) : undefined;
             const avatarUrl = request.body.avatarUrl ? xss(request.body.avatarUrl) : undefined;
+            fastify.log.debug(`Updating profile for user ID: ${userId}`);
 
             if (!displayName && !avatarUrl) {
                 throw fastify.httpErrors.badRequest('No update data provided.');
@@ -481,6 +496,7 @@ export default async function (fastify, opts) {
                 }
             });
 
+            fastify.log.info(`User profile updated for user ID: ${userId}`);
             return { user: updatedUser };
 
         } catch (error) {

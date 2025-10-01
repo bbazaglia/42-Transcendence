@@ -512,12 +512,25 @@ export default async function (fastify, opts) {
 
             const updatedTournamentFromDb = await fastify.prisma.$transaction(async (prisma) => {
                 const existing = await prisma.tournament.findFirst({
-                    where: { id: tournamentId, status: { notIn: [TournamentStatus.COMPLETED, TournamentStatus.CANCELLED] } },
-                    select: { id: true }
+                    where: {
+                        id: tournamentId,
+                        status: { notIn: [TournamentStatus.COMPLETED, TournamentStatus.CANCELLED] }
+                    },
+                    select: {
+                        id: true,
+                        participants: { select: { userId: true } }
+                    }
                 });
 
                 if (!existing) {
                     throw fastify.httpErrors.notFound('Tournament not found or already completed/cancelled.');
+                }
+
+                // Check if all participants are still in the main app session.
+                for (const participant of existing.participants) {
+                    if (!fastify.session.isParticipant(participant.userId)) {
+                        throw fastify.httpErrors.forbidden('All tournament participants must be present in the session to cancel the tournament.');
+                    }
                 }
 
                 return await prisma.tournament.update({

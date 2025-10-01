@@ -81,8 +81,11 @@ export default async function (fastify, opts) {
             const userId = request.params.userId;
             const session = fastify.session.get();
             const onlineUserIds = new Set(session.participants.keys());
+            fastify.log.debug(`Fetching friends for user ${userId}. Online users: ${Array.from(onlineUserIds).join(', ')}`);
 
             const friendships = await getFriendshipsForUser(fastify.prisma, userId, FriendshipStatus.ACCEPTED, onlineUserIds);
+            fastify.log.debug(`Found ${friendships.length} friends for user ${userId}`);
+
             return { friendships: friendships };
 
         } catch (error) {
@@ -121,8 +124,11 @@ export default async function (fastify, opts) {
             const userId = request.params.userId;
             const session = fastify.session.get();
             const onlineUserIds = new Set(session.participants.keys());
+            fastify.log.debug(`Fetching incoming pending requests for user ${userId}. Online users: ${Array.from(onlineUserIds).join(', ')}`);
 
             const pendingFriendships = await getFriendshipsForUser(fastify.prisma, userId, FriendshipStatus.PENDING, onlineUserIds, 'INCOMING');
+            fastify.log.debug(`Found ${pendingFriendships.length} incoming pending requests for user ${userId}`);
+
             return { friendships: pendingFriendships };
 
         } catch (error) {
@@ -161,8 +167,11 @@ export default async function (fastify, opts) {
             const userId = request.params.userId;
             const session = fastify.session.get();
             const onlineUserIds = new Set(session.participants.keys());
+            fastify.log.debug(`Fetching sent pending requests for user ${userId}. Online users: ${Array.from(onlineUserIds).join(', ')}`);
 
             const pendingFriendships = await getFriendshipsForUser(fastify.prisma, userId, FriendshipStatus.PENDING, onlineUserIds, 'SENT');
+            fastify.log.debug(`Found ${pendingFriendships.length} sent pending requests for user ${userId}`);
+
             return { friendships: pendingFriendships };
 
         } catch (error) {
@@ -203,7 +212,7 @@ export default async function (fastify, opts) {
     }, async (request, reply) => {
         try {
             const { actorId, friendId } = request.body;
-            const session = fastify.session.get();
+            fastify.log.debug(`User ${actorId} is attempting to send a friend request to user ${friendId}`);
 
             if (actorId === friendId) {
                 throw fastify.httpErrors.badRequest('A user cannot send a friend request to themselves.');
@@ -245,6 +254,7 @@ export default async function (fastify, opts) {
                 user: friendUserObject
             };
 
+            fastify.log.debug(`Friend request created with ID ${newFriendshipFromDb.id} between users ${actorId} and ${friendId}`);
             reply.code(201);
             return { friendship: friendshipResponse };
 
@@ -293,7 +303,7 @@ export default async function (fastify, opts) {
         try {
             const { friendshipId } = request.params;
             const { actorId } = request.body;
-            const session = fastify.session.get();
+            fastify.log.debug(`User ${actorId} is attempting to accept friend request ID ${friendshipId}`);
 
             const updatedFriendship = await fastify.prisma.friendship.update({
                 where: {
@@ -319,6 +329,7 @@ export default async function (fastify, opts) {
                 user: friendUserObject
             };
 
+            fastify.log.debug(`Friend request ID ${friendshipId} accepted by user ${actorId}`);
             return { friendship: friendshipResponse };
 
         } catch (error) {
@@ -361,6 +372,7 @@ export default async function (fastify, opts) {
         try {
             const { friendshipId } = request.params;
             const { actorId } = request.body;
+            fastify.log.debug(`User ${actorId} is attempting to remove friendship ID ${friendshipId}`);
 
             await fastify.prisma.friendship.delete({
                 where: {
@@ -373,6 +385,7 @@ export default async function (fastify, opts) {
             });
 
             // On successful deletion, return a 204 No Content response.
+            fastify.log.debug(`Friendship ID ${friendshipId} removed by user ${actorId}`);
             reply.code(204);
 
         } catch (error) {

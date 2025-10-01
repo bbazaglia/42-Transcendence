@@ -233,11 +233,9 @@ export default async function (fastify, opts) {
 
     //------ User authentication required for all routes below this line ------
 
-    //TODO: test if the hook works only for routes below this line
-    fastify.addHook('preHandler', fastify.session.authorizeParticipant);
-
     // ROUTE: Generates a new secret and QR code for setting up TOTP.
     fastify.post('/:userId/totp/setup', {
+        preHandler: [fastify.session.authorizeParticipant],
         schema: {
             params: {
                 type: 'object',
@@ -292,6 +290,7 @@ export default async function (fastify, opts) {
 
     // ROUTE: Verifies a TOTP code and enables it for a user.
     fastify.post('/:userId/totp/verify', {
+        preHandler: [fastify.session.authorizeParticipant],
         schema: {
             params: {
                 type: 'object',
@@ -356,6 +355,7 @@ export default async function (fastify, opts) {
 
     // ROUTE: Disables TOTP for a user.
     fastify.post('/:userId/totp/disable', {
+        preHandler: [fastify.session.authorizeParticipant],
         schema: {
             params: {
                 type: 'object',
@@ -418,6 +418,7 @@ export default async function (fastify, opts) {
 
     // ROUTE: Updates user profile information
     fastify.patch('/:userId', {
+        preHandler: [fastify.session.authorizeParticipant],
         schema: {
             params: {
                 type: 'object',

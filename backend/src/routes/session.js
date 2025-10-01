@@ -172,8 +172,6 @@ export default async function (fastify, opts) {
         }
     });
 
-    //---------------------------------------------------------------------------
-
     // ROUTE: The route Google redirects back to after a user authorizes the app.
     fastify.get('/google/callback', {
         schema: {
@@ -249,11 +247,9 @@ export default async function (fastify, opts) {
 
     //------ Session authentication required for all routes below this line ------
 
-    //TODO: test if the hook works only for routes below this line
-    fastify.addHook('preHandler', fastify.session.authorize);
-
     // ROUTE: Logs a user out of the session.
     fastify.post('/logout', {
+        preHandler: [fastify.session.authorize],
         schema: {
             body: {
                 type: 'object',
@@ -305,6 +301,7 @@ export default async function (fastify, opts) {
 
     // ROUTE: Gets the current participants of the session.
     fastify.get('/', {
+        preHandler: [fastify.session.authorize],
         schema: {
             response: {
                 200: { $ref: 'sessionState#' },

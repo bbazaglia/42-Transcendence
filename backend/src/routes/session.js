@@ -187,7 +187,6 @@ export default async function (fastify, opts) {
         },
     }, async (request, reply) => {
         try {
-            //TODO: add handleSuccessfulLogin here to manage session creation
             const { token } = await fastify.googleOAuth2.getAccessTokenFromAuthorizationCodeFlow(request);
             fastify.log.debug('Received Google OAuth token');
 
@@ -229,20 +228,20 @@ export default async function (fastify, opts) {
                 create: { ...user },
             });
 
-            const payload = { id: dbUser.id, displayName: dbUser.displayName };
-            const jwt_signed_token = fastify.jwt.sign({ payload });
-
-            reply.setCookie('token', jwt_signed_token, { //TODO check this token name
-                path: '/',
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict',
-                maxAge: 60 * 60 * 24 * 7
-            });
+            // We use our existing login handler. It will create the session and set the cookie if needed.
+            // We wrap it in a try-catch to ignore the "already in session" conflict for OAuth and redirect
+            // the user to the frontend anyway.
+            try {
+                await handleSuccessfulLogin(fastify, reply, dbUser);
+            } catch (error) {
+                if (error.statusCode !== 409) { // Re-throw if it's not the expected conflict
+                    throw error;
+                }
+                fastify.log.info(`User ${dbUser.displayName} is already in a session, proceeding with OAuth login.`);
+            }
 
             fastify.log.info(`User ${dbUser.displayName} registered/logged in via Google OAuth`);
-            //TODO: redirect to frontend with 302 status (reply.redirect(frontendUrl)))
-            reply.code(201);
+            return reply.redirect(process.env.FRONTEND_URL);
 
         } catch (error) {
             fastify.log.error(error, 'Oauth Registration failed');

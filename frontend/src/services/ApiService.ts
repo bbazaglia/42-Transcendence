@@ -54,9 +54,10 @@ class ApiService {
   private baseUrl: string;
 
   constructor() {
-    // In development, uses Vite proxy
-    // In production, uses backend URL
-    this.baseUrl = (import.meta as any).env?.DEV ? '/api' : 'http://localhost:3000/api';
+    // In both development and production, we use a relative path.
+    // In dev, Vite's proxy handles it.
+    // In prod, Nginx handles it.
+    this.baseUrl = '/api';
   }
 
   /**

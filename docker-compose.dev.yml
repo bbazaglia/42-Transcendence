@@ -16,6 +16,7 @@ services:
       - ./.env
     environment:
       - NODE_ENV=development
+      - FRONTEND_URL=http://localhost:5173
       - DATABASE_PATH=file:/app/data/database.sqlite
       - JWT_SECRET=dev-jwt-secret-replace-in-prod
       - COOKIE_SECRET=dev-cookie-secret-replace-in-prod

@@ -61,6 +61,13 @@ class ApiService {
   }
 
   /**
+   * Gets the base URL for API requests
+   */
+  getBaseUrl(): string {
+    return this.baseUrl;
+  }
+
+  /**
    * Makes a generic HTTP request
    */
   async request<T>(

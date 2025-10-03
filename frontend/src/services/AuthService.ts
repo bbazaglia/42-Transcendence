@@ -207,6 +207,16 @@ class AuthService {
   }
 
   /**
+   * Initiates Google OAuth login
+   * Redirects to backend which handles the entire OAuth flow
+   */
+  initiateGoogleLogin(): void {
+    // Use the base URL from ApiService for consistency
+    const loginUrl = `${apiService.getBaseUrl()}/session/google`;
+    window.location.href = loginUrl;
+  }
+
+  /**
    * Logs out the user
    */
   async logout(): Promise<void> {

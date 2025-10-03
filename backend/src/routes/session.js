@@ -187,7 +187,10 @@ export default async function (fastify, opts) {
             },
         },
     }, async (request, reply) => {
+        // fastify.log.info('=== GOOGLE CALLBACK ROUTE HIT ===');
+        // fastify.log.info('Query params:', request.query);
         try {
+            // fastify.log.info('Attempting to get access token...');
             const { token } = await fastify.googleOAuth2.getAccessTokenFromAuthorizationCodeFlow(request);
             fastify.log.debug('Received Google OAuth token');
 
@@ -203,7 +206,7 @@ export default async function (fastify, opts) {
                 displayName: googleData.name,
                 email: googleData.email,
                 googleId: googleData.id,
-                avatarUrl: googleData.picture, //TODO download it from google URL and store it locally.
+                avatarUrl: googleData.picture, 
             };
 
             const existingUser = await fastify.prisma.user.findUnique({

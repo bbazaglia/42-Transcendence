@@ -11,8 +11,9 @@ export async function fetchUserProfile(userId: number): Promise<PublicUser> {
     });
 
     if (resp.ok) {
-        // assume valid JSON shape matching PublicUser
-        return await resp.json();
+        const data = await resp.json();
+        // Extract user from wrapper object
+        return data.user;
     }
 
     // Attempt to read backend error JSON, fallback to status text.

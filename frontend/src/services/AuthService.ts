@@ -187,14 +187,15 @@ class AuthService {
         return { success: false, error: response.error };
       }
 
-      // Successful login
+      // Successful login - get the first participant (current user)
+      const currentUser = response.data!.participants[0];
       this.setState({
-        user: response.data!,
+        user: currentUser,
         isAuthenticated: true,
         isLoading: false,
       });
 
-      console.log(`Login successful! Welcome, ${response.data!.displayName}!`);
+      console.log(`Login successful! Welcome, ${currentUser.displayName}!`);
       return { success: true };
     } catch (error) {
       this.setState({ isLoading: false });

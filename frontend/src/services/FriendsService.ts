@@ -34,11 +34,12 @@ class FriendsService {
   async getFriends(): Promise<Friend[]> {
     try {
       const currentUser = authService.getCurrentUser();
-      if (!currentUser) {
+      if (!currentUser || !currentUser.id) {
+        console.warn('No authenticated user found, cannot fetch friends');
         return [];
       }
 
-      const response = await apiService.request<Friend[]>(`/friends/${currentUser.id}`);
+      const response = await apiService.request<{ friendships: Friend[] }>(`/friends/${currentUser.id}`);
       
       if (response.error) {
         console.error('Failed to fetch friends:', response.error);
@@ -46,7 +47,7 @@ class FriendsService {
         return [];
       }
 
-      this.friends = response.data || [];
+      this.friends = response.data?.friendships || [];
       return this.friends;
 
     } catch (error) {
@@ -62,18 +63,19 @@ class FriendsService {
   async getPendingRequests(): Promise<FriendRequest[]> {
     try {
       const currentUser = authService.getCurrentUser();
-      if (!currentUser) {
+      if (!currentUser || !currentUser.id) {
+        console.warn('No authenticated user found, cannot fetch pending requests');
         return [];
       }
 
-      const response = await apiService.request<FriendRequest[]>(`/friends/pending/${currentUser.id}`);
+      const response = await apiService.request<{ friendships: FriendRequest[] }>(`/friends/pending/incoming/${currentUser.id}`);
       
       if (response.error) {
         console.error('Failed to fetch pending requests:', response.error);
         return [];
       }
 
-      this.pendingRequests = response.data || [];
+      this.pendingRequests = response.data?.friendships || [];
       return this.pendingRequests;
 
     } catch (error) {

@@ -180,7 +180,8 @@ export default async function (fastify, opts) {
     fastify.get('/google/callback', {
         schema: {
             response: {
-                201: { $ref: 'publicUser#' },
+                302: { type: 'string', format: 'uri' },
+                401: { $ref: 'httpError#' },
                 409: { $ref: 'httpError#' },
                 500: { $ref: 'httpError#' }
             },

@@ -81,7 +81,7 @@ class MatchService {
         return [];
       }
 
-      this.matchHistory = response.data || [];
+      this.matchHistory = response.data?.matches || [];
       return this.matchHistory;
 
     } catch (error) {
@@ -118,7 +118,7 @@ class MatchService {
     // For now, we'll use placeholder IDs since we don't have a user management system
     // In a real implementation, you'd look up user IDs by name or have them passed in
     const currentUser = authService.getCurrentUser();
-    if (!currentUser) {
+    if (!currentUser || !currentUser.id) {
       return null;
     }
 
@@ -142,7 +142,7 @@ class MatchService {
    */
   private updateLocalUserStats(matchResult: MatchResult): void {
     const currentUser = authService.getCurrentUser();
-    if (!currentUser) return;
+    if (!currentUser || !currentUser.id) return;
 
     // Determine if current user won or lost
     const isCurrentUserWinner = matchResult.winnerId === currentUser.id;

@@ -122,8 +122,8 @@ class ApiService {
   /**
    * Authentication - User registration
    */
-  async register(userData: RegisterRequest): Promise<ApiResponse<User>> {
-    return this.request<User>('/users/register', {
+  async register(userData: RegisterRequest): Promise<ApiResponse<{ user: User }>> {
+    return this.request<{ user: User }>('/users/register', {
       method: 'POST',
       body: JSON.stringify(userData),
     });
@@ -132,8 +132,8 @@ class ApiService {
   /**
    * Authentication - User login
    */
-  async login(credentials: LoginRequest): Promise<ApiResponse<User>> {
-    return this.request<User>('/session/login', {
+  async login(credentials: LoginRequest): Promise<ApiResponse<{ participants: User[] }>> {
+    return this.request<{ participants: User[] }>('/session/login', {
       method: 'POST',
       body: JSON.stringify(credentials),
     });
@@ -183,15 +183,15 @@ class ApiService {
   /**
    * Gets match history of a user
    */
-  async getUserMatchHistory(userId: number): Promise<ApiResponse<Match[]>> {
-    return this.request<Match[]>(`/users/${userId}/history`);
+  async getUserMatchHistory(userId: number): Promise<ApiResponse<{ matches: Match[] }>> {
+    return this.request<{ matches: Match[] }>(`/users/${userId}/history`);
   }
 
   /**
    * Updates user profile information
    */
-  async updateUserProfile(userId: number, profileData: { displayName?: string; avatarUrl?: string }): Promise<ApiResponse<User>> {
-    return this.request<User>(`/users/${userId}`, {
+  async updateUserProfile(userId: number, profileData: { displayName?: string; avatarUrl?: string }): Promise<ApiResponse<{ user: User }>> {
+    return this.request<{ user: User }>(`/users/${userId}`, {
       method: 'PATCH',
       body: JSON.stringify(profileData),
     });
@@ -200,8 +200,8 @@ class ApiService {
   /**
    * Searches for users by display name
    */
-  async searchUsers(query: string): Promise<ApiResponse<User[]>> {
-    return this.request<User[]>(`/users/search?q=${encodeURIComponent(query)}`);
+  async searchUsers(query: string): Promise<ApiResponse<{ users: User[] }>> {
+    return this.request<{ users: User[] }>(`/users/search?search=${encodeURIComponent(query)}`);
   }
 
   /**

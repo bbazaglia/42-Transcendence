@@ -57,14 +57,14 @@ class TournamentService {
    */
   async getTournaments(): Promise<Tournament[]> {
     try {
-      const response = await apiService.request<Tournament[]>('/tournaments');
+      const response = await apiService.request<{ tournaments: Tournament[] }>('/tournaments');
       
       if (response.error) {
         console.error('Failed to fetch tournaments:', response.error);
         return [];
       }
 
-      this.tournaments = response.data || [];
+      this.tournaments = response.data?.tournaments || [];
       return this.tournaments;
 
     } catch (error) {
@@ -78,14 +78,14 @@ class TournamentService {
    */
   async getTournament(tournamentId: number): Promise<Tournament | null> {
     try {
-      const response = await apiService.request<Tournament>(`/tournaments/${tournamentId}`);
+      const response = await apiService.request<{ tournament: Tournament }>(`/tournaments/${tournamentId}`);
       
       if (response.error) {
         console.error('Failed to fetch tournament:', response.error);
         return null;
       }
 
-      this.currentTournament = response.data || null;
+      this.currentTournament = response.data?.tournament || null;
       return this.currentTournament;
 
     } catch (error) {
@@ -99,7 +99,7 @@ class TournamentService {
    */
   async createTournament(tournamentData: CreateTournamentRequest): Promise<{ success: boolean; tournament?: Tournament; error?: string }> {
     try {
-      const response = await apiService.request<Tournament>('/tournaments', {
+      const response = await apiService.request<{ tournament: Tournament }>('/tournaments', {
         method: 'POST',
         body: JSON.stringify(tournamentData),
       });
@@ -109,7 +109,7 @@ class TournamentService {
         return { success: false, error: response.error };
       }
 
-      const tournament = response.data!;
+      const tournament = response.data?.tournament!;
       this.tournaments.unshift(tournament);
       console.log('Tournament created successfully:', tournament.name);
       return { success: true, tournament };
@@ -129,13 +129,13 @@ class TournamentService {
   async joinTournament(tournamentId: number): Promise<{ success: boolean; tournament?: Tournament; error?: string }> {
     try {
       const currentUser = authService.getCurrentUser();
-      if (!currentUser) {
+      if (!currentUser || !currentUser.id) {
         return { success: false, error: 'User not authenticated' };
       }
 
-      const response = await apiService.request<Tournament>(`/tournaments/${tournamentId}/join`, {
+      const response = await apiService.request<{ tournament: Tournament }>(`/tournaments/${tournamentId}/join`, {
         method: 'POST',
-        body: JSON.stringify({ userId: currentUser.id }),
+        body: JSON.stringify({ actorId: currentUser.id }),
       });
 
       if (response.error) {
@@ -143,7 +143,7 @@ class TournamentService {
         return { success: false, error: response.error };
       }
 
-      const tournament = response.data!;
+      const tournament = response.data?.tournament!;
       // Update local tournaments list
       const index = this.tournaments.findIndex(t => t.id === tournamentId);
       if (index !== -1) {
@@ -167,7 +167,7 @@ class TournamentService {
    */
   async startTournament(tournamentId: number): Promise<{ success: boolean; tournament?: Tournament; error?: string }> {
     try {
-      const response = await apiService.request<Tournament>(`/tournaments/${tournamentId}/start`, {
+      const response = await apiService.request<{ tournament: Tournament }>(`/tournaments/${tournamentId}/start`, {
         method: 'PATCH',
       });
 
@@ -176,7 +176,7 @@ class TournamentService {
         return { success: false, error: response.error };
       }
 
-      const tournament = response.data!;
+      const tournament = response.data?.tournament!;
       // Update local tournaments list
       const index = this.tournaments.findIndex(t => t.id === tournamentId);
       if (index !== -1) {
@@ -200,7 +200,7 @@ class TournamentService {
    */
   async updateMatch(tournamentId: number, matchId: number, matchData: UpdateMatchRequest): Promise<{ success: boolean; tournament?: Tournament; error?: string }> {
     try {
-      const response = await apiService.request<Tournament>(`/tournaments/${tournamentId}/matches/${matchId}`, {
+      const response = await apiService.request<{ tournament: Tournament }>(`/tournaments/${tournamentId}/matches/${matchId}`, {
         method: 'PATCH',
         body: JSON.stringify(matchData),
       });
@@ -210,7 +210,7 @@ class TournamentService {
         return { success: false, error: response.error };
       }
 
-      const tournament = response.data!;
+      const tournament = response.data?.tournament!;
       // Update local tournaments list
       const index = this.tournaments.findIndex(t => t.id === tournamentId);
       if (index !== -1) {
@@ -234,8 +234,8 @@ class TournamentService {
    */
   async cancelTournament(tournamentId: number): Promise<{ success: boolean; tournament?: Tournament; error?: string }> {
     try {
-      const response = await apiService.request<Tournament>(`/tournaments/${tournamentId}/cancel`, {
-        method: 'DELETE',
+      const response = await apiService.request<{ tournament: Tournament }>(`/tournaments/${tournamentId}/cancel`, {
+        method: 'PATCH',
       });
 
       if (response.error) {
@@ -243,7 +243,7 @@ class TournamentService {
         return { success: false, error: response.error };
       }
 
-      const tournament = response.data!;
+      const tournament = response.data?.tournament!;
       // Update local tournaments list
       const index = this.tournaments.findIndex(t => t.id === tournamentId);
       if (index !== -1) {
@@ -296,7 +296,7 @@ class TournamentService {
    */
   isUserParticipating(tournamentId: number): boolean {
     const currentUser = authService.getCurrentUser();
-    if (!currentUser) return false;
+    if (!currentUser || !currentUser.id) return false;
 
     const tournament = this.tournaments.find(t => t.id === tournamentId);
     return tournament?.participants.some(p => p.id === currentUser.id) || false;
@@ -307,7 +307,7 @@ class TournamentService {
    */
   getUserTournaments(): Tournament[] {
     const currentUser = authService.getCurrentUser();
-    if (!currentUser) return [];
+    if (!currentUser || !currentUser.id) return [];
 
     return this.tournaments.filter(t => 
       t.participants.some(p => p.id === currentUser.id)

@@ -82,7 +82,10 @@ export class ProfilePage {
 
   private async loadProfileData(): Promise<any> {
     const currentUser = authService.getCurrentUser()
-    if (!currentUser) return null
+    if (!currentUser || !currentUser.id) {
+      console.warn('No authenticated user found, cannot load profile data')
+      return null
+    }
 
     try {
       // Load all profile data in parallel
@@ -488,7 +491,7 @@ export class ProfilePage {
 
   private showEditProfileModal(): void {
     const currentUser = authService.getCurrentUser()
-    if (!currentUser) return
+    if (!currentUser || !currentUser.id) return
 
     const modalHTML = `
       <div id="edit-profile-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50">
@@ -552,7 +555,7 @@ export class ProfilePage {
 
   private async handleProfileUpdate(): Promise<void> {
     const currentUser = authService.getCurrentUser()
-    if (!currentUser) return
+    if (!currentUser || !currentUser.id) return
 
     const displayName = (document.getElementById('edit-display-name') as HTMLInputElement)?.value
     const avatarUrl = (document.getElementById('edit-avatar-url') as HTMLInputElement)?.value
@@ -569,7 +572,7 @@ export class ProfilePage {
       }
 
       // Update local user data
-      authService.updateUserProfile(response.data!)
+      authService.updateUserProfile(response.data!.user)
       this.closeEditProfileModal()
       // Refresh the page
       window.location.reload()
@@ -587,7 +590,7 @@ export class ProfilePage {
     const currentUser = authService.getCurrentUser()
     console.log('Current user:', currentUser)
     
-    if (!currentUser) {
+    if (!currentUser || !currentUser.id) {
       console.error('No current user found - user not authenticated')
       alert('Please log in to view your analytics')
       return
@@ -658,7 +661,7 @@ export class ProfilePage {
   private async searchUsers(query: string): Promise<void> {
     try {
       const response = await apiService.searchUsers(query)
-      const results = response.data || []
+      const results = response.data?.users || []
       
       const resultsHTML = results.map((user: any) => `
         <div class="flex items-center justify-between bg-white/5 rounded-lg p-3">

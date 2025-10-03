@@ -117,7 +117,7 @@ class LobbyService {
   async leaveLobby(): Promise<{ success: boolean; error?: string }> {
     try {
       const currentUser = authService.getCurrentUser();
-      if (!currentUser) {
+      if (!currentUser || !currentUser.id) {
         return { success: false, error: 'User not authenticated' };
       }
 
@@ -224,7 +224,7 @@ class LobbyService {
    */
   isHost(): boolean {
     const currentUser = authService.getCurrentUser();
-    if (!currentUser || !this.lobbyState) return false;
+    if (!currentUser || !currentUser.id || !this.lobbyState) return false;
     
     return this.lobbyState.host.id === currentUser.id;
   }

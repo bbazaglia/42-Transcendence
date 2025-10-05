@@ -1,8 +1,9 @@
 import bcrypt from 'bcrypt';
 
-async function createSessionCookie(reply, sessionId) {
+async function createSessionCookie(fastify, reply, sessionId) {
+    fastify.log.debug(`Creating session cookie for session ID: ${sessionId}`);
     const payload = { sessionId };
-    const token = reply.jwtSign(payload);
+    const token = await reply.jwtSign(payload);
 
     reply.setCookie('token', token, {
         path: '/',
@@ -10,6 +11,7 @@ async function createSessionCookie(reply, sessionId) {
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
         maxAge: 60 * 60 * 24, // 24 hours
+        signed: true
     });
 }
 
@@ -20,7 +22,7 @@ async function handleSuccessfulLogin(fastify, reply, publicUser) {
         session = fastify.session.create(publicUser);
         fastify.log.info(`New session ${session.sessionId} created by ${publicUser.displayName}`);
         // Issue the session cookie ONLY when the session is created.
-        await createSessionCookie(reply, session.sessionId);
+        await createSessionCookie(fastify, reply, session.sessionId);
     } else {
         // A session already exists. Check if user is already in it.
         if (fastify.session.isParticipant(publicUser.id)) {
@@ -42,6 +44,7 @@ export default async function (fastify, opts) {
 
     // ROUTE: Logs in the host user and returns a JWT token.
     fastify.post('/login', {
+        preHandler: [fastify.session.updateSessionActivity],
         schema: {
             body: {
                 type: 'object',
@@ -114,16 +117,17 @@ export default async function (fastify, opts) {
             return { participants: Array.from(session.participants.values()) };
 
         } catch (error) {
-            fastify.log.error(error, 'Login failed');
             if (error && error.statusCode) {
                 return reply.send(error);
             }
+            fastify.log.error(error, 'Login failed');
             return reply.internalServerError('An unexpected error occurred during login.');
         }
     });
 
     // ROUTE: Handles TOTP verification during login.
     fastify.post('/login/totp', {
+        preHandler: [fastify.session.updateSessionActivity],
         schema: {
             body: {
                 type: 'object',
@@ -168,16 +172,17 @@ export default async function (fastify, opts) {
             return { participants: Array.from(session.participants.values()) };
 
         } catch (error) {
-            fastify.log.error(error, 'TOTP login failed');
             if (error && error.statusCode) {
                 return reply.send(error);
             }
+            fastify.log.error(error, 'TOTP login failed');
             return reply.unauthorized('Invalid or expired TOTP session.');
         }
     });
 
     // ROUTE: The route Google redirects back to after a user authorizes the app.
     fastify.get('/google/callback', {
+        preHandler: [fastify.session.updateSessionActivity],
         schema: {
             response: {
                 302: { type: 'string', format: 'uri' },
@@ -187,10 +192,7 @@ export default async function (fastify, opts) {
             },
         },
     }, async (request, reply) => {
-        // fastify.log.info('=== GOOGLE CALLBACK ROUTE HIT ===');
-        // fastify.log.info('Query params:', request.query);
         try {
-            // fastify.log.info('Attempting to get access token...');
             const { token } = await fastify.googleOAuth2.getAccessTokenFromAuthorizationCodeFlow(request);
             fastify.log.debug('Received Google OAuth token');
 
@@ -206,7 +208,7 @@ export default async function (fastify, opts) {
                 displayName: googleData.name,
                 email: googleData.email,
                 googleId: googleData.id,
-                avatarUrl: googleData.picture, 
+                avatarUrl: googleData.picture,
             };
 
             const existingUser = await fastify.prisma.user.findUnique({
@@ -248,10 +250,10 @@ export default async function (fastify, opts) {
             return reply.redirect(process.env.FRONTEND_URL);
 
         } catch (error) {
-            fastify.log.error(error, 'Oauth Registration failed');
             if (error && error.statusCode) {
                 return reply.send(error);
             }
+            fastify.log.error(error, 'Oauth Registration failed');
             return reply.internalServerError('An unexpected error occurred during oauth registration.');
         }
     });
@@ -303,10 +305,10 @@ export default async function (fastify, opts) {
             return { participants: Array.from(session.participants.values()) };
 
         } catch (error) {
-            fastify.log.error(error, 'Logout failed');
             if (error && error.statusCode) {
                 return reply.send(error);
             }
+            fastify.log.error(error, 'Logout failed');
             return reply.internalServerError('An unexpected error occurred during logout.');
         }
     });
@@ -328,10 +330,10 @@ export default async function (fastify, opts) {
             return { participants: Array.from(session.participants.values()) };
 
         } catch (error) {
-            fastify.log.error(error, 'Failed to get session state');
             if (error && error.statusCode) {
                 return reply.send(error);
             }
+            fastify.log.error(error, 'Failed to get session state');
             return reply.internalServerError('An unexpected error occurred while fetching the session state.');
         }
     });

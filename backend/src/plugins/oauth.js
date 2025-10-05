@@ -2,7 +2,7 @@ import fp from 'fastify-plugin'
 import fastifyOauth2 from '@fastify/oauth2'
 
 async function oauthPlugin(fastify, opts) {
-  fastify.register(fastifyOauth2, {
+  await fastify.register(fastifyOauth2, {
     name: 'googleOAuth2',
     credentials: {
       client: {

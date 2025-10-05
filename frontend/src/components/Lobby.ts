@@ -1,21 +1,44 @@
-import { authService } from '../services/AuthService'
-import { friendsService } from '../services/FriendsService'
-import { lobbyService } from '../services/LobbyService'
+import { sessionService } from '../services/SessionService'
 
 export class Lobby {
-  private authModal: any
+  private authModal: any;
+  private lobbyContainer: HTMLElement | null = null;
 
   constructor(authModal: any) {
-    this.authModal = authModal
+    this.authModal = authModal;
   }
 
-  render(): string {
-    const isAuthenticated = authService.isAuthenticated()
-    
-    if (isAuthenticated) {
-      return this.renderAuthenticatedLobby()
-    } else {
-      return this.renderGuestLobby()
+  public init(): void {
+    // Create a container for the lobby to be re-rendered into
+    this.lobbyContainer = document.createElement('div');
+    this.lobbyContainer.id = 'lobby-container';
+    document.body.appendChild(this.lobbyContainer);
+
+    // Initial render
+    this.render();
+
+    // Subscribe to session changes to automatically update the UI
+    sessionService.subscribe(() => this.render());
+  }
+
+  public destroy(): void {
+    if (this.lobbyContainer) {
+      this.lobbyContainer.remove();
+      this.lobbyContainer = null;
+    }
+  }
+
+  private render(): void {
+    const isAuthenticated = sessionService.isAuthenticated();
+    const html = isAuthenticated ? this.renderAuthenticatedLobby() : this.renderGuestLobby();
+
+    if (this.lobbyContainer) {
+      this.lobbyContainer.innerHTML = html;
+      this.setupEventListeners(); // Re-attach listeners after every render
+
+      if (isAuthenticated) {
+        this.renderParticipantsList();
+      }
     }
   }
 
@@ -39,50 +62,26 @@ export class Lobby {
               <h3 class="text-lg font-semibold text-white">Lobby</h3>
               <div class="flex items-center space-x-2">
                 <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span class="text-xs text-gray-400" id="online-count">0 online</span>
+                <span class="text-xs text-gray-400" id="participant-count">0 online</span>
               </div>
             </div>
           </div>
 
           <!-- Content -->
           <div class="p-4">
-            <!-- Host Status -->
-            <div id="lobby-host-status" class="mb-4 hidden">
-              <div class="bg-green-500/20 border border-green-500/30 rounded-lg p-3">
-                <div class="flex items-center space-x-2">
-                  <span class="text-green-400 text-lg">👑</span>
-                  <span class="text-green-400 font-medium text-sm">You are the Host</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Joined Status -->
-            <div id="lobby-joined-status" class="mb-4 hidden">
-              <div class="bg-blue-500/20 border border-blue-500/30 rounded-lg p-3">
-                <div class="flex items-center space-x-2">
-                  <span class="text-blue-400 text-lg">✅</span>
-                  <span class="text-blue-400 font-medium text-sm">You joined the lobby</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Online Users -->
+            <!-- Participants List -->
             <div class="mb-4">
-              <h4 class="text-sm font-medium text-gray-300 mb-2">Online Users</h4>
-              <div id="online-users-list" class="space-y-2 max-h-40 overflow-y-auto">
-                <!-- Users will be loaded here -->
+              <h4 class="text-sm font-medium text-gray-300 mb-2">Players in Session</h4>
+              <div id="participants-list" class="space-y-2 max-h-40 overflow-y-auto">
+                <!-- Participants will be rendered here by the render method -->
               </div>
             </div>
 
-            <!-- Lobby Actions -->
+            <!-- Add Player Button -->
             <div class="space-y-2">
-              <button id="leave-lobby-btn" 
-                      class="w-full px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors text-sm hidden">
-                Leave Lobby
-              </button>
-              <button id="lobby-login-btn" 
+              <button id="lobby-add-player-btn" 
                       class="w-full px-4 py-2 bg-cyan-600 text-white font-medium rounded-lg hover:bg-cyan-700 transition-colors text-sm">
-                Sign In
+                Add / Switch Player
               </button>
             </div>
           </div>
@@ -141,161 +140,89 @@ export class Lobby {
     `
   }
 
-  setupEventListeners(): void {
+  private renderParticipantsList(): void {
+    const participants = sessionService.getParticipants();
+    const listElement = document.getElementById('participants-list');
+    const countElement = document.getElementById('participant-count');
+
+    if (!listElement || !countElement) return;
+
+    countElement.textContent = `${participants.length} player${participants.length !== 1 ? 's' : ''}`;
+
+    if (participants.length === 0) {
+      listElement.innerHTML = '<div class="px-2 py-2 text-sm text-gray-400">No players in session.</div>';
+      return;
+    }
+
+    listElement.innerHTML = participants.map(user => `
+      <div class="flex items-center justify-between p-2 bg-white/5 rounded-lg">
+        <div class="flex items-center overflow-hidden">
+          <img src="${user.avatarUrl}" alt="Avatar of ${user.displayName}" class="w-6 h-6 rounded-full mr-2 flex-shrink-0">
+          <span class="text-white text-sm font-medium truncate">${user.displayName}</span>
+        </div>
+        <div class="flex items-center flex-shrink-0 ml-2">
+          <button data-user-id="${user.id}" class="view-profile-btn text-cyan-400 hover:text-cyan-300 text-xs font-semibold mr-2">
+            Profile
+          </button>
+          <button data-user-id="${user.id}" class="logout-user-btn text-red-400 hover:text-red-300 text-xs font-semibold">
+            Logout
+          </button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  private setupEventListeners(): void {
+    if (!this.lobbyContainer) return;
+
+    // Find elements *within* the lobby container
+    const toggleBtn = this.lobbyContainer.querySelector('#lobby-toggle');
+    const loginBtn = this.lobbyContainer.querySelector('#lobby-login-btn');
+    const addPlayerBtn = this.lobbyContainer.querySelector('#lobby-add-player-btn');
+    const participantsList = this.lobbyContainer.querySelector('#participants-list');
+
     // Toggle lobby panel
-    document.getElementById('lobby-toggle')?.addEventListener('click', () => {
-      const panel = document.getElementById('lobby-panel')
-      if (panel) {
-        panel.classList.toggle('hidden')
-      }
-    })
+    toggleBtn?.addEventListener('click', () => {
+      this.lobbyContainer?.querySelector('#lobby-panel')?.classList.toggle('hidden');
+    });
 
-    // Leave lobby
-    document.getElementById('leave-lobby-btn')?.addEventListener('click', async () => {
-      try {
-        const result = await lobbyService.leaveLobby()
-        if (result.success) {
-          console.log('Successfully left lobby')
-          this.updateLobbyJoinStatus(false)
-          this.updateLobbyStatus(false)
-        } else {
-          console.error('Failed to leave lobby:', result.error)
-          alert('Failed to leave lobby. Please try again.')
+    // Button to open the login modal (for guests)
+    loginBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.authModal.show('login');
+    });
+
+    // Button to open the login modal (for adding a new player)
+    addPlayerBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.authModal.show('login');
+    });
+
+    // Delegated event listener for profile and logout buttons
+    participantsList?.addEventListener('click', async (e) => {
+      const target = e.target as HTMLElement;
+      
+      // Handle profile button click
+      const profileButton = target.closest('.view-profile-btn');
+      if (profileButton) {
+        const userId = parseInt(profileButton.getAttribute('data-user-id') || '0', 10);
+        if (userId) {
+          // Navigate to user profile page
+          window.history.pushState({}, '', `/profile/${userId}`);
+          window.dispatchEvent(new PopStateEvent('popstate'));
         }
-      } catch (error) {
-        console.error('Error leaving lobby:', error)
-        alert('Error leaving lobby. Please try again.')
+        return;
       }
-    })
 
-    // Lobby login button
-    document.getElementById('lobby-login-btn')?.addEventListener('click', (e) => {
-      e.preventDefault()
-      this.authModal.show('login')
-    })
-  }
-
-  async loadData(): Promise<void> {
-    if (!authService.isAuthenticated()) return
-
-    try {
-      // Load friends (online users)
-      await friendsService.getFriends()
-      const friends = friendsService.getLocalFriends()
-      
-      // Update online users list
-      this.updateOnlineUsersList(friends)
-      
-      // Auto-join lobby when user logs in
-      await this.autoJoinLobby()
-      
-    } catch (error) {
-      console.error('Error loading lobby data:', error)
-    }
-  }
-
-  private async autoJoinLobby(): Promise<void> {
-    try {
-      // Check if this is the first user (no lobby exists yet)
-      const createResult = await lobbyService.createLobby()
-      if (createResult.success) {
-        console.log('Created lobby and became host')
-        this.updateLobbyStatus(true)
-        this.updateLobbyJoinStatus(true)
-      } else {
-        // If create fails with 409, lobby already exists
-        if (createResult.error && createResult.error.includes('already in session')) {
-          console.log('Lobby already exists - user joins as participant')
-          this.updateLobbyJoinStatus(true)
-          this.updateLobbyStatus(false) // Not the host
-        } else {
-          console.log('Failed to create or join lobby:', createResult.error)
-          this.updateLobbyJoinStatus(false)
+      // Handle logout button click
+      const logoutButton = target.closest('.logout-user-btn');
+      if (logoutButton) {
+        const userId = parseInt(logoutButton.getAttribute('data-user-id') || '0', 10);
+        if (userId) {
+          await sessionService.logout(userId);
+          // The view will automatically update via the sessionService subscription
         }
       }
-    } catch (error) {
-      console.error('Error auto-joining lobby:', error)
-      this.updateLobbyJoinStatus(false)
-    }
-  }
-
-  private updateOnlineUsersList(friends: any[]): void {
-    const usersList = document.getElementById('online-users-list')
-    const onlineCount = document.getElementById('online-count')
-    
-    if (!usersList || !onlineCount) return
-
-    // Clear existing users
-    usersList.innerHTML = ''
-
-    // Add current user
-    const currentUser = authService.getCurrentUser()
-    if (currentUser) {
-      const userElement = document.createElement('div')
-      userElement.className = 'flex items-center space-x-3 p-2 bg-cyan-500/20 border border-cyan-500/30 rounded-lg cursor-pointer hover:bg-cyan-500/30 transition-colors'
-      userElement.innerHTML = `
-        <div class="w-8 h-8 bg-gradient-to-br from-cyan-400 to-purple-600 rounded-full flex items-center justify-center">
-          <span class="text-xs font-bold text-white">${currentUser.displayName.charAt(0).toUpperCase()}</span>
-        </div>
-        <div class="flex-1">
-          <div class="text-white text-sm font-medium hover:text-cyan-400 transition-colors" id="current-user-name">${currentUser.displayName} (You)</div>
-          <div class="text-cyan-400 text-xs">🟢 Online</div>
-        </div>
-      `
-      usersList.appendChild(userElement)
-    }
-
-    // Add friends
-    friends.forEach(friend => {
-      const userElement = document.createElement('div')
-      userElement.className = 'flex items-center space-x-3 p-2 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors'
-      userElement.innerHTML = `
-        <div class="w-8 h-8 bg-gradient-to-br from-purple-400 to-pink-600 rounded-full flex items-center justify-center">
-          <span class="text-xs font-bold text-white">${friend.displayName.charAt(0).toUpperCase()}</span>
-        </div>
-        <div class="flex-1">
-          <div class="text-white text-sm font-medium">${friend.displayName}</div>
-          <div class="text-gray-400 text-xs">${friend.isOnline ? '🟢 Online' : '🔴 Offline'}</div>
-        </div>
-        ${friend.isOnline ? '<button class="text-cyan-400 hover:text-cyan-300 text-xs">Invite</button>' : ''}
-      `
-      usersList.appendChild(userElement)
-    })
-
-    // Update online count
-    const onlineUsers = friends.filter(friend => friend.isOnline).length + (currentUser ? 1 : 0)
-    onlineCount.textContent = `${onlineUsers} online`
-  }
-
-  private updateLobbyStatus(isHost: boolean): void {
-    const hostStatus = document.getElementById('lobby-host-status')
-    if (hostStatus) {
-      if (isHost) {
-        hostStatus.classList.remove('hidden')
-      } else {
-        hostStatus.classList.add('hidden')
-      }
-    }
-  }
-
-  private updateLobbyJoinStatus(isJoined: boolean): void {
-    const joinedStatus = document.getElementById('lobby-joined-status')
-    const leaveBtn = document.getElementById('leave-lobby-btn')
-    
-    if (joinedStatus) {
-      if (isJoined) {
-        joinedStatus.classList.remove('hidden')
-      } else {
-        joinedStatus.classList.add('hidden')
-      }
-    }
-    
-    if (leaveBtn) {
-      if (isJoined) {
-        leaveBtn.classList.remove('hidden')
-      } else {
-        leaveBtn.classList.add('hidden')
-      }
-    }
+    });
   }
 }

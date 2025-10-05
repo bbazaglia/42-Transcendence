@@ -4,8 +4,9 @@
  */
 
 import { apiService } from './ApiService.js';
-import { authService } from './AuthService.js';
+import { sessionService } from './SessionService.js';
 
+//TODO: remove all currentUser related code as it is obsolete
 export interface Tournament {
   id: number;
   name: string;
@@ -128,7 +129,7 @@ class TournamentService {
    */
   async joinTournament(tournamentId: number): Promise<{ success: boolean; tournament?: Tournament; error?: string }> {
     try {
-      const currentUser = authService.getCurrentUser();
+      const currentUser = sessionService.getCurrentUser();
       if (!currentUser || !currentUser.id) {
         return { success: false, error: 'User not authenticated' };
       }
@@ -295,7 +296,7 @@ class TournamentService {
    * Checks if user is participating in a tournament
    */
   isUserParticipating(tournamentId: number): boolean {
-    const currentUser = authService.getCurrentUser();
+    const currentUser = sessionService.getCurrentUser();
     if (!currentUser || !currentUser.id) return false;
 
     const tournament = this.tournaments.find(t => t.id === tournamentId);
@@ -306,7 +307,7 @@ class TournamentService {
    * Gets tournaments where user is participating
    */
   getUserTournaments(): Tournament[] {
-    const currentUser = authService.getCurrentUser();
+    const currentUser = sessionService.getCurrentUser();
     if (!currentUser || !currentUser.id) return [];
 
     return this.tournaments.filter(t => 

@@ -1,9 +1,10 @@
-import { authService } from '../services/AuthService'
+import { sessionService } from '../services/SessionService'
 import { matchService } from '../services/MatchService'
 import { friendsService } from '../services/FriendsService'
 import { apiService } from '../services/ApiService'
 import { InsightsModal } from '../components/InsightsModal'
 
+//TODO: remove all currentUser related code as it is obsolete
 export class ProfilePage {
   private authModal: any
 
@@ -13,11 +14,11 @@ export class ProfilePage {
 
   async render(): Promise<string> {
     // Check if user is authenticated
-    if (!authService.isAuthenticated()) {
+    if (!sessionService.isAuthenticated()) {
       return this.renderLoginRequired()
     }
 
-    const currentUser = authService.getCurrentUser()
+    const currentUser = sessionService.getCurrentUser()
     if (!currentUser) return ''
 
     // Show loading state
@@ -81,7 +82,7 @@ export class ProfilePage {
   }
 
   private async loadProfileData(): Promise<any> {
-    const currentUser = authService.getCurrentUser()
+    const currentUser = sessionService.getCurrentUser()
     if (!currentUser || !currentUser.id) {
       console.warn('No authenticated user found, cannot load profile data')
       return null
@@ -490,7 +491,7 @@ export class ProfilePage {
   }
 
   private showEditProfileModal(): void {
-    const currentUser = authService.getCurrentUser()
+    const currentUser = sessionService.getCurrentUser()
     if (!currentUser || !currentUser.id) return
 
     const modalHTML = `
@@ -554,7 +555,7 @@ export class ProfilePage {
   }
 
   private async handleProfileUpdate(): Promise<void> {
-    const currentUser = authService.getCurrentUser()
+    const currentUser = sessionService.getCurrentUser()
     if (!currentUser || !currentUser.id) return
 
     const displayName = (document.getElementById('edit-display-name') as HTMLInputElement)?.value
@@ -572,7 +573,7 @@ export class ProfilePage {
       }
 
       // Update local user data
-      authService.updateUserProfile(response.data!.user)
+      sessionService.updateUserProfile(response.data!.user)
       this.closeEditProfileModal()
       // Refresh the page
       window.location.reload()
@@ -587,7 +588,7 @@ export class ProfilePage {
   }
 
   private async showInsightsModal(): Promise<void> {
-    const currentUser = authService.getCurrentUser()
+    const currentUser = sessionService.getCurrentUser()
     console.log('Current user:', currentUser)
     
     if (!currentUser || !currentUser.id) {

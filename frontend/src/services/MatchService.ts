@@ -4,8 +4,9 @@
  */
 
 import { apiService, Match, CreateMatchRequest } from './ApiService.js';
-import { authService } from './AuthService.js';
+import { sessionService } from './SessionService.js';
 
+//TODO: remove all currentUser related code as it is obsolete
 export interface MatchResult {
   playerOneId: number;
   playerTwoId: number;
@@ -23,12 +24,12 @@ class MatchService {
   async createMatch(matchResult: MatchResult): Promise<{ success: boolean; error?: string }> {
     try {
       // Check if user is authenticated
-      if (!authService.isAuthenticated()) {
+      if (!sessionService.isAuthenticated()) {
         console.log('User not authenticated, skipping match creation');
         return { success: false, error: 'User not authenticated' };
       }
 
-      const currentUser = authService.getCurrentUser();
+      const currentUser = sessionService.getCurrentUser();
       if (!currentUser) {
         return { success: false, error: 'User not found' };
       }
@@ -117,7 +118,7 @@ class MatchService {
   ): MatchResult | null {
     // For now, we'll use placeholder IDs since we don't have a user management system
     // In a real implementation, you'd look up user IDs by name or have them passed in
-    const currentUser = authService.getCurrentUser();
+    const currentUser = sessionService.getCurrentUser();
     if (!currentUser || !currentUser.id) {
       return null;
     }
@@ -141,16 +142,16 @@ class MatchService {
    * Updates local user stats after a match
    */
   private updateLocalUserStats(matchResult: MatchResult): void {
-    const currentUser = authService.getCurrentUser();
+    const currentUser = sessionService.getCurrentUser();
     if (!currentUser || !currentUser.id) return;
 
     // Determine if current user won or lost
     const isCurrentUserWinner = matchResult.winnerId === currentUser.id;
     
     if (isCurrentUserWinner) {
-      authService.updateUserStats(1, 0); // +1 win, +0 losses
+      sessionService.updateUserStats(1, 0); // +1 win, +0 losses
     } else {
-      authService.updateUserStats(0, 1); // +0 wins, +1 loss
+      sessionService.updateUserStats(0, 1); // +0 wins, +1 loss
     }
   }
 }

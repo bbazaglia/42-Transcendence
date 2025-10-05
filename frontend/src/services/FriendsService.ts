@@ -4,8 +4,9 @@
  */
 
 import { apiService } from './ApiService.js';
-import { authService } from './AuthService.js';
+import { sessionService } from './SessionService.js';
 
+//TODO: remove all currentUser related code as it is obsolete
 export interface Friend {
   id: number;
   displayName: string;
@@ -33,7 +34,7 @@ class FriendsService {
    */
   async getFriends(): Promise<Friend[]> {
     try {
-      const currentUser = authService.getCurrentUser();
+      const currentUser = sessionService.getCurrentUser();
       if (!currentUser || !currentUser.id) {
         console.warn('No authenticated user found, cannot fetch friends');
         return [];
@@ -62,7 +63,7 @@ class FriendsService {
    */
   async getPendingRequests(): Promise<FriendRequest[]> {
     try {
-      const currentUser = authService.getCurrentUser();
+      const currentUser = sessionService.getCurrentUser();
       if (!currentUser || !currentUser.id) {
         console.warn('No authenticated user found, cannot fetch pending requests');
         return [];
@@ -89,7 +90,7 @@ class FriendsService {
    */
   async sendFriendRequest(friendId: number): Promise<{ success: boolean; error?: string }> {
     try {
-      const currentUser = authService.getCurrentUser();
+      const currentUser = sessionService.getCurrentUser();
       if (!currentUser) {
         return { success: false, error: 'User not authenticated' };
       }
@@ -124,7 +125,7 @@ class FriendsService {
    */
   async acceptFriendRequest(senderId: number): Promise<{ success: boolean; error?: string }> {
     try {
-      const currentUser = authService.getCurrentUser();
+      const currentUser = sessionService.getCurrentUser();
       if (!currentUser) {
         return { success: false, error: 'User not authenticated' };
       }
@@ -162,7 +163,7 @@ class FriendsService {
    */
   async removeFriend(friendId: number): Promise<{ success: boolean; error?: string }> {
     try {
-      const currentUser = authService.getCurrentUser();
+      const currentUser = sessionService.getCurrentUser();
       if (!currentUser) {
         return { success: false, error: 'User not authenticated' };
       }

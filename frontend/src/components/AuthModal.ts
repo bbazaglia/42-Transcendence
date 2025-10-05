@@ -3,11 +3,12 @@
  * Reusable component for authentication
  */
 
-import { authService } from '../services/AuthService.js';
+import { sessionService } from '../services/SessionService.js';
 
 export class AuthModal {
   private modalElement: HTMLElement | null = null;
   private isLoginMode: boolean = true;
+  private isAwaitingTotp: boolean = false;
 
   constructor() {
     this.render();
@@ -54,6 +55,13 @@ export class AuthModal {
                 <input type="password" id="password" 
                        class="w-full p-4 rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/50 focus:border-cyan-400 focus:outline-none transition-colors"
                        placeholder="Your password" required>
+              </div>
+
+              <div id="totp-field" class="hidden">
+                <label class="block text-white font-semibold mb-2">2FA Code:</label>
+                <input type="text" id="totp-code" 
+                       class="w-full p-4 rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/50 focus:border-cyan-400 focus:outline-none transition-colors"
+                       placeholder="6-digit code" required>
               </div>
 
               <button type="submit" id="auth-submit-btn"
@@ -142,7 +150,7 @@ export class AuthModal {
     });
 
     // Listen to auth state changes
-    authService.subscribe((state) => {
+    sessionService.subscribe((state) => {
       if (state.isAuthenticated) {
         this.hide();
         this.showMessage('Logged in successfully!', 'success');
@@ -170,15 +178,39 @@ export class AuthModal {
     const displayNameInput = document.getElementById('displayName') as HTMLInputElement;
     const googleAuthText = document.getElementById('google-auth-text');
 
-    if (this.isLoginMode) {
+    const emailField = (document.getElementById('email') as HTMLInputElement).parentElement;
+    const passwordField = (document.getElementById('password') as HTMLInputElement).parentElement;
+    const totpField = document.getElementById('totp-field');
+    const totpCodeInput = document.getElementById('totp-code') as HTMLInputElement;
+    const toggleSection = document.querySelector('.text-center.mt-6');
+    const googleSection = document.getElementById('google-auth-section');
+
+    // Reset all fields first
+    displayNameField!.classList.add('hidden');
+    emailField!.classList.remove('hidden');
+    passwordField!.classList.remove('hidden');
+    totpField!.classList.add('hidden');
+    toggleSection!.classList.remove('hidden');
+    googleSection!.classList.remove('hidden');
+    displayNameInput!.required = false;
+    totpCodeInput!.required = false;
+
+    if (this.isAwaitingTotp) {
+      title!.textContent = 'Enter 2FA Code';
+      submitText!.textContent = 'Verify Code';
+      emailField!.classList.add('hidden');
+      passwordField!.classList.add('hidden');
+      totpField!.classList.remove('hidden');
+      totpCodeInput!.required = true;
+      toggleSection!.classList.add('hidden');
+      googleSection!.classList.add('hidden');
+    } else if (this.isLoginMode) {
       title!.textContent = 'Login';
       submitText!.textContent = 'Sign In';
       toggleText!.textContent = "Don't have an account?";
       toggleBtn!.textContent = 'Create an account';
-      displayNameField!.classList.add('hidden');
-      displayNameInput!.required = false;
       googleAuthText!.textContent = 'Sign in with Google';
-    } else {
+    } else { // Register mode
       title!.textContent = 'Create Account';
       submitText!.textContent = 'Create Account';
       toggleText!.textContent = 'Already have an account?';
@@ -197,24 +229,36 @@ export class AuthModal {
    * Handles form submission
    */
   private async handleSubmit(): Promise<void> {
-    const email = (document.getElementById('email') as HTMLInputElement).value;
-    const password = (document.getElementById('password') as HTMLInputElement).value;
-    const displayName = (document.getElementById('displayName') as HTMLInputElement).value;
-
     this.setLoading(true);
 
     try {
       let result;
 
-      if (this.isLoginMode) {
-        result = await authService.login({ email, password });
-      } else {
+      if (this.isAwaitingTotp) {
+        const code = (document.getElementById('totp-code') as HTMLInputElement).value;
+        result = await sessionService.submitTotp(code);
+      } else if (this.isLoginMode) {
+        const email = (document.getElementById('email') as HTMLInputElement).value;
+        const password = (document.getElementById('password') as HTMLInputElement).value;
+        result = await sessionService.login({ email, password });
+
+        if (result.success && result.needsTotp) {
+          this.isAwaitingTotp = true;
+          this.updateUI();
+          this.showMessage('Please enter your 2FA code.', 'success');
+          this.setLoading(false);
+          return; // Stop here and wait for TOTP submission
+        }
+      } else { // Register mode
+        const email = (document.getElementById('email') as HTMLInputElement).value;
+        const password = (document.getElementById('password') as HTMLInputElement).value;
+        const displayName = (document.getElementById('displayName') as HTMLInputElement).value;
         if (!displayName.trim()) {
           this.showMessage('Username is required.', 'error');
           this.setLoading(false);
           return;
         }
-        result = await authService.register({ displayName, email, password });
+        result = await sessionService.register({ displayName, email, password });
       }
 
       if (result.success) {
@@ -222,9 +266,14 @@ export class AuthModal {
           this.isLoginMode ? 'Logged in successfully!!' : 'Account successfully created!',
           'success'
         );
-        // The modal will be closed automatically by the authService listener
+        // The modal will be closed automatically by the sessionService listener
       } else {
         this.showMessage(result.error || 'Authentication error', 'error');
+        // If TOTP submission fails, go back to the login screen
+        if (this.isAwaitingTotp) {
+          this.isAwaitingTotp = false;
+          this.updateUI();
+        }
       }
     } catch (error) {
       this.showMessage('Unexpected error. Try again.', 'error');
@@ -237,7 +286,7 @@ export class AuthModal {
    * Handles Google Authentication
    */
   private async handleGoogleAuthentication(): Promise<void> {
-    authService.initiateGoogleLogin();
+    sessionService.initiateGoogleLogin();
   }
 
   /**
@@ -249,7 +298,7 @@ export class AuthModal {
     const loadingSpinner = document.getElementById('loading-spinner');
 
     submitBtn.disabled = loading;
-    
+
     if (loading) {
       submitText!.classList.add('hidden');
       loadingSpinner!.classList.remove('hidden');
@@ -267,11 +316,10 @@ export class AuthModal {
     if (!messageElement) return;
 
     messageElement.textContent = message;
-    messageElement.className = `mb-6 p-4 rounded-lg ${
-      type === 'success' 
-        ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
-        : 'bg-red-500/20 text-red-400 border border-red-500/30'
-    }`;
+    messageElement.className = `mb-6 p-4 rounded-lg ${type === 'success'
+      ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+      : 'bg-red-500/20 text-red-400 border border-red-500/30'
+      }`;
     messageElement.classList.remove('hidden');
 
     // Auto-hide success messages
@@ -299,6 +347,7 @@ export class AuthModal {
     (document.getElementById('email') as HTMLInputElement).value = '';
     (document.getElementById('password') as HTMLInputElement).value = '';
     (document.getElementById('displayName') as HTMLInputElement).value = '';
+    (document.getElementById('totp-code') as HTMLInputElement).value = '';
   }
 
   /**

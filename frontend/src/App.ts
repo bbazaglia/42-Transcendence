@@ -6,7 +6,7 @@ import { AuthModal } from './components/AuthModal'
 import { Navbar } from './components/Navbar'
 import { Lobby } from './components/Lobby'
 import { PageService } from './services/PageService'
-import { authService } from './services/AuthService'
+import { sessionService } from './services/SessionService'
 import { tournamentService } from './services/TournamentService'
 
 export class App {
@@ -37,62 +37,51 @@ export class App {
     this.setupCustomizationHandlers()
     this.setupAuthListeners()
     this.initializeAuth()
+    this.renderNavbar()
+    this.lobby.init()
     this.render()
-    
+
     // Listen for tournament updates
     window.addEventListener('tournament-updated', () => {
       console.log('Tournament updated, re-rendering...')
       this.render()
     })
 
-    // Expose debug methods to window for testing
-    ; (window as any).debugTournament = {
-      setMatchResult: (matchIndex: number, winner: string) => {
-        this.tournamentManager.debugSetMatchResult(matchIndex, winner)
-        this.render() // Refresh the display
-      },
-      getCurrentTournament: () => this.tournamentManager.getCurrentTournament(),
-      resetTournament: () => {
-        this.tournamentManager.resetTournament()
-        this.render() // Refresh the display
-      },
-      clearStorage: () => {
-        localStorage.removeItem('currentTournament')
-        console.log('localStorage cleared')
-      },
-      testFirstMatch: () => {
-        const tournament = this.tournamentManager.getCurrentTournament()
-        if (tournament && tournament.matches[0]) {
-          const match = tournament.matches[0]
-          if (match.player1 && match.player2) {
-            console.log('Testing first match result...')
-            this.tournamentManager.debugSetMatchResult(0, match.player1)
-            window.location.reload()
+      // Expose debug methods to window for testing
+      ; (window as any).debugTournament = {
+        setMatchResult: (matchIndex: number, winner: string) => {
+          this.tournamentManager.debugSetMatchResult(matchIndex, winner)
+          this.render() // Refresh the display
+        },
+        getCurrentTournament: () => this.tournamentManager.getCurrentTournament(),
+        resetTournament: () => {
+          this.tournamentManager.resetTournament()
+          this.render() // Refresh the display
+        },
+        clearStorage: () => {
+          localStorage.removeItem('currentTournament')
+          console.log('localStorage cleared')
+        },
+        testFirstMatch: () => {
+          const tournament = this.tournamentManager.getCurrentTournament()
+          if (tournament && tournament.matches[0]) {
+            const match = tournament.matches[0]
+            if (match.player1 && match.player2) {
+              console.log('Testing first match result...')
+              this.tournamentManager.debugSetMatchResult(0, match.player1)
+              window.location.reload()
+            }
           }
         }
       }
-    }
-
-    // Expose auth debug methods
-    ; (window as any).debugAuth = {
-      checkState: () => authService.debugAuthState(),
-      clearAuth: () => {
-        localStorage.removeItem('authState')
-        console.log('Auth state cleared from localStorage')
-      },
-      forceLogout: () => {
-        authService.logout()
-        this.updateAuthStatus()
-      }
-    }
   }
 
   private setupRouting(): void {
     this.router.addRoute('/', () => this.showHomePage())
     this.router.addRoute('/tournament', () => this.showTournamentPage())
-    this.router.addRoute('/game', () => this.showGamePage(false, false)) // Tournament game
-    this.router.addRoute('/quick-game', () => this.showGamePage(true, false)) // Quick game
-    this.router.addRoute('/play-ai', () => this.showGamePage(true, true)) // AI game
+    this.router.addRoute('/game', () => this.showGamePage(false, false))
+    this.router.addRoute('/quick-game', () => this.showGamePage(true, false))
+    this.router.addRoute('/play-ai', () => this.showGamePage(true, true))
     this.router.addRoute('/register', () => this.showRegistrationPage())
     this.router.addRoute('/profile', () => this.showProfilePage())
 
@@ -104,39 +93,44 @@ export class App {
 
   private render(): void {
     const currentPath = window.location.pathname
-    
-    // Always render the navbar first
-    this.renderNavbar()
-    
+
     // Then navigate to the specific page
     this.router.navigate(currentPath)
-    
-    // Setup auth bar listeners after rendering
-    this.setupNavbarListeners()
-    
-    // Always render the lobby dropdown after auth bar setup
-    this.renderLobbyDropdown()
   }
 
   private renderNavbar(): void {
     // Check if navbar already exists
-    let navbar = document.getElementById('navbar')
-    if (navbar) {
-      navbar.remove()
+    const existingNavbar = document.getElementById('navbar')
+    if (existingNavbar) {
+      return // Already rendered, don't re-render
     }
 
     // Create navbar
-    navbar = document.createElement('div')
+    const navbar = document.createElement('div')
     navbar.id = 'navbar'
     navbar.innerHTML = this.navbar.render()
 
-    // Add to body
-    document.body.appendChild(navbar)
+    // Insert before root element
+    // This ensures navbar is always above the main content
+    this.rootElement.parentElement?.insertBefore(navbar, this.rootElement)
+
+    // Setup event listeners once
+    this.setupNavbarListeners()
+  }
+
+  private setupNavbarListeners(): void {
+    // Setup navbar event listeners
+    this.navbar.setupEventListeners(
+      (path: string) => {
+        window.history.pushState({}, '', path)
+        this.render()
+      }
+    )
   }
 
   private showHomePage(): void {
     this.rootElement.innerHTML = this.pageService.renderHomePage()
-    
+
     // Setup event listeners
     this.pageService.setupHomePageListeners((path: string) => {
       window.history.pushState({}, '', path)
@@ -146,14 +140,14 @@ export class App {
 
   private async showTournamentPage(): Promise<void> {
     // Check if user is authenticated
-    if (!authService.isAuthenticated()) {
+    if (!sessionService.isAuthenticated()) {
       this.rootElement.innerHTML = `
         <div class="min-h-screen mesh-gradient relative overflow-hidden">
           <div class="relative z-10 flex items-center justify-center min-h-screen px-4 pt-20">
             <div class="text-center">
               <h1 class="text-4xl font-bold text-white mb-4">Login Required</h1>
               <p class="text-gray-300 mb-6">You need to be logged in to view tournaments</p>
-              <button onclick="window.history.pushState({}, '', '/'); window.location.reload()" 
+              <button id="go-home-btn"
                       class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
                 Go Home
               </button>
@@ -161,6 +155,12 @@ export class App {
           </div>
         </div>
       `
+
+      // Add event listener
+      document.getElementById('go-home-btn')?.addEventListener('click', () => {
+        window.history.pushState({}, '', '/')
+        this.render()
+      })
       return
     }
 
@@ -175,7 +175,6 @@ export class App {
 
     this.rootElement.innerHTML = `
       <div class="min-h-screen mesh-gradient relative overflow-hidden">
-        ${this.renderNavbar()}
         
         <!-- Main content -->
         <div class="relative z-10 p-8 pt-24">
@@ -199,16 +198,16 @@ export class App {
   }
 
   private showGamePage(isQuickGame: boolean, isAIGame: boolean = false): void {
-    
+
     // Check if user is authenticated
-    if (!authService.isAuthenticated()) {
+    if (!sessionService.isAuthenticated()) {
       this.rootElement.innerHTML = `
         <div class="min-h-screen mesh-gradient relative overflow-hidden">
           <div class="relative z-10 flex items-center justify-center min-h-screen px-4 pt-20">
             <div class="text-center">
               <h1 class="text-4xl font-bold text-white mb-4">Login Required</h1>
               <p class="text-gray-300 mb-6">You need to be logged in to play games</p>
-              <button onclick="window.history.pushState({}, '', '/'); window.location.reload()" 
+              <button if="go-home-btn"
                       class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
                 Go Home
               </button>
@@ -216,13 +215,18 @@ export class App {
           </div>
         </div>
       `
+      // Add event listener
+      document.getElementById('go-home-btn')?.addEventListener('click', () => {
+        window.history.pushState({}, '', '/')
+        this.render()
+      })
+
       return
     }
-    
+
 
     this.rootElement.innerHTML = `
       <div class="min-h-screen mesh-gradient relative overflow-hidden">
-        ${this.renderNavbar()}
         
         <!-- Main content -->
         <div class="relative z-10 flex items-center justify-center min-h-screen px-4 pt-20">
@@ -265,12 +269,12 @@ export class App {
       ${this.customization.renderSettingsButton()}
       ${this.customization.renderActivePowerUps()}
     `
-    
+
     if (isQuickGame) {
       // Quick game - start without tournament manager
       console.log(`Starting quick game. Is AI game: ${isAIGame}`)
       this.gameManager.startGame(undefined, undefined, this.customization, isAIGame)
-      
+
       // Set up game over button handlers for quick games
       this.setupQuickGameButtons()
     } else {
@@ -304,7 +308,6 @@ export class App {
   private showRegistrationPage(): void {
     this.rootElement.innerHTML = `
       <div class="min-h-screen mesh-gradient relative overflow-hidden">
-        ${this.renderNavbar()}
         
         <!-- Main content -->
         <div class="relative z-10 p-8 pt-24">
@@ -408,44 +411,44 @@ export class App {
 
   private setupCustomizationHandlers(): void {
     // Expose customization functions to window
-    ;(window as any).openCustomizationMenu = () => {
+    ; (window as any).openCustomizationMenu = () => {
       this.rootElement.insertAdjacentHTML('beforeend', this.customization.renderCustomizationMenu())
       this.setupCustomizationFormHandlers()
     }
 
-    ;(window as any).closeCustomizationMenu = () => {
-      this.closeCustomizationMenu()
-    }
+      ; (window as any).closeCustomizationMenu = () => {
+        this.closeCustomizationMenu()
+      }
 
-    ;(window as any).saveCustomizationSettings = () => {
-      const ballSpeed = parseInt((document.getElementById('ballSpeed') as HTMLInputElement)?.value || '4')
-      const paddleSpeed = parseInt((document.getElementById('paddleSpeed') as HTMLInputElement)?.value || '5')
-      const winningScore = parseInt((document.getElementById('winningScore') as HTMLInputElement)?.value || '5')
-      const powerUpsEnabled = (document.getElementById('powerUpsEnabled') as HTMLInputElement)?.checked
-      const mapTheme = (document.querySelector('input[name="mapTheme"]:checked') as HTMLInputElement)?.value
+      ; (window as any).saveCustomizationSettings = () => {
+        const ballSpeed = parseInt((document.getElementById('ballSpeed') as HTMLInputElement)?.value || '4')
+        const paddleSpeed = parseInt((document.getElementById('paddleSpeed') as HTMLInputElement)?.value || '5')
+        const winningScore = parseInt((document.getElementById('winningScore') as HTMLInputElement)?.value || '5')
+        const powerUpsEnabled = (document.getElementById('powerUpsEnabled') as HTMLInputElement)?.checked
+        const mapTheme = (document.querySelector('input[name="mapTheme"]:checked') as HTMLInputElement)?.value
 
-      this.customization.updateSettings({
-        ballSpeed,
-        paddleSpeed,
-        winningScore,
-        powerUpsEnabled: powerUpsEnabled || false,
-        mapTheme: mapTheme || 'classic'
-      })
+        this.customization.updateSettings({
+          ballSpeed,
+          paddleSpeed,
+          winningScore,
+          powerUpsEnabled: powerUpsEnabled || false,
+          mapTheme: mapTheme || 'classic'
+        })
 
-      this.closeCustomizationMenu()
-    }
+        this.closeCustomizationMenu()
+      }
 
-    ;(window as any).resetToDefaults = () => {
-      this.customization.updateSettings({
-        ballSpeed: 4,
-        paddleSpeed: 5,
-        winningScore: 5,
-        powerUpsEnabled: false,
-        mapTheme: 'classic'
-      })
-      this.closeCustomizationMenu()
-      this.render()
-    }
+      ; (window as any).resetToDefaults = () => {
+        this.customization.updateSettings({
+          ballSpeed: 4,
+          paddleSpeed: 5,
+          winningScore: 5,
+          powerUpsEnabled: false,
+          mapTheme: 'classic'
+        })
+        this.closeCustomizationMenu()
+        this.render()
+      }
   }
 
   private closeCustomizationMenu(): void {
@@ -488,7 +491,7 @@ export class App {
       input.addEventListener('change', (e) => {
         const target = e.target as HTMLInputElement
         const themeId = target.value
-        
+
         // Remove selected styling from all theme options
         document.querySelectorAll('input[name="mapTheme"]').forEach(radio => {
           const radioTarget = radio as HTMLInputElement
@@ -498,7 +501,7 @@ export class App {
             themeDiv.className = 'p-4 rounded-lg border-2 transition-all duration-300 border-white/20 bg-white/5 hover:bg-white/10'
           }
         })
-        
+
         // Add selected styling to the chosen theme
         const selectedLabel = document.querySelector(`label[for="theme_${themeId}"]`)
         const selectedThemeDiv = selectedLabel?.querySelector('div')
@@ -645,13 +648,11 @@ export class App {
 
   // Auth-related methods
   private async initializeAuth(): Promise<void> {
-    // Update UI with current auth status from localStorage
-    this.updateAuthStatus()
-    
+
     // Only verify session with server if user appears to be authenticated
-    if (authService.isAuthenticated()) {
+    if (sessionService.isAuthenticated()) {
       // Verify the session is still valid with the server in background
-      authService.checkAuthStatus().catch(error => {
+      sessionService.checkSessionStatus().catch(error => {
         console.error('Auth verification failed:', error)
       })
     }
@@ -659,76 +660,9 @@ export class App {
 
   private setupAuthListeners(): void {
     // Listen for auth state changes
-    authService.subscribe(() => {
-      this.updateAuthStatus()
+    sessionService.subscribe(() => {
       // Re-render the entire app to update lobby and other components
       this.render()
     })
-  }
-
-
-  private updateAuthStatus(): void {
-    // No need to hide/show guest info since Sign In button is always visible
-    // This method is kept for potential future use
-  }
-
-
-  private renderLobbyDropdown(): void {
-    // Check if lobby dropdown already exists
-    let lobbyDropdown = document.getElementById('lobby-dropdown')
-    if (lobbyDropdown) {
-      lobbyDropdown.remove()
-    }
-
-    // Create lobby dropdown
-    lobbyDropdown = document.createElement('div')
-    lobbyDropdown.id = 'lobby-dropdown'
-    lobbyDropdown.innerHTML = this.lobby.render()
-
-    // Add to body
-    document.body.appendChild(lobbyDropdown)
-
-    // Setup lobby listeners
-    this.lobby.setupEventListeners()
-    
-    // Load initial data if authenticated
-    if (authService.isAuthenticated()) {
-      this.lobby.loadData()
-    }
-  }
-
-  private setupNavbarListeners(): void {
-    // Update auth status first
-    this.updateAuthStatus()
-
-    // Setup navbar event listeners
-    this.navbar.setupEventListeners(
-      (path: string) => {
-        window.history.pushState({}, '', path)
-        this.render()
-      },
-      async () => {
-        await this.handleLogout()
-      }
-    )
-  }
-
-
-  /**
-   * Handles user logout
-   */
-  private async handleLogout(): Promise<void> {
-    try {
-      await authService.logout()
-      // Redirect to home page after logout
-      window.history.pushState({}, '', '/')
-      this.render()
-      console.log('Logout realizado com sucesso!')
-    } catch (error) {
-      console.error('Erro durante logout:', error)
-      // Even if logout fails, redirect to home and refresh
-      window.history.pushState({}, '', '/')
-      this.render()
-    }
   }
 }

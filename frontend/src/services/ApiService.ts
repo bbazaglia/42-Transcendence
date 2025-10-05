@@ -21,15 +21,22 @@ export interface User {
   updatedAt: string;
 }
 
+export interface RegisterRequest {
+  displayName: string;
+  email: string;
+  password: string;
+}
+
 export interface LoginRequest {
   email: string;
   password: string;
 }
 
-export interface RegisterRequest {
-  displayName: string;
-  email: string;
-  password: string;
+export interface LoginResponse {
+  participants?: User[];
+  twoFactorChallenge?: {
+    tempToken: string;
+  };
 }
 
 export interface Match {
@@ -86,7 +93,7 @@ class ApiService {
       };
 
       const response = await fetch(url, { ...defaultOptions, ...options });
-      
+
       let data;
       const contentType = response.headers.get('content-type');
 
@@ -139,10 +146,23 @@ class ApiService {
   /**
    * Authentication - User login
    */
-  async login(credentials: LoginRequest): Promise<ApiResponse<{ participants: User[] }>> {
-    return this.request<{ participants: User[] }>('/session/login', {
+  async login(credentials: LoginRequest): Promise<ApiResponse<LoginResponse>> {
+    return this.request<LoginResponse>('/session/login', {
       method: 'POST',
       body: JSON.stringify(credentials),
+    });
+  }
+
+  /**
+   * Verifies the TOTP code during the second step of login.
+   */
+  async verifyTotp(code: string, tempToken: string): Promise<ApiResponse<{ participants: User[] }>> {
+    return this.request<{ participants: User[] }>('/session/login/totp', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${tempToken}`,
+      },
+      body: JSON.stringify({ code }),
     });
   }
 
@@ -161,20 +181,12 @@ class ApiService {
   }
 
   /**
-   * Checks if the user is authenticated
+   * Checks if the session is authenticated
    * (makes a request that requires authentication)
    */
   async checkAuth(): Promise<boolean> {
-    try {
-      // Tries to get the health endpoint which requires authentication
-      // If it fails, it means the user is not authenticated
-      const response = await this.request('/health');
-      return response.status === 200;
-    } catch (error) {
-      // If it's a 401 error (not authenticated), it's not a real error
-      // Just returns false silently
-      return false;
-    }
+    const response = await this.request('/session');
+    return response.status === 200;
   }
 
   /**
@@ -214,10 +226,10 @@ class ApiService {
   /**
    * Logs out the user
    */
-  async logout(): Promise<ApiResponse> {
-    return this.request('/session/logout', {
+  async logout(userId: number): Promise<ApiResponse<{ participants: User[] }>> {
+    return this.request<{ participants: User[] }>('/session/logout', {
       method: 'POST',
-      body: JSON.stringify({}),
+      body: JSON.stringify({ userId }),
     });
   }
 }

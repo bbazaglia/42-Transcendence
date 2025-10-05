@@ -1,5 +1,3 @@
-import { authService } from '../services/AuthService'
-
 export class Navbar {
   private authModal: any
 
@@ -8,7 +6,6 @@ export class Navbar {
   }
 
   render(): string {
-    const isAuthenticated = authService.isAuthenticated()
     
     return `
       <!-- Auth Bar -->
@@ -40,22 +37,10 @@ export class Navbar {
             
             <!-- Auth Status -->
             <div id="auth-status" class="hidden md:flex items-center space-x-4">
-              <!-- Always show Sign In button -->
+              <!-- Always show Sign In button, which now acts as "Add Player" -->
               <button id="login-btn" class="px-4 py-2 bg-black/60 text-white font-medium rounded-lg border border-white/20 hover:bg-white/10 hover:border-white/40 transition-all duration-300 text-sm transform hover:scale-105">
-                Sign In
+                Add Player
               </button>
-              
-              ${isAuthenticated ? `
-                <!-- Authenticated User -->
-                <div class="flex items-center space-x-3">
-                  <button id="desktop-profile-btn" class="px-3 py-1 bg-cyan-600/20 text-white border border-cyan-500/30 text-sm rounded hover:bg-cyan-600/30 transition-colors">
-                    Profile
-                  </button>
-                  <button id="logout-btn" class="px-3 py-1 bg-red-600/20 text-white border border-red-500/30 text-sm rounded hover:bg-red-600/30 transition-colors">
-                    Logout
-                  </button>
-                </div>
-              ` : ''}
             </div>
           </div>
         </div>
@@ -63,31 +48,14 @@ export class Navbar {
         <!-- Mobile Menu -->
         <div id="mobile-menu" class="md:hidden hidden bg-black/40 backdrop-blur-md border-t border-white/10">
           <div class="px-4 py-4 space-y-4">
-            <!-- Mobile Navigation Links -->
-            <div class="space-y-3">
-              <a href="/" class="block text-white hover:text-cyan-400 transition-colors font-medium py-2">🏠 Home</a>
-              <a href="/tournament" class="block text-white hover:text-cyan-400 transition-colors font-medium py-2">🏆 Tournament</a>
-              <a href="/quick-game" class="block text-white hover:text-cyan-400 transition-colors font-medium py-2">⚡ Quick Game</a>
-            </div>
+            <!-- ... (mobile nav links) ... -->
             
             <!-- Mobile Auth Status -->
             <div class="border-t border-white/20 pt-4">
               <!-- Always show Sign In button -->
               <button id="mobile-login-btn" class="w-full px-4 py-2 bg-black/60 text-white font-medium rounded-lg border border-white/20 hover:bg-white/10 hover:border-white/40 transition-all duration-300 text-sm transform hover:scale-105 mb-3">
-                Sign In
+                Add Player
               </button>
-              
-              ${isAuthenticated ? `
-                <!-- Mobile Authenticated User -->
-                <div class="space-y-3">
-                  <button id="mobile-nav-profile-btn" class="w-full px-4 py-2 bg-cyan-600/20 text-white border border-cyan-500/30 text-sm rounded-lg hover:bg-cyan-600/30 transition-colors">
-                    Profile
-                  </button>
-                  <button id="mobile-logout-btn" class="w-full px-4 py-2 bg-red-600/20 text-white border border-red-500/30 text-sm rounded-lg hover:bg-red-600/30 transition-colors">
-                    Logout
-                  </button>
-                </div>
-              ` : ''}
             </div>
           </div>
         </div>
@@ -95,7 +63,7 @@ export class Navbar {
     `
   }
 
-  setupEventListeners(onNavigate: (path: string) => void, onLogout: () => void): void {
+  setupEventListeners(onNavigate: (path: string) => void): void {
     // Desktop Auth button listeners
     document.getElementById('login-btn')?.addEventListener('click', (e) => {
       e.preventDefault()
@@ -105,18 +73,6 @@ export class Navbar {
     document.getElementById('mobile-login-btn')?.addEventListener('click', (e) => {
       e.preventDefault()
       this.authModal.show('login')
-    })
-
-    // Logout button listeners
-    document.getElementById('logout-btn')?.addEventListener('click', async (e) => {
-      e.preventDefault()
-      await onLogout()
-    })
-
-    document.getElementById('mobile-logout-btn')?.addEventListener('click', async (e) => {
-      e.preventDefault()
-      this.closeMobileMenu()
-      await onLogout()
     })
 
     // Mobile menu toggle
@@ -134,26 +90,6 @@ export class Navbar {
           onNavigate(href)
         }
       })
-    })
-
-    // Profile button listeners
-    document.getElementById('desktop-profile-btn')?.addEventListener('click', (e) => {
-      e.preventDefault()
-      if (authService.isAuthenticated()) {
-        onNavigate('/profile')
-      } else {
-        this.authModal.show('login')
-      }
-    })
-
-    document.getElementById('mobile-nav-profile-btn')?.addEventListener('click', (e) => {
-      e.preventDefault()
-      this.closeMobileMenu()
-      if (authService.isAuthenticated()) {
-        onNavigate('/profile')
-      } else {
-        this.authModal.show('login')
-      }
     })
 
     // Mobile navigation link listeners

@@ -7,11 +7,11 @@ import fastifyStatic from '@fastify/static';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import sharedSchemas from './schemas/sharedSchemas.js'
-import sessionManager from './plugins/sessionManager.js';
-import jwtPlugin from './plugins/jwt.js';
+import authPlugin from './plugins/auth.js';
 import oauthPlugin from './plugins/oauth.js';
 import prismaPlugin from './plugins/prisma.js';
+import sessionStorePlugin from './plugins/fileSessionStore.js';
+import sharedSchemas from './schemas/sharedSchemas.js'
 import totpPlugin from './plugins/totp.js';
 
 import analyticsRoutes from './routes/analytics.js';
@@ -33,11 +33,11 @@ async function app(fastify, opts) {
     await fastify.register(fastifySensible, { sharedSchemaId: 'httpError' });
     await fastify.register(fastifyStatic, { root: path.join(__dirname, '..', 'public'), prefix: '/', });
     await fastify.register(sharedSchemas);
-    await fastify.register(sessionManager);
-    await fastify.register(jwtPlugin);
+    await fastify.register(sessionStorePlugin);
+    await fastify.register(prismaPlugin);
+    await fastify.register(authPlugin);
     await fastify.register(totpPlugin, { issuer: 'ft_transcendence' });
     await fastify.register(oauthPlugin);
-    await fastify.register(prismaPlugin);
 
     // Register routes
     await fastify.register(analyticsRoutes, { prefix: '/api/analytics' });

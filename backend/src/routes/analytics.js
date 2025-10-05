@@ -2,7 +2,7 @@ import { matchQueryTemplate } from "../lib/prismaQueryTemplates.js";
 
 export default async function (fastify, opts) {
     // All routes in this file require authentication
-    fastify.addHook('preHandler', fastify.session.authorizeParticipant);
+    fastify.addHook('preHandler', fastify.authorizeParticipant);
 
     // ROUTE: Get user analytics and insights
     fastify.get('/user/:userId', {
@@ -102,21 +102,8 @@ export default async function (fastify, opts) {
         }
     }, async (request, reply) => {
         try {
-            const userId = parseInt(request.params.userId);
-            const currentUser = request.user;
-
-            // Debug logging
-            fastify.log.info({ currentUser, userId }, 'Analytics request debug');
-
-            // Check if user is authenticated
-            if (!currentUser || !currentUser.id) {
-                throw fastify.httpErrors.unauthorized('User not properly authenticated.');
-            }
-
-            // Verify user can only view their own analytics
-            if (currentUser.id !== userId) {
-                throw fastify.httpErrors.forbidden('You can only view your own analytics.');
-            }
+            const userId = request.params.userId;
+            fastify.log.debug(`Getting analytics for user: ${userId}`)
 
             // Get all matches for the user
             const userMatches = await fastify.prisma.match.findMany({
@@ -217,13 +204,13 @@ export default async function (fastify, opts) {
 // Helper function to calculate performance over time
 function calculatePerformanceOverTime(matches, userId) {
     const dailyStats = new Map();
-    
+
     matches.forEach(match => {
         const date = new Date(match.playedAt).toISOString().split('T')[0];
         if (!dailyStats.has(date)) {
             dailyStats.set(date, { wins: 0, losses: 0 });
         }
-        
+
         const stats = dailyStats.get(date);
         if (match.winnerId === userId) {
             stats.wins++;
@@ -243,11 +230,11 @@ function calculatePerformanceOverTime(matches, userId) {
 // Helper function to calculate opponent analysis
 function calculateOpponentAnalysis(matches, userId) {
     const opponentStats = new Map();
-    
+
     matches.forEach(match => {
         const opponentId = match.playerOneId === userId ? match.playerTwoId : match.playerOneId;
         const opponentName = match.playerOneId === userId ? match.playerTwo.displayName : match.playerOne.displayName;
-        
+
         if (!opponentStats.has(opponentId)) {
             opponentStats.set(opponentId, {
                 opponentId,
@@ -257,10 +244,10 @@ function calculateOpponentAnalysis(matches, userId) {
                 losses: 0
             });
         }
-        
+
         const stats = opponentStats.get(opponentId);
         stats.matchesPlayed++;
-        
+
         if (match.winnerId === userId) {
             stats.wins++;
         } else {
@@ -290,7 +277,7 @@ async function calculateTournamentStats(prisma, userId) {
     });
 
     const tournamentsParticipated = tournamentParticipations.length;
-    const tournamentsWon = tournamentParticipations.filter(tp => 
+    const tournamentsWon = tournamentParticipations.filter(tp =>
         tp.tournament.status === 'COMPLETED' && tp.tournament.winnerId === userId
     ).length;
 

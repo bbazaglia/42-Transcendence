@@ -229,7 +229,7 @@ class ApiService {
   async logout(userId: number): Promise<ApiResponse<{ participants: User[] }>> {
     return this.request<{ participants: User[] }>('/session/logout', {
       method: 'POST',
-      body: JSON.stringify({ userId }),
+      body: JSON.stringify({ actorId: userId }),
     });
   }
 }

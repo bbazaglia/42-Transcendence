@@ -4,13 +4,8 @@ import { tournamentQueryTemplate } from '../lib/prismaQueryTemplates.js';
 import xss from 'xss';
 
 export default async function (fastify, opts) {
-    // Ensure the sessionManager plugin is registered.
-    if (!fastify.hasDecorator('session')) {
-        throw new Error('sessionManager plugin must be registered before this file');
-    }
-
     // All routes in this file require authentication
-    fastify.addHook('preHandler', fastify.session.authorize);
+    fastify.addHook('preHandler', fastify.authorize);
 
     // ROUTE: Gets a list of all tournaments.
     fastify.get('/', {
@@ -168,7 +163,7 @@ export default async function (fastify, opts) {
 
     // ROUTE: Allows a user to join an existing tournament.
     fastify.post('/:tournamentId/join', {
-        preHandler: [fastify.session.authorizeParticipant],
+        preHandler: [fastify.authorizeParticipant],
         schema: {
             params: {
                 type: 'object',
@@ -221,7 +216,7 @@ export default async function (fastify, opts) {
                     throw fastify.httpErrors.forbidden('Only pending tournaments can be started.');
                 }
 
-                if (tournament.participants.length >= t.maxParticipants) {
+                if (tournament.participants.length >= tournament.maxParticipants) {
                     throw fastify.httpErrors.forbidden('Tournament is full. You cannot join at this time.');
                 }
 
@@ -290,6 +285,9 @@ export default async function (fastify, opts) {
             const tournamentId = request.params.tournamentId;
             fastify.log.debug(`Attempting to start tournament ${tournamentId} for session ${request.user.sessionId}`);
 
+            // Get the list of online users from the new session data
+            const onlineUserIds = new Set(request.sessionData.participants);
+
             const updatedTournamentFromDb = await fastify.prisma.$transaction(async (prisma) => {
                 const tournament = await prisma.tournament.findUnique({
                     where: { id: tournamentId },
@@ -314,7 +312,7 @@ export default async function (fastify, opts) {
 
                 // Check if all participants are still in the main app session.
                 for (const participant of tournament.participants) {
-                    if (!fastify.session.isParticipant(participant.userId)) {
+                    if (!onlineUserIds.has(participant.userId)) {
                         throw fastify.httpErrors.forbidden('All tournament participants must be present in the session to start the tournament.');
                     }
                 }
@@ -522,6 +520,9 @@ export default async function (fastify, opts) {
             const tournamentId = request.params.tournamentId;
             fastify.log.debug(`Attempting to cancel tournament ${tournamentId} for session ${request.user.sessionId}`);
 
+            // Get the list of online users from the new session data
+            const onlineUserIds = new Set(request.sessionData.participants);
+
             const updatedTournamentFromDb = await fastify.prisma.$transaction(async (prisma) => {
                 const existing = await prisma.tournament.findFirst({
                     where: {
@@ -540,7 +541,7 @@ export default async function (fastify, opts) {
 
                 // Check if all participants are still in the main app session.
                 for (const participant of existing.participants) {
-                    if (!fastify.session.isParticipant(participant.userId)) {
+                    if (!onlineUserIds.has(participant.userId)) {
                         throw fastify.httpErrors.forbidden('All tournament participants must be present in the session to cancel the tournament.');
                     }
                 }

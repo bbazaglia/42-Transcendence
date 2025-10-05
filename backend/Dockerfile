@@ -1,5 +1,5 @@
 # Stage 1: Install dependencies
-FROM node:lts-alpine3.22 AS deps
+FROM node:lts-alpine AS deps
 WORKDIR /app
 
 COPY package.json package-lock.json ./
@@ -9,7 +9,7 @@ RUN npm audit fix --force
 RUN npm install
 
 # Stage 2: Run the application
-FROM node:lts-alpine3.22
+FROM node:lts-alpine
 WORKDIR /app
 
 RUN apk add --no-cache openssl

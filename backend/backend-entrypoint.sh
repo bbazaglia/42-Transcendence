@@ -19,6 +19,7 @@ generate_secret_if_needed() {
 
 generate_secret_if_needed "JWT_SECRET"
 generate_secret_if_needed "COOKIE_SECRET"
+generate_secret_if_needed "SESSION_SECRET"
 
 echo "Running Prisma migrations for SQLite database..."
 

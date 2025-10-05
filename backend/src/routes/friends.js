@@ -89,10 +89,10 @@ export default async function (fastify, opts) {
             return { friendships: friendships };
 
         } catch (error) {
-            fastify.log.error(error, `Error fetching friends for user ${request.params.userId}`);
             if (error && error.statusCode) {
                 return reply.send(error);
             }
+            fastify.log.error(error, `Error fetching friends for user ${request.params.userId}`);
             return reply.internalServerError('An unexpected error occurred while fetching friendships.');
         }
     });
@@ -132,10 +132,10 @@ export default async function (fastify, opts) {
             return { friendships: pendingFriendships };
 
         } catch (error) {
-            fastify.log.error(error, `Error fetching pending requests for user ${request.params.userId}`);
             if (error && error.statusCode) {
                 return reply.send(error);
             }
+            fastify.log.error(error, `Error fetching pending requests for user ${request.params.userId}`);
             return reply.internalServerError('An unexpected error occurred while fetching pending requests.');
         }
     });
@@ -175,10 +175,10 @@ export default async function (fastify, opts) {
             return { friendships: pendingFriendships };
 
         } catch (error) {
-            fastify.log.error(error, `Error fetching pending requests for user ${request.params.userId}`);
             if (error && error.statusCode) {
                 return reply.send(error);
             }
+            fastify.log.error(error, `Error fetching pending requests for user ${request.params.userId}`);
             return reply.internalServerError('An unexpected error occurred while fetching pending requests.');
         }
     });
@@ -259,7 +259,6 @@ export default async function (fastify, opts) {
             return { friendship: friendshipResponse };
 
         } catch (error) {
-            fastify.log.error(error, 'Error creating friendship for user', actorId);
             // This will catch the error from the @@unique constraint if the friendship already exists.
             if (error.code === 'P2002') { // Prisma's unique constraint violation code
                 return reply.conflict('A friendship with this user already exists.');
@@ -267,6 +266,7 @@ export default async function (fastify, opts) {
             if (error && error.statusCode) {
                 return reply.send(error);
             }
+            fastify.log.error(error, 'Error creating friendship for user', actorId);
             return reply.internalServerError('An unexpected error occurred.');
         }
     });
@@ -333,7 +333,6 @@ export default async function (fastify, opts) {
             return { friendship: friendshipResponse };
 
         } catch (error) {
-            fastify.log.error(error, 'Error accepting friendship for user', actorId);
             // If the `where` clause fails to find a match, Prisma throws P2025.
             if (error.code === 'P2025') {
                 return reply.notFound('No pending friend request found from this user.');
@@ -341,6 +340,7 @@ export default async function (fastify, opts) {
             if (error && error.statusCode) {
                 return reply.send(error);
             }
+            fastify.log.error(error, 'Error accepting friendship for user', actorId);
             return reply.internalServerError('An unexpected error occurred when accepting the friend request.');
         }
     });
@@ -389,7 +389,6 @@ export default async function (fastify, opts) {
             reply.code(204);
 
         } catch (error) {
-            fastify.log.error(error, 'Error deleting friendship');
             // If no friendship exists or the user is not part of it, Prisma will throw an error.
             if (error.code === 'P2025') { // Prisma's record not found code
                 return reply.notFound('Friendship not found or you do not have permission to modify it.');
@@ -397,6 +396,7 @@ export default async function (fastify, opts) {
             if (error && error.statusCode) {
                 return reply.send(error);
             }
+            fastify.log.error(error, 'Error deleting friendship');
             return reply.internalServerError('An unexpected error occurred while removing the friendship.');
         }
     });

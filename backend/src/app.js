@@ -2,6 +2,10 @@ import fastifyCookie from '@fastify/cookie';
 import fastifyCors from '@fastify/cors';
 import fastifyPlugin from 'fastify-plugin';
 import fastifySensible from '@fastify/sensible';
+import fastifyStatic from '@fastify/static';
+
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 import sharedSchemas from './schemas/sharedSchemas.js'
 import sessionManager from './plugins/sessionManager.js';
@@ -20,11 +24,14 @@ import usersRoutes from './routes/users.js';
 
 // This function will contain all our application's setup logic
 async function app(fastify, opts) {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
 
     // Register plugins
-    await fastify.register(fastifyCors, { origin: [process.env.FRONTEND_URL], credentials: true });
     await fastify.register(fastifyCookie, { secret: process.env.COOKIE_SECRET });
+    await fastify.register(fastifyCors, { origin: [process.env.FRONTEND_URL], credentials: true });
     await fastify.register(fastifySensible, { sharedSchemaId: 'httpError' });
+    await fastify.register(fastifyStatic, { root: path.join(__dirname, '..', 'public'), prefix: '/', });
     await fastify.register(sharedSchemas);
     await fastify.register(sessionManager);
     await fastify.register(jwtPlugin);

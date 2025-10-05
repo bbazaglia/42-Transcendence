@@ -7,7 +7,14 @@ const isProduction = process.env.NODE_ENV === 'production';
 // Create the Fastify instance
 const fastify = Fastify({
     logger: {
-        level: isProduction ? 'info' : 'trace'
+        level: isProduction ? 'info' : 'trace',
+        transport: {
+            target: 'pino-pretty',
+            options: {
+                translateTime: 'HH:MM:ss Z',
+                ignore: 'pid,hostname',
+            },
+        },
     }
 });
 

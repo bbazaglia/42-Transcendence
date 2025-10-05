@@ -49,10 +49,10 @@ export default async function (fastify, opts) {
             return { tournaments: tournaments };
 
         } catch (error) {
-            fastify.log.error(error, 'Failed to fetch tournaments');
             if (error && error.statusCode) {
                 return reply.send(error);
             }
+            fastify.log.error(error, 'Failed to fetch tournaments');
             return reply.internalServerError('An unexpected error occurred when trying to fetch tournaments');
         }
     });
@@ -103,10 +103,10 @@ export default async function (fastify, opts) {
             return { tournament: tournament };
 
         } catch (error) {
-            fastify.log.error(error, `Failed to fetch tournament with id ${request.params.tournamentId}`);
             if (error && error.statusCode) {
                 return reply.send(error);
             }
+            fastify.log.error(error, `Failed to fetch tournament with id ${request.params.tournamentId}`);
             return reply.internalServerError('An unexpected error occurred while fetching the tournament.');
         }
     });
@@ -158,10 +158,10 @@ export default async function (fastify, opts) {
             return { tournament: tournament };
 
         } catch (error) {
-            fastify.log.error(error, 'Failed to create tournament');
             if (error && error.statusCode) {
                 return reply.send(error);
             }
+            fastify.log.error(error, 'Failed to create tournament');
             return reply.internalServerError('An unexpected error occurred while creating the tournament.');
         }
     });
@@ -254,10 +254,10 @@ export default async function (fastify, opts) {
             return { tournament: tournamentResponse };
 
         } catch (error) {
-            fastify.log.error(error, 'Failed to join tournament');
             if (error && error.statusCode) {
                 return reply.send(error);
             }
+            fastify.log.error(error, 'Failed to join tournament');
             return reply.internalServerError('An unexpected error occurred while joining the tournament.');
         }
     });
@@ -361,10 +361,10 @@ export default async function (fastify, opts) {
             return { tournament: tournamentResponse };
 
         } catch (error) {
-            fastify.log.error(error, 'Failed to start tournament');
             if (error && error.statusCode) {
                 return reply.send(error);
             }
+            fastify.log.error(error, 'Failed to start tournament');
             return reply.internalServerError('An unexpected error occurred while starting the tournament.');
         }
     });
@@ -487,10 +487,10 @@ export default async function (fastify, opts) {
             return { tournament: tournamentResponse };
 
         } catch (error) {
-            fastify.log.error(error, `Failed to update tournament match ${request.params.matchId} for tournament ${request.params.tournamentId}`);
             if (error && error.statusCode) {
                 return reply.send(error);
             }
+            fastify.log.error(error, `Failed to update tournament match ${request.params.matchId} for tournament ${request.params.tournamentId}`);
             return reply.internalServerError('An unexpected error occurred while updating the tournament match.');
         }
     });
@@ -560,10 +560,10 @@ export default async function (fastify, opts) {
             return { tournament: tournamentResponse };
 
         } catch (error) {
-            fastify.log.error(error, `Failed to cancel tournament ${request.params.tournamentId}`);
             if (error && error.statusCode) {
                 return reply.send(error);
             }
+            fastify.log.error(error, `Failed to cancel tournament ${request.params.tournamentId}`);
             return reply.internalServerError('An unexpected error occurred while canceling the tournament.');
         }
     });

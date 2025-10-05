@@ -205,10 +205,10 @@ export default async function (fastify, opts) {
             };
 
         } catch (error) {
-            fastify.log.error(error, `Failed to fetch analytics for user ${request.params.userId}`);
             if (error && error.statusCode) {
                 return reply.send(error);
             }
+            fastify.log.error(error, `Failed to fetch analytics for user ${request.params.userId}`);
             return reply.internalServerError('An unexpected error occurred while fetching analytics.');
         }
     });

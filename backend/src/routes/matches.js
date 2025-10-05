@@ -100,10 +100,10 @@ export default async function (fastify, opts) {
             return { match: createdMatch };
 
         } catch (error) {
-            fastify.log.error(error, 'Error creating match record');
             if (error && error.statusCode) {
                 return reply.send(error);
             }
+            fastify.log.error(error, 'Error creating match record');
             return reply.internalServerError('An error occurred while creating the match record.');
         }
     });

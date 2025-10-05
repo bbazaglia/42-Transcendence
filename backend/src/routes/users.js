@@ -38,6 +38,16 @@ export default async function (fastify, opts) {
             const { email, password } = request.body;
             fastify.log.debug(`Attempting to register user with email: ${email} and displayName: ${displayName}`);
 
+
+            const existingUserByEmail = await fastify.prisma.user.findUnique({
+                where: { email: email.toLowerCase() },
+                select: { id: true }
+            });
+
+            if (existingUserByEmail) {
+                throw fastify.httpErrors.conflict('An account with this email already exists.');
+            }
+
             const existingUserByDisplayName = await fastify.prisma.user.findFirst({
                 where: {
                     displayName: {
@@ -48,15 +58,6 @@ export default async function (fastify, opts) {
 
             if (existingUserByDisplayName) {
                 throw fastify.httpErrors.conflict('Display name is already in use.');
-            }
-
-            const existingUserByEmail = await fastify.prisma.user.findUnique({
-                where: { email: email.toLowerCase() },
-                select: { id: true }
-            });
-
-            if (existingUserByEmail) {
-                throw fastify.httpErrors.conflict('An account with this email already exists.');
             }
 
             const passwordHash = await bcrypt.hash(password, 10);
@@ -74,10 +75,10 @@ export default async function (fastify, opts) {
             return { user: newUser };
 
         } catch (error) {
-            fastify.log.error(error, 'Registration failed');
             if (error && error.statusCode) {
                 return reply.send(error);
             }
+            fastify.log.error(error, 'Registration failed');
             return reply.internalServerError('An unexpected error occurred during registration.');
         }
     });
@@ -128,10 +129,10 @@ export default async function (fastify, opts) {
             return { users: users };
 
         } catch (error) {
-            fastify.log.error(error, `Error searching users with query: ${request.query.search}`);
             if (error && error.statusCode) {
                 return reply.send(error);
             }
+            fastify.log.error(error, `Error searching users with query: ${request.query.search}`);
             return reply.internalServerError('An unexpected error occurred while searching users.');
         }
     });
@@ -231,10 +232,10 @@ export default async function (fastify, opts) {
             return { matches: matches };
 
         } catch (error) {
-            fastify.log.error(error, `Error fetching match history for user ID ${request.params.userId}`);
             if (error && error.statusCode) {
                 return reply.send(error);
             }
+            fastify.log.error(error, `Error fetching match history for user ID ${request.params.userId}`);
             return reply.internalServerError('An unexpected error occurred while fetching match history.');
         }
     });
@@ -290,10 +291,10 @@ export default async function (fastify, opts) {
             return { qrCodeUrl: qrCodeDataURL };
 
         } catch (error) {
-            fastify.log.error(error, `Error setting up TOTP for user ID ${request.params.userId}`);
             if (error && error.statusCode) {
                 return reply.send(error);
             }
+            fastify.log.error(error, `Error setting up TOTP for user ID ${request.params.userId}`);
             return reply.internalServerError('An unexpected error occurred during TOTP setup.');
         }
     });
@@ -357,10 +358,10 @@ export default async function (fastify, opts) {
             return { user: updatedUser };
 
         } catch (error) {
-            fastify.log.error(error, `Error verifying TOTP for user ID ${request.params.userId}`);
             if (error && error.statusCode) {
                 return reply.send(error);
             }
+            fastify.log.error(error, `Error verifying TOTP for user ID ${request.params.userId}`);
             return reply.internalServerError('An unexpected error occurred during TOTP verification.');
         }
     });
@@ -422,10 +423,10 @@ export default async function (fastify, opts) {
             return { user: updatedUser };
 
         } catch (error) {
-            fastify.log.error(error, `Error disabling TOTP for user ID ${request.params.userId}`);
             if (error && error.statusCode) {
                 return reply.send(error);
             }
+            fastify.log.error(error, `Error disabling TOTP for user ID ${request.params.userId}`);
             return reply.internalServerError('An unexpected error occurred while disabling TOTP.');
         }
     });
@@ -500,10 +501,10 @@ export default async function (fastify, opts) {
             return { user: updatedUser };
 
         } catch (error) {
-            fastify.log.error(error, `Error updating user profile for ID ${request.params.userId}`);
             if (error && error.statusCode) {
                 return reply.send(error);
             }
+            fastify.log.error(error, `Error updating user profile for ID ${request.params.userId}`);
             return reply.internalServerError('An unexpected error occurred while updating the user profile.');
         }
     });

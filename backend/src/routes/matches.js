@@ -1,13 +1,9 @@
 import { matchQueryTemplate } from "../lib/prismaQueryTemplates.js";
 
 export default async function (fastify, opts) {
-    // Ensure the sessionManager plugin is registered.
-    if (!fastify.hasDecorator('session')) {
-        throw new Error('sessionManager plugin must be registered before this file');
-    }
 
     // All routes in this file require session authentication
-    fastify.addHook('preHandler', fastify.session.authorize);
+    fastify.addHook('preHandler', fastify.authorize);
 
     // ROUTE: Creates a new quick match record after a game is finished.
     fastify.post('/', {
@@ -47,8 +43,9 @@ export default async function (fastify, opts) {
             } = request.body;
             fastify.log.debug(`Attempting to create match record: Player One ID ${playerOneId}, Player Two ID ${playerTwoId}, Player One Score ${playerOneScore}, Player Two Score ${playerTwoScore}, Winner ID ${winnerId}`);
 
-            const isPlayerOneValid = fastify.session.isParticipant(playerOneId);
-            const isPlayerTwoValid = fastify.session.isParticipant(playerTwoId);
+            const onlineUserIds = new Set(request.sessionData.participants);
+            const isPlayerOneValid = onlineUserIds.has(playerOneId);
+            const isPlayerTwoValid = onlineUserIds.has(playerTwoId);
 
             if (!isPlayerOneValid || !isPlayerTwoValid) {
                 throw fastify.httpErrors.forbidden('Match cannot be reported. One or both players are not verified in the current session.');

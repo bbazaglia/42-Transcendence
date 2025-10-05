@@ -7,6 +7,7 @@ async function prismaPlugin(fastify, opts) {
         log: process.env.NODE_ENV === 'development' ? ['query', 'info', 'warn', 'error'] : ['error'],
         omit: {
             user: {
+                email: true,
                 passwordHash: true,
                 totpSecret: true,
                 googleId: true,

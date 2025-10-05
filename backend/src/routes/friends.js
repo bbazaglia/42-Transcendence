@@ -46,13 +46,8 @@ async function getFriendshipsForUser(prisma, userId, status, onlineUserIds = new
 }
 
 export default async function (fastify, opts) {
-    // Ensure the sessionManager plugin is registered.
-    if (!fastify.hasDecorator('session')) {
-        throw new Error('sessionManager plugin must be registered before this file');
-    }
-
     // All routes in this file require authentication
-    fastify.addHook('preHandler', fastify.session.authorizeParticipant);
+    fastify.addHook('preHandler', fastify.authorizeParticipant);
 
     // ROUTE: Gets a list of the current user's friends and their status.
     fastify.get('/:userId', {
@@ -79,8 +74,7 @@ export default async function (fastify, opts) {
     }, async (request, reply) => {
         try {
             const userId = request.params.userId;
-            const session = fastify.session.get();
-            const onlineUserIds = new Set(session.participants.keys());
+            const onlineUserIds = new Set(request.sessionData.participants);
             fastify.log.debug(`Fetching friends for user ${userId}. Online users: ${Array.from(onlineUserIds).join(', ')}`);
 
             const friendships = await getFriendshipsForUser(fastify.prisma, userId, FriendshipStatus.ACCEPTED, onlineUserIds);
@@ -122,8 +116,7 @@ export default async function (fastify, opts) {
     }, async (request, reply) => {
         try {
             const userId = request.params.userId;
-            const session = fastify.session.get();
-            const onlineUserIds = new Set(session.participants.keys());
+            const onlineUserIds = new Set(request.sessionData.participants);
             fastify.log.debug(`Fetching incoming pending requests for user ${userId}. Online users: ${Array.from(onlineUserIds).join(', ')}`);
 
             const pendingFriendships = await getFriendshipsForUser(fastify.prisma, userId, FriendshipStatus.PENDING, onlineUserIds, 'INCOMING');
@@ -165,8 +158,7 @@ export default async function (fastify, opts) {
     }, async (request, reply) => {
         try {
             const userId = request.params.userId;
-            const session = fastify.session.get();
-            const onlineUserIds = new Set(session.participants.keys());
+            const onlineUserIds = new Set(request.sessionData.participants);
             fastify.log.debug(`Fetching sent pending requests for user ${userId}. Online users: ${Array.from(onlineUserIds).join(', ')}`);
 
             const pendingFriendships = await getFriendshipsForUser(fastify.prisma, userId, FriendshipStatus.PENDING, onlineUserIds, 'SENT');

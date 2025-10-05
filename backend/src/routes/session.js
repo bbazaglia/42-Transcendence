@@ -1,50 +1,42 @@
 import bcrypt from 'bcrypt';
 
-async function createSessionCookie(fastify, reply, sessionId) {
-    fastify.log.debug(`Creating session cookie for session ID: ${sessionId}`);
-    const payload = { sessionId };
-    const token = await reply.jwtSign(payload);
+async function handleSuccessfulLogin(request, reply, fastify, user) {
+    let participantIds = [];
+    let sessionId;
 
-    reply.setCookie('token', token, {
-        path: '/',
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 60 * 60 * 24, // 24 hours
-        signed: true
-    });
-}
-
-async function handleSuccessfulLogin(fastify, reply, publicUser) {
-    let session = fastify.session.get();
-
-    if (!session) {
-        session = fastify.session.create(publicUser);
-        fastify.log.info(`New session ${session.sessionId} created by ${publicUser.displayName}`);
-        // Issue the session cookie ONLY when the session is created.
-        await createSessionCookie(fastify, reply, session.sessionId);
-    } else {
-        // A session already exists. Check if user is already in it.
-        if (fastify.session.isParticipant(publicUser.id)) {
-            throw fastify.httpErrors.conflict('User is already in the session.');
+    try {
+        // Check for an existing JWT on the request to join a session
+        await request.jwtVerify();
+        sessionId = request.user.sessionId;
+        const existingSession = await request.sessionStore.get(sessionId);
+        if (existingSession) {
+            participantIds = existingSession.participants || [];
         }
-        // Add the new user to the existing session.
-        session.participants.set(publicUser.id, publicUser);
-        fastify.session.set(session);
-        fastify.log.info(`User ${publicUser.displayName} joined session ${session.sessionId}`);
+    } catch (err) {
+        // No valid JWT, so we'll create a new session
+        const tempSession = request.session; // Get a blank session object to steal its ID
+        sessionId = tempSession.sessionId;
     }
-    return session;
+
+    if (participantIds.includes(user.id)) {
+        throw fastify.httpErrors.conflict('User is already in the session.');
+    }
+    participantIds.push(user.id);
+
+    // Save the updated session state
+    await request.sessionStore.set(sessionId, { participants: participantIds });
+
+    // Create/update the JWT cookie
+    const token = await reply.jwtSign({ sessionId });
+    reply.setCookie('token', token, { path: '/', httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', signed: true });
+
+    // Return the full participant list for the frontend
+    return fastify.getHydratedParticipants(participantIds);
 }
 
 export default async function (fastify, opts) {
-    // Ensure the sessionManager plugin is registered.
-    if (!fastify.hasDecorator('session')) {
-        throw new Error('sessionManager plugin must be registered before session routes');
-    }
-
-    // ROUTE: Logs in the host user and returns a JWT token.
+    // ROUTE: Logs in a user, creating or joining a session.
     fastify.post('/login', {
-        preHandler: [fastify.session.updateSessionActivity],
         schema: {
             body: {
                 type: 'object',
@@ -59,7 +51,7 @@ export default async function (fastify, opts) {
                 200: {
                     oneOf: [
                         // The standard response with the session object.
-                        { 200: { $ref: 'sessionState#' } },
+                        { $ref: 'sessionState#' },
                         // The response when 2FA is required
                         {
                             type: 'object',
@@ -86,9 +78,10 @@ export default async function (fastify, opts) {
             const { email, password } = request.body;
             fastify.log.debug(`Login attempt for email: ${email}`);
 
+            // Standard login flow: Verify email and password.
             const userWithSecrets = await fastify.prisma.user.findUnique({
                 where: { email: email.toLowerCase() },
-                omit: { passwordHash: false }
+                omit: { email: false, passwordHash: false }
             });
 
             const isPasswordValid = userWithSecrets && await bcrypt.compare(password, userWithSecrets.passwordHash);
@@ -97,6 +90,7 @@ export default async function (fastify, opts) {
                 throw fastify.httpErrors.unauthorized('Invalid email or password.');
             }
 
+            //  2FA check
             if (userWithSecrets.isTwoFaEnabled) {
                 // Create a temporary, limited-scope token.
                 const tempPayload = { id: userWithSecrets.id, scope: 'totp' };
@@ -106,15 +100,10 @@ export default async function (fastify, opts) {
                 return { twoFactorChallenge: { tempToken: tempToken } };
             }
 
-            // Fetch the public user object to return.
             const publicUser = await fastify.prisma.user.findUnique({ where: { id: userWithSecrets.id } });
-
-            // Handle session creation or joining.
-            const session = await handleSuccessfulLogin(fastify, reply, publicUser);
-
-            // Return the latest session state
-            fastify.log.debug(`User ${publicUser.displayName} logged in successfully without TOTP.`);
-            return { participants: Array.from(session.participants.values()) };
+            const hydratedParticipants = await handleSuccessfulLogin(request, reply, fastify, publicUser);
+            fastify.log.info(`User ${publicUser.displayName} logged in successfully.`);
+            return { participants: hydratedParticipants };
 
         } catch (error) {
             if (error && error.statusCode) {
@@ -127,7 +116,6 @@ export default async function (fastify, opts) {
 
     // ROUTE: Handles TOTP verification during login.
     fastify.post('/login/totp', {
-        preHandler: [fastify.session.updateSessionActivity],
         schema: {
             body: {
                 type: 'object',
@@ -161,15 +149,10 @@ export default async function (fastify, opts) {
                 throw fastify.httpErrors.unauthorized('Invalid TOTP code.');
             }
 
-            // Fetch the public user object to return.
-            const publicUser = await fastify.prisma.user.findUnique({ where: { id: userWithSecrets.id } });
-
-            // Handle session creation or joining.
-            const session = await handleSuccessfulLogin(fastify, reply, publicUser);
-
-            // Return the latest session state
-            fastify.log.debug(`User ${publicUser.displayName} passed TOTP verification and logged in successfully.`);
-            return { participants: Array.from(session.participants.values()) };
+            const publicUser = await fastify.prisma.user.findUnique({ where: { id: decodedTempToken.id } });
+            const hydratedParticipants = await handleSuccessfulLogin(request, reply, fastify, publicUser);
+            fastify.log.info(`User ${publicUser.displayName} passed TOTP verification and logged in successfully.`);
+            return { participants: hydratedParticipants };
 
         } catch (error) {
             if (error && error.statusCode) {
@@ -182,7 +165,6 @@ export default async function (fastify, opts) {
 
     // ROUTE: The route Google redirects back to after a user authorizes the app.
     fastify.get('/google/callback', {
-        preHandler: [fastify.session.updateSessionActivity],
         schema: {
             response: {
                 302: { type: 'string', format: 'uri' },
@@ -212,7 +194,8 @@ export default async function (fastify, opts) {
             };
 
             const existingUser = await fastify.prisma.user.findUnique({
-                where: { email: user.email.toLowerCase() }
+                where: { email: user.email.toLowerCase() },
+                select: { displayName: true }
             });
 
             const generateUsername = (base = "user") => {
@@ -234,11 +217,10 @@ export default async function (fastify, opts) {
                 create: { ...user },
             });
 
-            // We use our existing login handler. It will create the session and set the cookie if needed.
-            // We wrap it in a try-catch to ignore the "already in session" conflict for OAuth and redirect
-            // the user to the frontend anyway.
+            // We wrap the call to handle the case where a user is already in a session
+            // but logs in with Google again.
             try {
-                await handleSuccessfulLogin(fastify, reply, dbUser);
+                await handleSuccessfulLogin(request, reply, fastify, dbUser);
             } catch (error) {
                 if (error.statusCode !== 409) { // Re-throw if it's not the expected conflict
                     throw error;
@@ -262,12 +244,12 @@ export default async function (fastify, opts) {
 
     // ROUTE: Logs a user out of the session.
     fastify.post('/logout', {
-        preHandler: [fastify.session.authorize],
+        preHandler: [fastify.authorizeParticipant],
         schema: {
             body: {
                 type: 'object',
-                properties: { userId: { type: 'integer' } },
-                required: ['userId'],
+                properties: { actorId: { type: 'integer' } },
+                required: ['actorId'],
                 additionalProperties: false
             },
             response: {
@@ -279,30 +261,24 @@ export default async function (fastify, opts) {
         }
     }, async (request, reply) => {
         try {
-            const { userId } = request.body;
-            const session = fastify.session.get();
-            fastify.log.debug(`Logout attempt for user ID: ${userId} from session ${session.sessionId}`);
+            const { actorId } = request.body;
+            fastify.log.debug(`Logout attempt for user ID: ${actorId} from session ${request.user.sessionId}`);
 
-            if (!fastify.session.isParticipant(userId)) {
-                throw fastify.httpErrors.notFound('User not found in current session.');
-            }
+            // The authorize hook has already loaded the session into request.sessionData.
+            request.sessionData.participants = request.sessionData.participants.filter(id => id !== actorId);
 
-            const loggedOutUser = session.participants.get(userId);
-            session.participants.delete(userId);
-            fastify.log.info(`User ${loggedOutUser.displayName} logged out of session ${session.sessionId}`);
-
-            // If the last participant has left, end the session.
-            if (session.participants.size === 0) {
-                fastify.session.set(null);
+            // If the last participant has left, destroy the session.
+            if (request.sessionData.participants.length === 0) {
+                await request.sessionStore.destroy(request.user.sessionId);
                 reply.clearCookie('token', { path: '/' });
-                fastify.log.info(`Session ${session.sessionId} ended as the last participant left.`);
+                fastify.log.info(`Session ${request.user.sessionId} ended as the last participant left.`);
                 return reply.code(204).send();
             }
 
-            // Otherwise, just update the session
-            fastify.session.set(session);
+            await request.saveSession();
 
-            return { participants: Array.from(session.participants.values()) };
+            const hydratedParticipants = await fastify.getHydratedParticipants(request.sessionData.participants);
+            return { participants: hydratedParticipants };
 
         } catch (error) {
             if (error && error.statusCode) {
@@ -315,7 +291,7 @@ export default async function (fastify, opts) {
 
     // ROUTE: Gets the current participants of the session.
     fastify.get('/', {
-        preHandler: [fastify.session.authorize],
+        preHandler: [fastify.authorize],
         schema: {
             response: {
                 200: { $ref: 'sessionState#' },
@@ -325,9 +301,10 @@ export default async function (fastify, opts) {
         }
     }, async (request, reply) => {
         try {
-            const session = fastify.session.get();
-
-            return { participants: Array.from(session.participants.values()) };
+            // The authorize hook has already loaded the lean session into request.sessionData.
+            // All we need to do is hydrate the IDs and return the result.
+            const hydratedParticipants = await fastify.getHydratedParticipants(request.sessionData.participants);
+            return { participants: hydratedParticipants };
 
         } catch (error) {
             if (error && error.statusCode) {

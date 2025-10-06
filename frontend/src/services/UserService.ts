@@ -13,7 +13,7 @@ class UserService {
    */
   async getUserProfile(userId: number): Promise<{ user?: User; error?: string }> {
     const response = await apiService.getUserProfile(userId);
-    return { user: response.data, error: response.error };
+    return { user: response.data?.user, error: response.error };
   }
 
   /**

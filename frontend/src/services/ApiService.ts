@@ -169,8 +169,8 @@ class ApiService {
   /**
    * Gets public profile of a user
    */
-  async getUserProfile(userId: number): Promise<ApiResponse<User>> {
-    return this.request<User>(`/users/${userId}`);
+  async getUserProfile(userId: number): Promise<ApiResponse<{ user: User }>> {
+    return this.request<{ user: User }>(`/users/${userId}`);
   }
 
   /**

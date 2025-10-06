@@ -14,6 +14,11 @@ export default defineConfig({
         changeOrigin: false,
         secure: false,
       },
+      '/avatars': {
+        target: 'http://backend:3000',
+        changeOrigin: false,
+        secure: false,
+      },
     },
   },
   resolve: {

@@ -155,7 +155,7 @@ export class ProfilePage {
                     
                     <!-- User Name -->
                     <h2 class="text-2xl font-bold text-white mb-2">${user.displayName}</h2>
-                    <p class="text-gray-400 text-sm mb-6">${user.email}</p>
+                    <p class="text-gray-400 text-sm mb-6">Player ID: ${user.id}</p>
                     
                     <!-- Edit Profile Button (only for own profile) -->
                     ${isOwnProfile ? `
@@ -704,7 +704,7 @@ export class ProfilePage {
             </div>
             <div>
               <div class="text-white font-medium">${user.displayName}</div>
-              <div class="text-gray-400 text-sm">${user.email}</div>
+              <div class="text-gray-400 text-sm">ID: ${user.id}</div>
             </div>
           </div>
           <button class="send-friend-request-btn px-3 py-1 bg-gradient-to-r from-purple-600 to-cyan-600 text-white text-sm rounded hover:from-purple-700 hover:to-cyan-700 transition-all duration-300" 

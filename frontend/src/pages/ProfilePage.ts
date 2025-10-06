@@ -99,8 +99,7 @@ export class ProfilePage {
 
       const user = userResponse.user
       const participants = sessionService.getParticipants()
-      const currentUser = participants.find(p => p.id)
-      const isOwnProfile = currentUser && currentUser.id === userId
+      const isOwnProfile = participants.some(p => p.id === userId)
 
       // Load profile data in parallel
       const [matches, friends, pendingRequests] = await Promise.all([
@@ -124,8 +123,7 @@ export class ProfilePage {
   private renderProfilePage(user: any, matches: any[], friends: any[], pendingRequests: any[], userId: number): string {
     const winRate = user.wins + user.losses > 0 ? ((user.wins / (user.wins + user.losses)) * 100).toFixed(1) : '0.0'
     const participants = sessionService.getParticipants()
-    const currentUser = participants.find(p => p.id)
-    const isOwnProfile = currentUser && currentUser.id === userId
+    const isOwnProfile = participants.some(p => p.id === userId)
 
     return `
       <div class="min-h-screen mesh-gradient relative overflow-hidden">
@@ -418,8 +416,7 @@ export class ProfilePage {
 
     // Friend management (only for own profile)
     const participants = sessionService.getParticipants()
-    const currentUser = participants.find(p => p.id)
-    const isOwnProfile = currentUser && window.location.pathname === '/profile'
+    const isOwnProfile = window.location.pathname === '/profile' || participants.some(p => window.location.pathname === `/profile/${p.id}`)
     if (isOwnProfile) {
       this.setupFriendEventListeners(onNavigate)
     }
@@ -521,7 +518,7 @@ export class ProfilePage {
 
   private showEditProfileModal(): void {
     const participants = sessionService.getParticipants()
-    const currentUser = participants.find(p => p.id)
+    const currentUser = participants.find(p => window.location.pathname === `/profile/${p.id}` || window.location.pathname === '/profile')
     if (!currentUser || !currentUser.id) return
 
     const modalHTML = `
@@ -586,7 +583,7 @@ export class ProfilePage {
 
   private async handleProfileUpdate(): Promise<void> {
     const participants = sessionService.getParticipants()
-    const currentUser = participants.find(p => p.id)
+    const currentUser = participants.find(p => window.location.pathname === `/profile/${p.id}` || window.location.pathname === '/profile')
     if (!currentUser || !currentUser.id) return
 
     const displayName = (document.getElementById('edit-display-name') as HTMLInputElement)?.value
@@ -620,7 +617,7 @@ export class ProfilePage {
 
   private async showInsightsModal(): Promise<void> {
     const participants = sessionService.getParticipants()
-    const currentUser = participants.find(p => p.id)
+    const currentUser = participants.find(p => window.location.pathname === `/profile/${p.id}` || window.location.pathname === '/profile')
     console.log('Current user:', currentUser)
     
     if (!currentUser || !currentUser.id) {

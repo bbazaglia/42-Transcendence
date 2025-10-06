@@ -30,6 +30,8 @@ class SessionService {
   // --- Getters for easy access to state ---
   getState = (): SessionState => this.state;
   getParticipants = (): User[] => this.state.participants;
+  getParticipantIds(): number[] { return this.state.participants.map(p => p.id); }
+  getParticipantById(userId: number): User | undefined { return this.state.participants.find(p => p.id === userId); }
   isAuthenticated = (): boolean => this.state.isAuthenticated;
   isLoading = (): boolean => this.state.isLoading;
 

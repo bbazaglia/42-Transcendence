@@ -32,28 +32,19 @@ class FriendsService {
   /**
    * Gets the current user's friends
    */
-  async getFriends(): Promise<Friend[]> {
+  async getFriends(userId: number): Promise<Friend[]> {
     try {
-      const currentUser = sessionService.getCurrentUser();
-      if (!currentUser || !currentUser.id) {
-        console.warn('No authenticated user found, cannot fetch friends');
-        return [];
-      }
-
-      const response = await apiService.request<{ friendships: Friend[] }>(`/friends/${currentUser.id}`);
+      const response = await apiService.request<{ friendships: Friend[] }>(`/friends/${userId}`);
       
       if (response.error) {
-        console.error('Failed to fetch friends:', response.error);
-        console.error('Falha ao carregar lista de amigos');
+        console.error(`Failed to fetch friends for user ${userId}:`, response.error);
         return [];
       }
 
-      this.friends = response.data?.friendships || [];
-      return this.friends;
+      return response.data?.friendships || [];
 
     } catch (error) {
       console.error('Error fetching friends:', error);
-      console.error('Falha ao carregar lista de amigos');
       return [];
     }
   }

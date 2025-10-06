@@ -416,8 +416,9 @@ export class GameCustomization {
   renderSettingsButton(): string {
     return `
       <button onclick="openCustomizationMenu()" 
-              class="fixed top-20 right-4 z-50 p-2 text-white hover:text-cyan-400 transition-all duration-300 transform hover:scale-110 bg-black/20 backdrop-blur-sm rounded-lg border border-white/10">
-        <span class="text-2xl">⚙️</span>
+              class="fixed top-20 right-4 z-50 px-3 py-2 text-white hover:text-cyan-400 transition-all duration-300 transform hover:scale-110 bg-black/20 backdrop-blur-sm rounded-lg border border-white/10 flex items-center space-x-2">
+        <span class="text-xl">⚙️</span>
+        <span class="text-sm font-medium">Customize Game</span>
       </button>
     `
   }

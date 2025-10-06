@@ -34,8 +34,8 @@ export class PageService {
             
             <!-- Subtitle -->
             <p class="text-xl text-gray-300 mb-12 max-w-2xl mx-auto">
-              Experience the ultimate competitive Pong experience with tournament brackets, 
-              real-time gameplay, epic battles for glory, and customizable game options.
+              Experience the ultimate competitive Pong with tournament brackets,<br>
+              real-time gameplay, epic battles for glory and customizable options.
             </p>
 
 
@@ -54,14 +54,8 @@ export class PageService {
               </button>
 
               <button id="ai-game-btn" 
-                      class="group relative px-8 py-4 bg-gradient-to-r from-red-600 to-orange-500 text-white font-bold text-xl rounded-xl shadow-2xl hover:shadow-red-500/25 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1">
-                <span class="relative z-10 orbitron-font">🤖 Play vs AI</span>
-                <div class="absolute inset-0 bg-gradient-to-r from-red-700 to-orange-600 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              </button>
-              
-              <button onclick="openCustomizationMenu()" 
                       class="group relative px-8 py-4 bg-gradient-to-r from-pink-600 to-purple-500 text-white font-bold text-xl rounded-xl shadow-2xl hover:shadow-pink-500/25 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1">
-                <span class="relative z-10 orbitron-font">⚙️ Customize Game</span>
+                <span class="relative z-10 orbitron-font">🤖 Play vs AI</span>
                 <div class="absolute inset-0 bg-gradient-to-r from-pink-700 to-purple-600 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </button>
             </div>
@@ -79,13 +73,13 @@ export class PageService {
               </div>
               
               <div class="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10 hover:bg-white/10 transition-all duration-300">
-                <h3 class="text-lg font-semibold text-white mb-2 orbitron-font">Game Customization</h3>
-                <p class="text-gray-400 text-sm">Customize themes, power-ups, difficulty, and game settings</p>
+                <h3 class="text-lg font-semibold text-white mb-2 orbitron-font">AI Practice Mode</h3>
+                <p class="text-gray-400 text-sm">Practice your skills against a skilled AI opponent</p>
               </div>
               
               <div class="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10 hover:bg-white/10 transition-all duration-300">
-                <h3 class="text-lg font-semibold text-white mb-2 orbitron-font">Power-ups & Effects</h3>
-                <p class="text-gray-400 text-sm">Experience exciting power-ups that enhance gameplay</p>
+                <h3 class="text-lg font-semibold text-white mb-2 orbitron-font">Game Customization</h3>
+                <p class="text-gray-400 text-sm">Customize themes, power-ups, difficulty, and game settings</p>
               </div>
             </div>
           </div>

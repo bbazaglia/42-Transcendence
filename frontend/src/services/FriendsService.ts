@@ -66,7 +66,7 @@ class FriendsService {
   }
 
   /**
-   * Gets pending friend requests
+   * Gets pending friend requests (incoming)
    */
   async getPendingRequests(userId?: number): Promise<FriendRequest[]> {
     try {
@@ -95,6 +95,39 @@ class FriendsService {
 
     } catch (error) {
       console.error('Error fetching pending requests:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Gets sent friend requests (pending sent)
+   */
+  async getSentRequests(userId?: number): Promise<FriendRequest[]> {
+    try {
+      let targetUserId = userId;
+      
+      if (!targetUserId) {
+        // Get the current user based on the current URL
+        const participants = sessionService.getParticipants();
+        const currentUser = participants.find(p => window.location.pathname === `/profile/${p.id}` || window.location.pathname === '/profile');
+        if (!currentUser || !currentUser.id) {
+          console.warn('No authenticated user found, cannot fetch sent requests');
+          return [];
+        }
+        targetUserId = currentUser.id;
+      }
+
+      const response = await apiService.request<{ friendships: FriendRequest[] }>(`/friends/pending/sent/${targetUserId}`);
+      
+      if (response.error) {
+        console.error('Failed to fetch sent requests:', response.error);
+        return [];
+      }
+
+      return response.data?.friendships || [];
+
+    } catch (error) {
+      console.error('Error fetching sent requests:', error);
       return [];
     }
   }
@@ -222,6 +255,47 @@ class FriendsService {
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Failed to reject friend request' 
+      };
+    }
+  }
+
+  /**
+   * Cancels a sent friend request
+   */
+  async cancelFriendRequest(friendshipId: number, senderId?: number): Promise<{ success: boolean; error?: string }> {
+    try {
+      let targetSenderId = senderId;
+      
+      if (!targetSenderId) {
+        // Get the current user based on the current URL
+        const participants = sessionService.getParticipants();
+        const currentUser = participants.find(p => window.location.pathname === `/profile/${p.id}` || window.location.pathname === '/profile');
+        if (!currentUser) {
+          return { success: false, error: 'User not authenticated' };
+        }
+        targetSenderId = currentUser.id;
+      }
+
+      const response = await apiService.request(`/friends/${friendshipId}`, {
+        method: 'DELETE',
+        body: JSON.stringify({
+          actorId: targetSenderId
+        })
+      });
+
+      if (response.error) {
+        console.error('Failed to cancel friend request:', response.error);
+        return { success: false, error: response.error };
+      }
+
+      console.log('Friend request canceled successfully');
+      return { success: true };
+
+    } catch (error) {
+      console.error('Error canceling friend request:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to cancel friend request' 
       };
     }
   }

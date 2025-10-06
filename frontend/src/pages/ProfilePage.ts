@@ -39,7 +39,10 @@ export class ProfilePage {
       return this.renderError()
     }
 
-    return this.renderProfilePage(profileData.user, profileData.matches, profileData.friends, profileData.pendingRequests, userId)
+    // Load sent requests
+    const sentRequests = await friendsService.getSentRequests(userId)
+
+    return this.renderProfilePage(profileData.user, profileData.matches, profileData.friends, profileData.pendingRequests, sentRequests, userId)
   }
 
   private renderLoginRequired(): string {
@@ -122,7 +125,7 @@ export class ProfilePage {
     }
   }
 
-  private renderProfilePage(user: any, matches: any[], friends: any[], pendingRequests: any[], userId: number): string {
+  private renderProfilePage(user: any, matches: any[], friends: any[], pendingRequests: any[], sentRequests: any[], userId: number): string {
     const winRate = user.wins + user.losses > 0 ? ((user.wins / (user.wins + user.losses)) * 100).toFixed(1) : '0.0'
     const participants = sessionService.getParticipants()
     const isOwnProfile = participants.some(p => p.id === userId)
@@ -228,7 +231,7 @@ export class ProfilePage {
                 ${isOwnProfile ? `
                   <!-- Friends Tab Content -->
                   <div id="friends-content">
-                    ${this.renderFriendsContent(friends, pendingRequests)}
+                    ${this.renderFriendsContent(friends, pendingRequests, sentRequests)}
                   </div>
                 ` : ''}
                 
@@ -244,7 +247,7 @@ export class ProfilePage {
     `
   }
 
-  private renderFriendsContent(friends: any[], pendingRequests: any[]): string {
+  private renderFriendsContent(friends: any[], pendingRequests: any[], sentRequests: any[] = []): string {
     return `
       <div class="space-y-6">
         <!-- Pending Requests -->
@@ -276,6 +279,38 @@ export class ProfilePage {
                             data-sender-id="${request.user.id}"
                             data-friendship-id="${request.friendshipId}">
                       Reject
+                    </button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- Sent Requests -->
+        ${sentRequests.length > 0 ? `
+          <div>
+            <h4 class="text-lg font-semibold text-white mb-4">Pending Friend Sent Requests</h4>
+            <div class="space-y-3">
+              ${sentRequests.map(request => `
+                <div class="flex items-center justify-between bg-white/5 rounded-lg p-4">
+                  <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-gradient-to-br from-cyan-400 to-purple-600 rounded-full flex items-center justify-center">
+                      <img src="${request.user.avatarUrl || '/avatars/default-avatar.png'}" 
+                           alt="Avatar" 
+                           class="w-10 h-10 rounded-full object-cover"
+                           onerror="this.src='/avatars/default-avatar.png'">
+                    </div>
+                    <div>
+                      <div class="text-white font-medium">${request.user.displayName}</div>
+                      <div class="text-gray-400 text-sm">ID: ${request.user.id}</div>
+                    </div>
+                  </div>
+                  <div class="flex space-x-2">
+                    <button class="cancel-request-btn px-3 py-1 bg-orange-600/20 text-white border border-orange-500/30 text-sm rounded hover:bg-orange-600/30 transition-colors" 
+                            data-receiver-id="${request.user.id}"
+                            data-friendship-id="${request.friendshipId}">
+                      Cancel
                     </button>
                   </div>
                 </div>
@@ -563,6 +598,32 @@ export class ProfilePage {
             }
           } else {
             alert('Error: Could not identify current user for rejecting request')
+          }
+        }
+      }
+    })
+
+    // Cancel friend request
+    document.addEventListener('click', async (e) => {
+      const target = e.target as HTMLElement
+      if (target.classList.contains('cancel-request-btn')) {
+        const friendshipId = parseInt(target.getAttribute('data-friendship-id') || '0')
+        if (friendshipId) {
+          // Get the current user (the one canceling the request)
+          const participants = sessionService.getParticipants()
+          const currentUser = participants.find(p => window.location.pathname === `/profile/${p.id}` || window.location.pathname === '/profile')
+          const senderId = currentUser?.id
+          
+          if (senderId) {
+            const result = await friendsService.cancelFriendRequest(friendshipId, senderId)
+            if (result.success) {
+              alert('Friend request canceled!')
+              window.location.reload() // Refresh the page to show updated sent requests
+            } else {
+              alert(`Failed to cancel friend request: ${result.error}`)
+            }
+          } else {
+            alert('Error: Could not identify current user for canceling request')
           }
         }
       }

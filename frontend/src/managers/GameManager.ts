@@ -517,11 +517,8 @@ export class GameManager {
         winner
       )
       
-      // For tournament matches, redirect after a short delay
-      setTimeout(() => {
-        window.history.pushState({}, '', '/tournament')
-        window.dispatchEvent(new CustomEvent('tournament-updated'))
-      }, 2000)
+      // For tournament matches, show game over modal
+      this.showTournamentGameOverModal(winner)
     } else {
       console.log('Quick game ended - showing game over screen')
       // For quick games, we'll show the game over overlay
@@ -717,6 +714,61 @@ export class GameManager {
       if (winnerText && this.gameWinner) {
         winnerText.textContent = `${this.gameWinner} Wins!`
       }
+    }
+  }
+
+  /**
+   * Shows game over modal for tournament games
+   */
+  private showTournamentGameOverModal(winner: string): void {
+    const modalHTML = `
+      <div id="tournament-game-over-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-black/90 backdrop-blur-md rounded-2xl border border-white/20 shadow-2xl max-w-md w-full">
+          <!-- Header -->
+          <div class="p-6 text-center">
+            <div class="w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span class="text-2xl">🏆</span>
+            </div>
+            <h3 class="text-3xl font-bold text-cyan-400 mb-2 orbitron-font">Match Complete!</h3>
+            <p class="text-xl text-yellow-400 mb-6">${winner} Wins!</p>
+            
+            <!-- Buttons -->
+            <div class="flex justify-center">
+              <button id="continue-tournament-btn" 
+                      class="px-6 py-3 bg-cyan-600/20 text-white border border-cyan-500/30 font-bold rounded-xl hover:bg-cyan-600/30 transition-colors">
+                Continue Tournament
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `
+
+    // Remove any existing modal
+    const existingModal = document.getElementById('tournament-game-over-modal')
+    if (existingModal) {
+      existingModal.remove()
+    }
+
+    // Add the modal to the page
+    document.body.insertAdjacentHTML('beforeend', modalHTML)
+
+    // Set up event listener
+    document.getElementById('continue-tournament-btn')?.addEventListener('click', () => {
+      this.hideTournamentGameOverModal()
+      // Navigate to tournament page
+      window.history.pushState({}, '', '/tournament')
+      window.dispatchEvent(new CustomEvent('tournament-updated'))
+    })
+  }
+
+  /**
+   * Hides the tournament game over modal
+   */
+  private hideTournamentGameOverModal(): void {
+    const modal = document.getElementById('tournament-game-over-modal')
+    if (modal) {
+      modal.remove()
     }
   }
 }

@@ -26,7 +26,7 @@ export class App {
     this.gameManager = new GameManager()
     this.customization = GameCustomization.getInstance()
     this.authModal = new AuthModal()
-    this.navbar = new Navbar(this.authModal)
+    this.navbar = new Navbar(this.authModal, this.handleSearchResults.bind(this))
     this.lobby = new Lobby(this.authModal)
     this.pageService = new PageService(this.authModal)
     this.rootElement = document.getElementById('root')!
@@ -121,6 +121,9 @@ export class App {
 
     // Setup event listeners once
     this.setupNavbarListeners()
+    
+    // Update search visibility based on current auth state
+    this.navbar.updateSearchVisibility()
   }
 
   private setupNavbarListeners(): void {
@@ -666,8 +669,22 @@ export class App {
   private setupAuthListeners(): void {
     // Listen for auth state changes
     sessionService.subscribe(() => {
+      // Update navbar search visibility
+      this.navbar.updateSearchVisibility()
       // Re-render the entire app to update lobby and other components
       this.render()
     })
+  }
+
+  /**
+   * Handles search results from the navbar
+   */
+  private handleSearchResults(users: any[]): void {
+    if (users.length > 0) {
+      const userId = users[0].id
+      // Navigate to the user's profile page
+      window.history.pushState({}, '', `/profile/${userId}`)
+      this.render()
+    }
   }
 }

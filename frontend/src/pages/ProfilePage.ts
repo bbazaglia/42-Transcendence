@@ -546,11 +546,24 @@ export class ProfilePage {
     document.addEventListener('click', async (e) => {
       const target = e.target as HTMLElement
       if (target.classList.contains('reject-request-btn')) {
-        const senderId = parseInt(target.getAttribute('data-sender-id') || '0')
-        if (senderId) {
-          // For now, we'll just refresh the page. In a real implementation, you'd have a reject endpoint
-          alert('Friend request rejected!')
-          window.location.reload()
+        const friendshipId = parseInt(target.getAttribute('data-friendship-id') || '0')
+        if (friendshipId) {
+          // Get the current user (the one rejecting the request)
+          const participants = sessionService.getParticipants()
+          const currentUser = participants.find(p => window.location.pathname === `/profile/${p.id}` || window.location.pathname === '/profile')
+          const rejectorId = currentUser?.id
+          
+          if (rejectorId) {
+            const result = await friendsService.rejectFriendRequest(friendshipId, rejectorId)
+            if (result.success) {
+              alert('Friend request rejected!')
+              window.location.reload() // Refresh the page to show updated pending requests
+            } else {
+              alert(`Failed to reject friend request: ${result.error}`)
+            }
+          } else {
+            alert('Error: Could not identify current user for rejecting request')
+          }
         }
       }
     })
@@ -727,13 +740,13 @@ export class ProfilePage {
                        required>
               </div>
               
-              <div id="search-results" class="space-y-2 max-h-40 overflow-y-auto">
+              <div id="friend-search-results" class="space-y-2 max-h-40 overflow-y-auto">
                 <!-- Search results will appear here -->
               </div>
               
-              <div class="flex space-x-3">
+              <div class="flex justify-center">
                 <button type="button" id="cancel-add-friend" 
-                        class="flex-1 px-4 py-3 bg-gradient-to-r from-gray-600 to-gray-500 text-white font-bold rounded-xl shadow-lg hover:from-gray-700 hover:to-gray-600 transition-all duration-300">
+                        class="px-6 py-3 bg-gradient-to-r from-gray-600 to-gray-500 text-white font-bold rounded-xl shadow-lg hover:from-gray-700 hover:to-gray-600 transition-all duration-300">
                   Cancel
                 </button>
               </div>
@@ -748,10 +761,17 @@ export class ProfilePage {
     // Event listeners
     document.getElementById('friend-search')?.addEventListener('input', async (e) => {
       const query = (e.target as HTMLInputElement).value
+      console.log('Input event triggered, query:', query, 'length:', query.length)
       if (query.length > 2) {
+        console.log('Query length > 2, calling searchUsers')
         await this.searchUsers(query)
       } else {
-        document.getElementById('search-results')!.innerHTML = ''
+        console.log('Query length <= 2, clearing results')
+        const searchResultsElement = document.getElementById('friend-search-results')
+        if (searchResultsElement) {
+          searchResultsElement.innerHTML = ''
+          searchResultsElement.classList.add('hidden')
+        }
       }
     })
 
@@ -770,8 +790,11 @@ export class ProfilePage {
 
   private async searchUsers(query: string): Promise<void> {
     try {
+      console.log('Searching for users with query:', query)
       const response = await apiService.searchUsers(query)
+      console.log('Search response:', response)
       const results = response.data?.users || []
+      console.log('Search results:', results)
       
       const resultsHTML = results.map((user: any) => `
         <div class="flex items-center justify-between bg-white/5 rounded-lg p-3">
@@ -794,7 +817,27 @@ export class ProfilePage {
         </div>
       `).join('')
 
-      document.getElementById('search-results')!.innerHTML = resultsHTML
+      const searchResultsElement = document.getElementById('friend-search-results')
+      console.log('Search results element:', searchResultsElement)
+      console.log('Results HTML:', resultsHTML)
+      
+      if (searchResultsElement) {
+        // Remove hidden class if it exists
+        searchResultsElement.classList.remove('hidden')
+        searchResultsElement.innerHTML = resultsHTML
+        
+        // Debug visibility
+        console.log('Element classes after removal:', searchResultsElement.className)
+        console.log('Element style display:', searchResultsElement.style.display)
+        console.log('Element computed style display:', window.getComputedStyle(searchResultsElement).display)
+        console.log('Element computed style visibility:', window.getComputedStyle(searchResultsElement).visibility)
+        console.log('Element computed style opacity:', window.getComputedStyle(searchResultsElement).opacity)
+        console.log('Element offsetHeight:', searchResultsElement.offsetHeight)
+        console.log('Element offsetWidth:', searchResultsElement.offsetWidth)
+        console.log('Results inserted into DOM')
+      } else {
+        console.error('Search results element not found!')
+      }
 
       // Add event listeners for send friend request buttons
       document.querySelectorAll('.send-friend-request-btn').forEach(btn => {

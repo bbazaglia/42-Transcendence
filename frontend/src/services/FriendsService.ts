@@ -37,9 +37,9 @@ class FriendsService {
       let targetUserId = userId;
       
       if (!targetUserId) {
-        // Fallback: get first participant (for backward compatibility)
+        // Get the current user based on the current URL
         const participants = sessionService.getParticipants();
-        const currentUser = participants.find(p => p.id);
+        const currentUser = participants.find(p => window.location.pathname === `/profile/${p.id}` || window.location.pathname === '/profile');
         if (!currentUser || !currentUser.id) {
           console.warn('No authenticated user found, cannot fetch friends');
           return [];
@@ -73,9 +73,9 @@ class FriendsService {
       let targetUserId = userId;
       
       if (!targetUserId) {
-        // Fallback: get first participant (for backward compatibility)
+        // Get the current user based on the current URL
         const participants = sessionService.getParticipants();
-        const currentUser = participants.find(p => p.id);
+        const currentUser = participants.find(p => window.location.pathname === `/profile/${p.id}` || window.location.pathname === '/profile');
         if (!currentUser || !currentUser.id) {
           console.warn('No authenticated user found, cannot fetch pending requests');
           return [];
@@ -107,9 +107,9 @@ class FriendsService {
       let targetSenderId = senderId;
       
       if (!targetSenderId) {
-        // Fallback: get first participant (for backward compatibility)
+        // Get the current user based on the current URL
         const participants = sessionService.getParticipants();
-        const currentUser = participants.find(p => p.id);
+        const currentUser = participants.find(p => window.location.pathname === `/profile/${p.id}` || window.location.pathname === '/profile');
         if (!currentUser) {
           return { success: false, error: 'User not authenticated' };
         }
@@ -149,9 +149,9 @@ class FriendsService {
       let targetAcceptorId = acceptorId;
       
       if (!targetAcceptorId) {
-        // Fallback: get first participant (for backward compatibility)
+        // Get the current user based on the current URL
         const participants = sessionService.getParticipants();
-        const currentUser = participants.find(p => p.id);
+        const currentUser = participants.find(p => window.location.pathname === `/profile/${p.id}` || window.location.pathname === '/profile');
         if (!currentUser) {
           return { success: false, error: 'User not authenticated' };
         }
@@ -186,6 +186,47 @@ class FriendsService {
   }
 
   /**
+   * Rejects a friend request
+   */
+  async rejectFriendRequest(friendshipId: number, rejectorId?: number): Promise<{ success: boolean; error?: string }> {
+    try {
+      let targetRejectorId = rejectorId;
+      
+      if (!targetRejectorId) {
+        // Get the current user based on the current URL
+        const participants = sessionService.getParticipants();
+        const currentUser = participants.find(p => window.location.pathname === `/profile/${p.id}` || window.location.pathname === '/profile');
+        if (!currentUser) {
+          return { success: false, error: 'User not authenticated' };
+        }
+        targetRejectorId = currentUser.id;
+      }
+
+      const response = await apiService.request(`/friends/${friendshipId}`, {
+        method: 'DELETE',
+        body: JSON.stringify({
+          actorId: targetRejectorId
+        })
+      });
+
+      if (response.error) {
+        console.error('Failed to reject friend request:', response.error);
+        return { success: false, error: response.error };
+      }
+
+      console.log('Friend request rejected successfully');
+      return { success: true };
+
+    } catch (error) {
+      console.error('Error rejecting friend request:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to reject friend request' 
+      };
+    }
+  }
+
+  /**
    * Removes a friend
    */
   async removeFriend(friendshipId: number, removerId?: number): Promise<{ success: boolean; error?: string }> {
@@ -193,9 +234,9 @@ class FriendsService {
       let targetRemoverId = removerId;
       
       if (!targetRemoverId) {
-        // Fallback: get first participant (for backward compatibility)
+        // Get the current user based on the current URL
         const participants = sessionService.getParticipants();
-        const currentUser = participants.find(p => p.id);
+        const currentUser = participants.find(p => window.location.pathname === `/profile/${p.id}` || window.location.pathname === '/profile');
         if (!currentUser) {
           return { success: false, error: 'User not authenticated' };
         }

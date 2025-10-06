@@ -59,6 +59,12 @@ export class PageService {
                 <span class="relative z-10 orbitron-font">🤖 Play vs AI</span>
                 <div class="absolute inset-0 bg-gradient-to-r from-pink-700 to-purple-600 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </button>
+
+              <button id="customize-game-btn" 
+                      class="group relative px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-500 text-white font-bold text-xl rounded-xl shadow-2xl hover:shadow-indigo-500/25 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1">
+                <span class="relative z-10 orbitron-font">⚙️ Customize Game</span>
+                <div class="absolute inset-0 bg-gradient-to-r from-indigo-700 to-purple-600 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              </button>
             </div>
             
             <!-- Features preview -->
@@ -142,6 +148,11 @@ export class PageService {
     document.getElementById('tournament-btn')?.addEventListener('click', (e) => {
       e.preventDefault()
       this.showUserSelection('tournament', onNavigate)
+    })
+
+    document.getElementById('customize-game-btn')?.addEventListener('click', (e) => {
+      e.preventDefault()
+      onNavigate('/customize')
     })
   }
 

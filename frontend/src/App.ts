@@ -85,6 +85,7 @@ export class App {
     this.router.addRoute('/register', () => this.showRegistrationPage())
     this.router.addRoute('/profile', () => this.showProfilePage())
     this.router.addRoute('/lobby', () => this.showLobbyPage())
+    this.router.addRoute('/customize', () => this.showCustomizePage())
     
     // Dynamic route for specific user profiles
     this.router.addDynamicRoute(/^\/profile\/(?<userId>\d+)$/, (params) => {
@@ -583,7 +584,14 @@ export class App {
           mapTheme: mapTheme || 'classic'
         })
 
-        this.closeCustomizationMenu()
+        // Check if we're on the customize page and navigate back to home
+        if (window.location.pathname === '/customize') {
+          window.history.pushState({}, '', '/')
+          this.render()
+        } else {
+          // If we're in a modal, close it
+          this.closeCustomizationMenu()
+        }
       }
 
       ; (window as any).resetToDefaults = () => {
@@ -594,8 +602,16 @@ export class App {
           powerUpsEnabled: false,
           mapTheme: 'classic'
         })
-        this.closeCustomizationMenu()
-        this.render()
+        
+        // Check if we're on the customize page and navigate back to home
+        if (window.location.pathname === '/customize') {
+          window.history.pushState({}, '', '/')
+          this.render()
+        } else {
+          // If we're in a modal, close it
+          this.closeCustomizationMenu()
+          this.render()
+        }
       }
   }
 
@@ -603,6 +619,13 @@ export class App {
     const menu = document.querySelector('.fixed.inset-0.bg-black\\/80')
     if (menu) {
       menu.remove()
+    }
+    
+    // Ensure the current page content is visible after closing the modal
+    // This handles cases where the modal might have been opened from a different page
+    if (window.location.pathname === '/') {
+      // If we're on the home page, make sure it's properly rendered
+      this.showHomePage()
     }
   }
 
@@ -937,5 +960,10 @@ export class App {
         }
       })
     })
+  }
+
+  private showCustomizePage(): void {
+    this.rootElement.innerHTML = this.customization.renderCustomizationMenu()
+    this.setupCustomizationFormHandlers()
   }
 }

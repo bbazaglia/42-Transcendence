@@ -136,7 +136,7 @@ export class GameManager {
     })
   }
 
-  private resetGame(): void {
+  resetGame(): void {
     // Reset scores
     this.score1 = 0
     this.score2 = 0
@@ -485,7 +485,14 @@ export class GameManager {
       cancelAnimationFrame(this.animationId)
     }
 
-    const winner = this.score1 > this.score2 ? 'Player 1' : 'Player 2'
+    // Determine winner using actual player names if available
+    let winner: string
+    if (this.currentMatch) {
+      winner = this.score1 > this.score2 ? this.currentMatch.player1 : this.currentMatch.player2
+    } else {
+      // Fallback to generic names if no match info
+      winner = this.score1 > this.score2 ? 'Player 1' : 'Player 2'
+    }
     this.gameWinner = winner
     this.gameOver = true
 
@@ -499,17 +506,15 @@ export class GameManager {
     // console.log('Current match:', this.currentMatch)
     
     if (this.tournamentManager && this.currentMatch) {
-      const winnerName = winner === 'Player 1' ? this.currentMatch.player1 : this.currentMatch.player2
       console.log('Game ended, recording result:', {
         player1: this.currentMatch.player1,
         player2: this.currentMatch.player2,
-        winner: winnerName,
-        gameWinner: winner
+        winner: winner
       })
       this.tournamentManager.recordMatchResult(
         this.currentMatch.player1,
         this.currentMatch.player2,
-        winnerName
+        winner
       )
       
       // For tournament matches, redirect after a short delay

@@ -4,6 +4,7 @@ import { friendsService } from '../services/FriendsService'
 import { apiService } from '../services/ApiService'
 import { userService } from '../services/UserService'
 import { InsightsModal } from '../components/InsightsModal'
+import { userSelectionModal } from '../components/UserSelectionModal'
 
 //TODO: remove all currentUser related code as it is obsolete
 export class ProfilePage {
@@ -346,7 +347,7 @@ export class ProfilePage {
                   ${new Date(match.playedAt).toLocaleDateString()}
                 </div>
                 <div class="text-white font-medium">
-                  Player ${match.playerOneId} vs Player ${match.playerTwoId}
+                  ${match.playerOne?.displayName || `Player ${match.playerOneId}`} vs ${match.playerTwo?.displayName || `Player ${match.playerTwoId}`}
                 </div>
               </div>
               <div class="flex items-center space-x-4">
@@ -354,7 +355,7 @@ export class ProfilePage {
                   ${match.playerOneScore} - ${match.playerTwoScore}
                 </div>
                 <div class="text-emerald-400 text-sm font-semibold">
-                  Winner: Player ${match.winnerId}
+                  Winner: ${match.winner?.displayName || `Player ${match.winnerId}`}
                 </div>
               </div>
             </div>
@@ -441,8 +442,47 @@ export class ProfilePage {
     // Play first game button
     document.getElementById('play-first-game-btn')?.addEventListener('click', (e) => {
       e.preventDefault()
-      onNavigate('/quick-game')
+      this.showUserSelection('quick-game', onNavigate)
     })
+  }
+
+  /**
+   * Shows user selection modal for different game types
+   */
+  private showUserSelection(gameType: 'quick-game' | 'ai-game' | 'tournament', onNavigate: (path: string) => void): void {
+    const options = {
+      'quick-game': { gameType: 'quick-game' as const, minPlayers: 2, maxPlayers: 2 },
+      'ai-game': { gameType: 'ai-game' as const, minPlayers: 1, maxPlayers: 1, allowAI: true },
+      'tournament': { gameType: 'tournament' as const, minPlayers: 4, maxPlayers: 16 }
+    }
+
+    // Map game types to correct routes
+    const routeMap = {
+      'quick-game': '/quick-game',
+      'ai-game': '/play-ai',
+      'tournament': '/tournament'
+    }
+
+    userSelectionModal.show(
+      options[gameType],
+      (selection) => {
+        // Store selected players for the game
+        this.storeSelectedPlayers(selection)
+        // Navigate to the appropriate page using correct route
+        onNavigate(routeMap[gameType])
+      },
+      () => {
+        // User cancelled selection
+        console.log('User selection cancelled')
+      }
+    )
+  }
+
+  /**
+   * Stores selected players in session storage for the game to use
+   */
+  private storeSelectedPlayers(selection: any): void {
+    sessionStorage.setItem('selectedPlayers', JSON.stringify(selection))
   }
 
   private switchProfileTab(tab: 'friends' | 'matches'): void {

@@ -47,6 +47,21 @@ export interface Match {
   playerTwoScore: number;
   winnerId: number | null;
   playedAt: string;
+  playerOne?: {
+    id: number;
+    displayName: string;
+    avatarUrl: string;
+  };
+  playerTwo?: {
+    id: number;
+    displayName: string;
+    avatarUrl: string;
+  };
+  winner?: {
+    id: number;
+    displayName: string;
+    avatarUrl: string;
+  };
 }
 
 export interface CreateMatchRequest {

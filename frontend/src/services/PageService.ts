@@ -1,4 +1,5 @@
 import { ProfilePage } from '../pages/ProfilePage'
+import { userSelectionModal } from '../components/UserSelectionModal.js'
 
 export class PageService {
   private profilePage: ProfilePage
@@ -130,17 +131,56 @@ export class PageService {
   setupHomePageListeners(onNavigate: (path: string) => void): void {
     document.getElementById('quick-game-btn')?.addEventListener('click', (e) => {
       e.preventDefault()
-      onNavigate('/quick-game')
+      this.showUserSelection('quick-game', onNavigate)
     })
 
     document.getElementById('ai-game-btn')?.addEventListener('click', (e) => {
       e.preventDefault()
-      onNavigate('/play-ai')
+      this.showUserSelection('ai-game', onNavigate)
     })
 
     document.getElementById('tournament-btn')?.addEventListener('click', (e) => {
       e.preventDefault()
-      onNavigate('/tournament')
+      this.showUserSelection('tournament', onNavigate)
     })
+  }
+
+  /**
+   * Shows user selection modal for different game types
+   */
+  private showUserSelection(gameType: 'quick-game' | 'ai-game' | 'tournament', onNavigate: (path: string) => void): void {
+    const options = {
+      'quick-game': { gameType: 'quick-game' as const, minPlayers: 2, maxPlayers: 2 },
+      'ai-game': { gameType: 'ai-game' as const, minPlayers: 1, maxPlayers: 1, allowAI: true },
+      'tournament': { gameType: 'tournament' as const, minPlayers: 4, maxPlayers: 16 }
+    }
+
+    // Map game types to correct routes
+    const routeMap = {
+      'quick-game': '/quick-game',
+      'ai-game': '/play-ai',  // Fix: use correct route
+      'tournament': '/tournament'
+    }
+
+    userSelectionModal.show(
+      options[gameType],
+      (selection) => {
+        // Store selected players for the game
+        this.storeSelectedPlayers(selection)
+        // Navigate to the appropriate page using correct route
+        onNavigate(routeMap[gameType])
+      },
+      () => {
+        // User cancelled selection
+        console.log('User selection cancelled')
+      }
+    )
+  }
+
+  /**
+   * Stores selected players in session storage for the game to use
+   */
+  private storeSelectedPlayers(selection: any): void {
+    sessionStorage.setItem('selectedPlayers', JSON.stringify(selection))
   }
 }

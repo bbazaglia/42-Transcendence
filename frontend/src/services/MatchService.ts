@@ -144,18 +144,9 @@ class MatchService {
    * Updates local user stats after a match
    */
   private updateLocalUserStats(matchResult: MatchResult): void {
-    const participants = sessionService.getParticipants();
-    const currentUser = participants.find(p => p.id);
-    if (!currentUser || !currentUser.id) return;
-
-    // Determine if current user won or lost
-    const isCurrentUserWinner = matchResult.winnerId === currentUser.id;
-    
-    if (isCurrentUserWinner) {
-      sessionService.updateUserStats(1, 0); // +1 win, +0 losses
-    } else {
-      sessionService.updateUserStats(0, 1); // +0 wins, +1 loss
-    }
+    // Note: User stats are updated on the backend when the match is saved
+    // This method is kept for potential future local caching needs
+    console.log('Match result processed:', matchResult);
   }
 }
 

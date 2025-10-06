@@ -216,7 +216,7 @@ export class App {
             <div class="text-center">
               <h1 class="text-4xl font-bold text-white mb-4">Login Required</h1>
               <p class="text-gray-300 mb-6">You need to be logged in to play games</p>
-              <button if="go-home-btn"
+              <button id="go-home-btn"
                       class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
                 Go Home
               </button>
@@ -233,6 +233,18 @@ export class App {
       return
     }
 
+    // Get selected players from session storage
+    const selectedPlayersData = sessionStorage.getItem('selectedPlayers')
+    let selectedPlayers = null
+    if (selectedPlayersData) {
+      try {
+        selectedPlayers = JSON.parse(selectedPlayersData)
+        // Clear the stored selection after reading
+        sessionStorage.removeItem('selectedPlayers')
+      } catch (error) {
+        console.error('Error parsing selected players:', error)
+      }
+    }
 
     this.rootElement.innerHTML = `
       <div class="min-h-screen mesh-gradient relative overflow-hidden">
@@ -272,6 +284,14 @@ export class App {
               <p class="text-gray-300">Player 2: <span class="text-purple-400 font-mono">↑</span> / <span class="text-purple-400 font-mono">↓</span> arrow keys</p>
               <p class="text-gray-300">Pause: <span class="text-yellow-400 font-mono">SPACE</span> key</p>
             </div>
+            
+            <!-- Reset Button -->
+            <div class="mt-6">
+              <button id="reset-game-btn" 
+                      class="px-6 py-3 bg-red-600/20 text-white border border-red-500/30 font-bold rounded-xl hover:bg-red-600/30 transition-colors">
+                Reset Game
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -280,9 +300,33 @@ export class App {
     `
 
     if (isQuickGame) {
-      // Quick game - start without tournament manager
+      // Quick game - use selected players
       console.log(`Starting quick game. Is AI game: ${isAIGame}`)
-      this.gameManager.startGame(undefined, undefined, this.customization, isAIGame)
+      console.log('Selected players:', selectedPlayers)
+      
+      if (selectedPlayers && selectedPlayers.players && selectedPlayers.players.length > 0) {
+        // Use selected players for the game
+        const players = selectedPlayers.players
+        if (isAIGame && players.length === 1) {
+          // AI game with one selected player
+          this.gameManager.startGame(undefined, {
+            player1: players[0].displayName,
+            player2: 'AI'
+          }, this.customization, true)
+        } else if (!isAIGame && players.length === 2) {
+          // Quick game with two selected players
+          this.gameManager.startGame(undefined, {
+            player1: players[0].displayName,
+            player2: players[1].displayName
+          }, this.customization, false)
+        } else {
+          // Fallback to default behavior
+          this.gameManager.startGame(undefined, undefined, this.customization, isAIGame)
+        }
+      } else {
+        // No selected players, use default behavior
+        this.gameManager.startGame(undefined, undefined, this.customization, isAIGame)
+      }
 
       // Set up game over button handlers for quick games
       this.setupQuickGameButtons()
@@ -309,12 +353,28 @@ export class App {
         console.log('No next match found, starting game without tournament')
         this.gameManager.startGame(undefined, undefined, this.customization, false)
       }
+      
+      // Set up reset button for tournament games
+      this.setupGameResetButton()
     }
 
     // Auth bar listeners are set up in the main render() method
   }
 
   private showRegistrationPage(): void {
+    // Get selected players from session storage
+    const selectedPlayersData = sessionStorage.getItem('selectedPlayers')
+    let selectedPlayers = null
+    if (selectedPlayersData) {
+      try {
+        selectedPlayers = JSON.parse(selectedPlayersData)
+        // Clear the stored selection after reading
+        sessionStorage.removeItem('selectedPlayers')
+      } catch (error) {
+        console.error('Error parsing selected players:', error)
+      }
+    }
+
     this.rootElement.innerHTML = `
       <div class="min-h-screen mesh-gradient relative overflow-hidden">
         
@@ -355,7 +415,7 @@ export class App {
         </div>
       </div>
     `
-    this.setupRegistrationForm()
+    this.setupRegistrationForm(selectedPlayers)
   }
 
   private async showProfilePage(userId?: number): Promise<void> {
@@ -391,10 +451,27 @@ export class App {
     return inputs
   }
 
-  private setupRegistrationForm(): void {
+  private setupRegistrationForm(selectedPlayers?: any): void {
     const form = document.getElementById('registrationForm') as HTMLFormElement
     const playerCountSelect = document.getElementById('playerCount') as HTMLSelectElement
     const playerInputs = document.getElementById('playerInputs')!
+
+    // Pre-fill form with selected players if available
+    if (selectedPlayers && selectedPlayers.players && selectedPlayers.players.length > 0) {
+      const playerCount = selectedPlayers.players.length
+      playerCountSelect.value = playerCount.toString()
+      playerInputs.innerHTML = this.generatePlayerInputs(playerCount)
+      
+      // Fill in the player names
+      setTimeout(() => {
+        const inputs = form.querySelectorAll('input[type="text"]')
+        selectedPlayers.players.forEach((player: any, index: number) => {
+          if (inputs[index]) {
+            (inputs[index] as HTMLInputElement).value = player.displayName
+          }
+        })
+      }, 0)
+    }
 
     playerCountSelect.addEventListener('change', () => {
       const count = parseInt(playerCountSelect.value)
@@ -654,6 +731,20 @@ export class App {
     document.getElementById('back-main-btn')?.addEventListener('click', (e) => {
       e.preventDefault()
       this.gameManager.backToMain()
+    })
+
+    // Reset button handler
+    document.getElementById('reset-game-btn')?.addEventListener('click', (e) => {
+      e.preventDefault()
+      this.gameManager.resetGame()
+    })
+  }
+
+  // Set up reset button for tournament games
+  private setupGameResetButton(): void {
+    document.getElementById('reset-game-btn')?.addEventListener('click', (e) => {
+      e.preventDefault()
+      this.gameManager.resetGame()
     })
   }
 

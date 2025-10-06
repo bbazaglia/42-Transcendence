@@ -147,7 +147,15 @@ export class PageService {
 
     document.getElementById('tournament-btn')?.addEventListener('click', (e) => {
       e.preventDefault()
-      this.showUserSelection('tournament', onNavigate)
+      // Check if there's already a tournament in progress
+      const existingTournament = localStorage.getItem('currentTournament')
+      if (existingTournament) {
+        // Navigate directly to tournament page if one exists
+        onNavigate('/tournament')
+      } else {
+        // Show user selection modal if no tournament exists
+        this.showUserSelection('tournament', onNavigate)
+      }
     })
 
     document.getElementById('customize-game-btn')?.addEventListener('click', (e) => {

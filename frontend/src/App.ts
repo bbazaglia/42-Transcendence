@@ -82,7 +82,6 @@ export class App {
     this.router.addRoute('/game', () => this.showGamePage(false, false))
     this.router.addRoute('/quick-game', () => this.showGamePage(true, false))
     this.router.addRoute('/play-ai', () => this.showGamePage(true, true))
-    this.router.addRoute('/register', () => this.showRegistrationPage())
     this.router.addRoute('/profile', () => this.showProfilePage())
     this.router.addRoute('/lobby', () => this.showLobbyPage())
     this.router.addRoute('/customize', () => this.showCustomizePage())
@@ -422,62 +421,6 @@ export class App {
     // Auth bar listeners are set up in the main render() method
   }
 
-  private showRegistrationPage(): void {
-    // Get selected players from session storage
-    const selectedPlayersData = sessionStorage.getItem('selectedPlayers')
-    let selectedPlayers = null
-    if (selectedPlayersData) {
-      try {
-        selectedPlayers = JSON.parse(selectedPlayersData)
-        // Clear the stored selection after reading
-        sessionStorage.removeItem('selectedPlayers')
-      } catch (error) {
-        console.error('Error parsing selected players:', error)
-      }
-    }
-
-    this.rootElement.innerHTML = `
-      <div class="min-h-screen mesh-gradient relative overflow-hidden">
-        
-        <!-- Main content -->
-        <div class="relative z-10 p-8 pt-24">
-          <div class="max-w-7xl mx-auto">
-            <!-- Header -->
-            <div class="text-center mb-12">
-              <h1 class="text-5xl font-black mb-6 text-cyan-400 orbitron-font">
-                Tournament Registration
-              </h1>
-              <p class="text-gray-300 text-lg">Set up your tournament bracket</p>
-            </div>
-            
-            <!-- Registration Form Card -->
-            <div class="bg-white/10 backdrop-blur-xl rounded-2xl p-8 border border-white/20 shadow-2xl max-w-2xl mx-auto">
-              <form id="registrationForm" class="space-y-6">
-                <div>
-                  <label class="block text-white font-semibold mb-3">Number of Players:</label>
-                  <select id="playerCount" class="w-full p-4 rounded-xl bg-white/10 text-white border border-white/20 focus:border-cyan-400 focus:outline-none transition-colors">
-                    <option value="4">4 Players</option>
-                    <option value="8">8 Players</option>
-                    <option value="16">16 Players</option>
-                  </select>
-                </div>
-                <div id="playerInputs" class="space-y-3">
-                  ${this.generatePlayerInputs(4)}
-                </div>
-                <div class="text-center">
-                  <button type="submit" 
-                          class="px-6 py-3 bg-cyan-600/20 text-white border border-cyan-500/30 font-bold rounded-xl hover:bg-cyan-600/30 transition-colors">
-                    Start Tournament
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      </div>
-    `
-    this.setupRegistrationForm(selectedPlayers)
-  }
 
   private async showProfilePage(userId?: number): Promise<void> {
     this.rootElement.innerHTML = await this.pageService.renderProfilePage((path: string) => {
@@ -497,66 +440,6 @@ export class App {
     }
   }
 
-  private generatePlayerInputs(count: number): string {
-    let inputs = ''
-    for (let i = 0; i < count; i++) {
-      inputs += `
-        <div>
-          <input type="text" 
-                 placeholder="Player ${i + 1} Alias" 
-                 class="w-full p-4 rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/50 focus:border-cyan-400 focus:outline-none transition-colors"
-                 required>
-        </div>
-      `
-    }
-    return inputs
-  }
-
-  private setupRegistrationForm(selectedPlayers?: any): void {
-    const form = document.getElementById('registrationForm') as HTMLFormElement
-    const playerCountSelect = document.getElementById('playerCount') as HTMLSelectElement
-    const playerInputs = document.getElementById('playerInputs')!
-
-    // Pre-fill form with selected players if available
-    if (selectedPlayers && selectedPlayers.players && selectedPlayers.players.length > 0) {
-      const playerCount = selectedPlayers.players.length
-      playerCountSelect.value = playerCount.toString()
-      playerInputs.innerHTML = this.generatePlayerInputs(playerCount)
-      
-      // Fill in the player names
-      setTimeout(() => {
-        const inputs = form.querySelectorAll('input[type="text"]')
-        selectedPlayers.players.forEach((player: any, index: number) => {
-          if (inputs[index]) {
-            (inputs[index] as HTMLInputElement).value = player.displayName
-          }
-        })
-      }, 0)
-    }
-
-    playerCountSelect.addEventListener('change', () => {
-      const count = parseInt(playerCountSelect.value)
-      playerInputs.innerHTML = this.generatePlayerInputs(count)
-    })
-
-    form.addEventListener('submit', (e) => {
-      e.preventDefault()
-      const aliases: string[] = []
-      const inputs = form.querySelectorAll('input[type="text"]')
-      inputs.forEach((input) => {
-        const inputElement = input as HTMLInputElement
-        if (inputElement.value.trim()) {
-          aliases.push(inputElement.value.trim())
-        }
-      })
-
-      if (aliases.length >= 2) {
-        this.tournamentManager.startTournament(aliases)
-        window.history.pushState({}, '', '/tournament')
-        this.render()
-      }
-    })
-  }
 
   private setupCustomizationHandlers(): void {
     // Expose customization functions to window
@@ -720,6 +603,7 @@ export class App {
     `
   }
 
+
   private renderNextMatch(tournament: any): string {
     // Check if tournament is actually complete by looking at the final match
     const finalMatch = tournament.matches[tournament.matches.length - 1]
@@ -799,8 +683,15 @@ export class App {
     document.getElementById('reset-tournament-btn-next')?.addEventListener('click', (e) => {
       e.preventDefault()
       this.tournamentManager.resetTournament()
-      window.history.pushState({}, '', '/register')
-      this.render()
+      // Show user selection modal instead of navigating to /register
+      this.pageService.showUserSelection('tournament', (path) => {
+        window.history.pushState({}, '', path)
+        this.render()
+      }, () => {
+        // Cancel callback - redirect to homepage
+        window.history.pushState({}, '', '/')
+        this.render()
+      })
     })
   }
 

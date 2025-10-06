@@ -693,7 +693,7 @@ export class ProfilePage {
               <div>
                 <label class="block text-white font-semibold mb-2">Avatar URL:</label>
                 <input type="url" id="edit-avatar-url" 
-                       value="${currentUser.avatarUrl || ''}"
+                       value="${currentUser.avatarUrl && currentUser.avatarUrl !== '/avatars/default-avatar.png' ? currentUser.avatarUrl : ''}"
                        placeholder="https://example.com/avatar.jpg"
                        class="w-full p-3 rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/50 focus:border-cyan-400 focus:outline-none transition-colors">
               </div>

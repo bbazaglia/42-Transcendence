@@ -535,10 +535,14 @@ export class GameManager {
    */
   private async saveMatchToBackend(winner: string): Promise<void> {
     try {
+      // Get actual player names from current match
+      const player1Name = this.currentMatch?.player1 || 'Player 1';
+      const player2Name = this.currentMatch?.player2 || 'Player 2';
+      
       // Create match result data
       const matchResult = matchService.createMatchResult(
-        'Player 1', // Player 1 name
-        'Player 2', // Player 2 name
+        player1Name,
+        player2Name,
         this.score1,
         this.score2,
         winner

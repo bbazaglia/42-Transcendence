@@ -111,25 +111,34 @@ class MatchService {
    * Creates a match result from game data
    */
   createMatchResult(
-    _player1Name: string,
-    _player2Name: string,
+    player1Name: string,
+    player2Name: string,
     score1: number,
     score2: number,
     winner: string
   ): MatchResult | null {
-    // For now, we'll use placeholder IDs since we don't have a user management system
-    // In a real implementation, you'd look up user IDs by name or have them passed in
+    // Skip AI games - we don't need to save statistics for AI matches
+    if (player2Name === 'AI') {
+      console.log('Skipping AI match - no statistics to save');
+      return null;
+    }
+
     const participants = sessionService.getParticipants();
-    const currentUser = participants.find(p => p.id);
-    if (!currentUser || !currentUser.id) {
+    
+    // Find both players by their display names
+    const player1 = participants.find(p => p.displayName === player1Name);
+    const player2 = participants.find(p => p.displayName === player2Name);
+    
+    if (!player1 || !player2) {
+      console.error('Could not find both players in session participants:', { player1Name, player2Name, participants });
       return null;
     }
 
     // Determine winner ID based on winner name
     const isPlayer1Winner = winner === 'Player 1';
-    const winnerId = isPlayer1Winner ? currentUser.id : 2; // Placeholder for player 2
-    const playerOneId = currentUser.id;
-    const playerTwoId = 2; // Placeholder for player 2
+    const winnerId = isPlayer1Winner ? player1.id : player2.id;
+    const playerOneId = player1.id;
+    const playerTwoId = player2.id;
 
     return {
       playerOneId,

@@ -81,7 +81,6 @@ export default async function (fastify, opts) {
                     data: { wins: { increment: 1 } }
                 });
 
-
                 // Update loser stats
                 await prisma.user.update({
                     where: { id: loserId },

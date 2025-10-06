@@ -29,7 +29,8 @@ class MatchService {
         return { success: false, error: 'User not authenticated' };
       }
 
-      const currentUser = sessionService.getCurrentUser();
+      const participants = sessionService.getParticipants();
+      const currentUser = participants.find(p => p.id);
       if (!currentUser) {
         return { success: false, error: 'User not found' };
       }
@@ -118,7 +119,8 @@ class MatchService {
   ): MatchResult | null {
     // For now, we'll use placeholder IDs since we don't have a user management system
     // In a real implementation, you'd look up user IDs by name or have them passed in
-    const currentUser = sessionService.getCurrentUser();
+    const participants = sessionService.getParticipants();
+    const currentUser = participants.find(p => p.id);
     if (!currentUser || !currentUser.id) {
       return null;
     }
@@ -142,7 +144,8 @@ class MatchService {
    * Updates local user stats after a match
    */
   private updateLocalUserStats(matchResult: MatchResult): void {
-    const currentUser = sessionService.getCurrentUser();
+    const participants = sessionService.getParticipants();
+    const currentUser = participants.find(p => p.id);
     if (!currentUser || !currentUser.id) return;
 
     // Determine if current user won or lost

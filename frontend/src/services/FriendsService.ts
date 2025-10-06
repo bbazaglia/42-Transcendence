@@ -32,15 +32,22 @@ class FriendsService {
   /**
    * Gets the current user's friends
    */
-  async getFriends(): Promise<Friend[]> {
+  async getFriends(userId?: number): Promise<Friend[]> {
     try {
-      const currentUser = sessionService.getCurrentUser();
-      if (!currentUser || !currentUser.id) {
-        console.warn('No authenticated user found, cannot fetch friends');
-        return [];
+      let targetUserId = userId;
+      
+      if (!targetUserId) {
+        // Fallback: get first participant (for backward compatibility)
+        const participants = sessionService.getParticipants();
+        const currentUser = participants.find(p => p.id);
+        if (!currentUser || !currentUser.id) {
+          console.warn('No authenticated user found, cannot fetch friends');
+          return [];
+        }
+        targetUserId = currentUser.id;
       }
 
-      const response = await apiService.request<{ friendships: Friend[] }>(`/friends/${currentUser.id}`);
+      const response = await apiService.request<{ friendships: Friend[] }>(`/friends/${targetUserId}`);
       
       if (response.error) {
         console.error('Failed to fetch friends:', response.error);
@@ -61,15 +68,22 @@ class FriendsService {
   /**
    * Gets pending friend requests
    */
-  async getPendingRequests(): Promise<FriendRequest[]> {
+  async getPendingRequests(userId?: number): Promise<FriendRequest[]> {
     try {
-      const currentUser = sessionService.getCurrentUser();
-      if (!currentUser || !currentUser.id) {
-        console.warn('No authenticated user found, cannot fetch pending requests');
-        return [];
+      let targetUserId = userId;
+      
+      if (!targetUserId) {
+        // Fallback: get first participant (for backward compatibility)
+        const participants = sessionService.getParticipants();
+        const currentUser = participants.find(p => p.id);
+        if (!currentUser || !currentUser.id) {
+          console.warn('No authenticated user found, cannot fetch pending requests');
+          return [];
+        }
+        targetUserId = currentUser.id;
       }
 
-      const response = await apiService.request<{ friendships: FriendRequest[] }>(`/friends/pending/incoming/${currentUser.id}`);
+      const response = await apiService.request<{ friendships: FriendRequest[] }>(`/friends/pending/incoming/${targetUserId}`);
       
       if (response.error) {
         console.error('Failed to fetch pending requests:', response.error);
@@ -88,17 +102,24 @@ class FriendsService {
   /**
    * Sends a friend request
    */
-  async sendFriendRequest(friendId: number): Promise<{ success: boolean; error?: string }> {
+  async sendFriendRequest(friendId: number, senderId?: number): Promise<{ success: boolean; error?: string }> {
     try {
-      const currentUser = sessionService.getCurrentUser();
-      if (!currentUser) {
-        return { success: false, error: 'User not authenticated' };
+      let targetSenderId = senderId;
+      
+      if (!targetSenderId) {
+        // Fallback: get first participant (for backward compatibility)
+        const participants = sessionService.getParticipants();
+        const currentUser = participants.find(p => p.id);
+        if (!currentUser) {
+          return { success: false, error: 'User not authenticated' };
+        }
+        targetSenderId = currentUser.id;
       }
 
       const response = await apiService.request('/friends', {
         method: 'POST',
         body: JSON.stringify({
-          actorId: currentUser.id,
+          actorId: targetSenderId,
           friendId: friendId
         })
       });
@@ -123,18 +144,24 @@ class FriendsService {
   /**
    * Accepts a friend request
    */
-  async acceptFriendRequest(senderId: number): Promise<{ success: boolean; error?: string }> {
+  async acceptFriendRequest(friendshipId: number, acceptorId?: number): Promise<{ success: boolean; error?: string }> {
     try {
-      const currentUser = sessionService.getCurrentUser();
-      if (!currentUser) {
-        return { success: false, error: 'User not authenticated' };
+      let targetAcceptorId = acceptorId;
+      
+      if (!targetAcceptorId) {
+        // Fallback: get first participant (for backward compatibility)
+        const participants = sessionService.getParticipants();
+        const currentUser = participants.find(p => p.id);
+        if (!currentUser) {
+          return { success: false, error: 'User not authenticated' };
+        }
+        targetAcceptorId = currentUser.id;
       }
 
-      const response = await apiService.request('/friends/accept', {
+      const response = await apiService.request(`/friends/${friendshipId}/accept`, {
         method: 'PATCH',
         body: JSON.stringify({
-          actorId: currentUser.id,
-          senderId: senderId
+          actorId: targetAcceptorId
         })
       });
 
@@ -161,18 +188,24 @@ class FriendsService {
   /**
    * Removes a friend
    */
-  async removeFriend(friendId: number): Promise<{ success: boolean; error?: string }> {
+  async removeFriend(friendshipId: number, removerId?: number): Promise<{ success: boolean; error?: string }> {
     try {
-      const currentUser = sessionService.getCurrentUser();
-      if (!currentUser) {
-        return { success: false, error: 'User not authenticated' };
+      let targetRemoverId = removerId;
+      
+      if (!targetRemoverId) {
+        // Fallback: get first participant (for backward compatibility)
+        const participants = sessionService.getParticipants();
+        const currentUser = participants.find(p => p.id);
+        if (!currentUser) {
+          return { success: false, error: 'User not authenticated' };
+        }
+        targetRemoverId = currentUser.id;
       }
 
-      const response = await apiService.request('/friends', {
+      const response = await apiService.request(`/friends/${friendshipId}`, {
         method: 'DELETE',
         body: JSON.stringify({
-          actorId: currentUser.id,
-          friendIdToRemove: friendId
+          actorId: targetRemoverId
         })
       });
 

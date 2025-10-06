@@ -8,6 +8,7 @@ import { InsightsModal } from '../components/InsightsModal'
 //TODO: remove all currentUser related code as it is obsolete
 export class ProfilePage {
   private authModal: any
+  private eventListenersSetup = false
 
   constructor(authModal: any) {
     this.authModal = authModal
@@ -104,8 +105,8 @@ export class ProfilePage {
       // Load profile data in parallel
       const [matches, friends, pendingRequests] = await Promise.all([
         matchService.getUserMatchHistory(userId),
-        isOwnProfile ? friendsService.getFriends() : Promise.resolve([]),
-        isOwnProfile ? friendsService.getPendingRequests() : Promise.resolve([])
+        isOwnProfile ? friendsService.getFriends(userId) : Promise.resolve([]),
+        isOwnProfile ? friendsService.getPendingRequests(userId) : Promise.resolve([])
       ])
 
       return {
@@ -254,23 +255,25 @@ export class ProfilePage {
                 <div class="flex items-center justify-between bg-white/5 rounded-lg p-4">
                   <div class="flex items-center space-x-3">
                     <div class="w-10 h-10 bg-gradient-to-br from-cyan-400 to-purple-600 rounded-full flex items-center justify-center">
-                      <img src="${request.avatarUrl || '/avatars/default-avatar.png'}" 
+                      <img src="${request.user.avatarUrl || '/avatars/default-avatar.png'}" 
                            alt="Avatar" 
                            class="w-10 h-10 rounded-full object-cover"
                            onerror="this.src='/avatars/default-avatar.png'">
                     </div>
                     <div>
-                      <div class="text-white font-medium">${request.displayName}</div>
-                      <div class="text-gray-400 text-sm">${request.email}</div>
+                      <div class="text-white font-medium">${request.user.displayName}</div>
+                      <div class="text-gray-400 text-sm">ID: ${request.user.id}</div>
                     </div>
                   </div>
                   <div class="flex space-x-2">
                     <button class="accept-request-btn px-3 py-1 bg-cyan-600/20 text-white border border-cyan-500/30 text-sm rounded hover:bg-cyan-600/30 transition-colors" 
-                            data-sender-id="${request.id}">
+                            data-sender-id="${request.user.id}"
+                            data-friendship-id="${request.friendshipId}">
                       Accept
                     </button>
                     <button class="reject-request-btn px-3 py-1 bg-red-600/20 text-white border border-red-500/30 text-sm rounded hover:bg-red-600/30 transition-colors" 
-                            data-sender-id="${request.id}">
+                            data-sender-id="${request.user.id}"
+                            data-friendship-id="${request.friendshipId}">
                       Reject
                     </button>
                   </div>
@@ -297,20 +300,21 @@ export class ProfilePage {
                   <div class="flex items-center space-x-3">
                     <div class="relative">
                       <div class="w-10 h-10 bg-gradient-to-br from-cyan-400 to-purple-600 rounded-full flex items-center justify-center">
-                        <img src="${friend.avatarUrl || '/avatars/default-avatar.png'}" 
+                        <img src="${friend.user.avatarUrl || '/avatars/default-avatar.png'}" 
                              alt="Avatar" 
                              class="w-10 h-10 rounded-full object-cover"
                              onerror="this.src='/avatars/default-avatar.png'">
                       </div>
-                      <div class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full ${friend.isOnline ? 'bg-emerald-400' : 'bg-gray-400'} border-2 border-white"></div>
+                      <div class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full ${friend.user.isOnline ? 'bg-emerald-400' : 'bg-gray-400'} border-2 border-white"></div>
                     </div>
                     <div>
-                      <div class="text-white font-medium">${friend.displayName}</div>
-                      <div class="text-gray-400 text-sm">${friend.wins}W - ${friend.losses}L</div>
+                      <div class="text-white font-medium">${friend.user.displayName}</div>
+                      <div class="text-gray-400 text-sm">${friend.user.wins}W - ${friend.user.losses}L</div>
                     </div>
                   </div>
                   <button class="remove-friend-btn px-3 py-1 bg-red-600/20 text-white border border-red-500/30 text-sm rounded hover:bg-red-600/30 transition-colors" 
-                          data-friend-id="${friend.id}">
+                          data-friend-id="${friend.user.id}"
+                          data-friendship-id="${friend.friendshipId}">
                     Remove
                   </button>
                 </div>
@@ -419,6 +423,7 @@ export class ProfilePage {
     const isOwnProfile = window.location.pathname === '/profile' || participants.some(p => window.location.pathname === `/profile/${p.id}`)
     if (isOwnProfile) {
       this.setupFriendEventListeners(onNavigate)
+      this.setupAddFriendButtons()
     }
 
     // Edit profile (only for own profile)
@@ -464,15 +469,34 @@ export class ProfilePage {
   }
 
   private setupFriendEventListeners(onNavigate: (path: string) => void): void {
+    // Prevent duplicate event listeners
+    if (this.eventListenersSetup) {
+      return
+    }
+    this.eventListenersSetup = true
+
     // Accept friend request
     document.addEventListener('click', async (e) => {
       const target = e.target as HTMLElement
       if (target.classList.contains('accept-request-btn')) {
-        const senderId = parseInt(target.getAttribute('data-sender-id') || '0')
-        if (senderId) {
-          const result = await friendsService.acceptFriendRequest(senderId)
-          if (result.success) {
-            onNavigate('/profile') // Refresh the page
+        const friendshipId = parseInt(target.getAttribute('data-friendship-id') || '0')
+        if (friendshipId) {
+          // Get the current user (the one accepting the request)
+          const participants = sessionService.getParticipants()
+          const currentUser = participants.find(p => window.location.pathname === `/profile/${p.id}` || window.location.pathname === '/profile')
+          const acceptorId = currentUser?.id
+          
+          if (acceptorId) {
+            const result = await friendsService.acceptFriendRequest(friendshipId, acceptorId)
+            if (result.success) {
+              alert('Friend request accepted!')
+              // Force a page reload to show updated friends list
+              window.location.reload()
+            } else {
+              alert(`Failed to accept friend request: ${result.error}`)
+            }
+          } else {
+            alert('Error: Could not identify current user for accepting request')
           }
         }
       }
@@ -485,7 +509,8 @@ export class ProfilePage {
         const senderId = parseInt(target.getAttribute('data-sender-id') || '0')
         if (senderId) {
           // For now, we'll just refresh the page. In a real implementation, you'd have a reject endpoint
-          onNavigate('/profile')
+          alert('Friend request rejected!')
+          window.location.reload()
         }
       }
     })
@@ -494,16 +519,31 @@ export class ProfilePage {
     document.addEventListener('click', async (e) => {
       const target = e.target as HTMLElement
       if (target.classList.contains('remove-friend-btn')) {
-        const friendId = parseInt(target.getAttribute('data-friend-id') || '0')
-        if (friendId) {
-          const result = await friendsService.removeFriend(friendId)
-          if (result.success) {
-            onNavigate('/profile') // Refresh the page
+        const friendshipId = parseInt(target.getAttribute('data-friendship-id') || '0')
+        if (friendshipId) {
+          // Get the current user (the one removing the friend)
+          const participants = sessionService.getParticipants()
+          const currentUser = participants.find(p => window.location.pathname === `/profile/${p.id}` || window.location.pathname === '/profile')
+          const removerId = currentUser?.id
+          
+          if (removerId) {
+            const result = await friendsService.removeFriend(friendshipId, removerId)
+            if (result.success) {
+              alert('Friend removed successfully!')
+              window.location.reload() // Refresh the page
+            } else {
+              alert(`Failed to remove friend: ${result.error}`)
+            }
+          } else {
+            alert('Error: Could not identify current user for removing friend')
           }
         }
       }
     })
 
+  }
+
+  private setupAddFriendButtons(): void {
     // Add friend buttons
     document.getElementById('add-friend-btn')?.addEventListener('click', (e) => {
       e.preventDefault()
@@ -721,10 +761,30 @@ export class ProfilePage {
         btn.addEventListener('click', async (e) => {
           const userId = parseInt((e.target as HTMLElement).getAttribute('data-user-id') || '0')
           if (userId) {
-            const result = await friendsService.sendFriendRequest(userId)
-            if (result.success) {
-              this.closeAddFriendModal()
-              window.location.reload() // Refresh the page
+            // Get the current user (the one viewing the profile and sending the request)
+            const participants = sessionService.getParticipants()
+            const currentUser = participants.find(p => window.location.pathname === `/profile/${p.id}` || window.location.pathname === '/profile')
+            const senderId = currentUser?.id
+            
+            if (senderId) {
+              const result = await friendsService.sendFriendRequest(userId, senderId)
+              if (result.success) {
+                this.closeAddFriendModal()
+                alert('Friend request sent successfully!')
+                setTimeout(() => {
+                  window.location.reload()
+                }, 1000)
+              } else {
+                // Handle the case where friendship already exists
+                if (result.error && result.error.includes('already exists')) {
+                  alert('You already have a pending friend request with this user!')
+                } else {
+                  alert(`Failed to send friend request: ${result.error}`)
+                }
+                this.closeAddFriendModal()
+              }
+            } else {
+              alert('Error: Could not identify current user')
             }
           }
         })

@@ -129,7 +129,8 @@ class TournamentService {
    */
   async joinTournament(tournamentId: number): Promise<{ success: boolean; tournament?: Tournament; error?: string }> {
     try {
-      const currentUser = sessionService.getCurrentUser();
+      const participants = sessionService.getParticipants();
+      const currentUser = participants.find(p => p.id);
       if (!currentUser || !currentUser.id) {
         return { success: false, error: 'User not authenticated' };
       }
@@ -296,7 +297,8 @@ class TournamentService {
    * Checks if user is participating in a tournament
    */
   isUserParticipating(tournamentId: number): boolean {
-    const currentUser = sessionService.getCurrentUser();
+    const participants = sessionService.getParticipants();
+    const currentUser = participants.find(p => p.id);
     if (!currentUser || !currentUser.id) return false;
 
     const tournament = this.tournaments.find(t => t.id === tournamentId);
@@ -307,7 +309,8 @@ class TournamentService {
    * Gets tournaments where user is participating
    */
   getUserTournaments(): Tournament[] {
-    const currentUser = sessionService.getCurrentUser();
+    const participants = sessionService.getParticipants();
+    const currentUser = participants.find(p => p.id);
     if (!currentUser || !currentUser.id) return [];
 
     return this.tournaments.filter(t => 

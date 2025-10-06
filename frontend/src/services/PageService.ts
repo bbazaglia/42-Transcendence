@@ -7,8 +7,8 @@ export class PageService {
     this.profilePage = new ProfilePage(authModal)
   }
 
-  async renderProfilePage(onNavigate: (path: string) => void): Promise<string> {
-    const html = await this.profilePage.render()
+  async renderProfilePage(onNavigate: (path: string) => void, userId?: number): Promise<string> {
+    const html = await this.profilePage.render(userId)
     
     // Setup event listeners after rendering
     setTimeout(() => {

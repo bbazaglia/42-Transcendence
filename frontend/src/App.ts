@@ -84,6 +84,11 @@ export class App {
     this.router.addRoute('/play-ai', () => this.showGamePage(true, true))
     this.router.addRoute('/register', () => this.showRegistrationPage())
     this.router.addRoute('/profile', () => this.showProfilePage())
+    
+    // Dynamic route for specific user profiles
+    this.router.addDynamicRoute(/^\/profile\/(?<userId>\d+)$/, (params) => {
+      this.showProfilePage(parseInt(params.userId))
+    })
 
     // Handle browser back/forward buttons
     window.addEventListener('popstate', () => {
@@ -347,11 +352,11 @@ export class App {
     this.setupRegistrationForm()
   }
 
-  private async showProfilePage(): Promise<void> {
+  private async showProfilePage(userId?: number): Promise<void> {
     this.rootElement.innerHTML = await this.pageService.renderProfilePage((path: string) => {
       window.history.pushState({}, '', path)
       this.render()
-    })
+    }, userId)
   }
 
 

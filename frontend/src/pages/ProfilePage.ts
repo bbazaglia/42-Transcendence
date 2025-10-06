@@ -2,6 +2,7 @@ import { sessionService } from '../services/SessionService'
 import { matchService } from '../services/MatchService'
 import { friendsService } from '../services/FriendsService'
 import { apiService } from '../services/ApiService'
+import { userService } from '../services/UserService'
 import { InsightsModal } from '../components/InsightsModal'
 
 //TODO: remove all currentUser related code as it is obsolete
@@ -12,25 +13,31 @@ export class ProfilePage {
     this.authModal = authModal
   }
 
-  async render(): Promise<string> {
-    // Check if user is authenticated
-    if (!sessionService.isAuthenticated()) {
-      return this.renderLoginRequired()
-    }
+  async render(userId?: number): Promise<string> {
+    // If no userId provided, use current user
+    if (!userId) {
+      // Check if user is authenticated
+      if (!sessionService.isAuthenticated()) {
+        return this.renderLoginRequired()
+      }
 
-    const currentUser = sessionService.getCurrentUser()
-    if (!currentUser) return ''
+      const participants = sessionService.getParticipants()
+      const currentUser = participants.find(p => p.id) // Get first authenticated user
+      if (!currentUser) return ''
+
+      userId = currentUser.id
+    }
 
     // Show loading state
     this.renderLoadingState()
 
     // Load profile data
-    const profileData = await this.loadProfileData()
+    const profileData = await this.loadProfileData(userId)
     if (!profileData) {
       return this.renderError()
     }
 
-    return this.renderProfilePage(profileData.user, profileData.matches, profileData.friends, profileData.pendingRequests)
+    return this.renderProfilePage(profileData.user, profileData.matches, profileData.friends, profileData.pendingRequests, userId)
   }
 
   private renderLoginRequired(): string {
@@ -81,23 +88,29 @@ export class ProfilePage {
     `
   }
 
-  private async loadProfileData(): Promise<any> {
-    const currentUser = sessionService.getCurrentUser()
-    if (!currentUser || !currentUser.id) {
-      console.warn('No authenticated user found, cannot load profile data')
-      return null
-    }
-
+  private async loadProfileData(userId: number): Promise<any> {
     try {
-      // Load all profile data in parallel
+      // Get user data
+      const userResponse = await userService.getUserProfile(userId)
+      if (userResponse.error || !userResponse.user) {
+        console.warn('Failed to load user profile:', userResponse.error)
+        return null
+      }
+
+      const user = userResponse.user
+      const participants = sessionService.getParticipants()
+      const currentUser = participants.find(p => p.id)
+      const isOwnProfile = currentUser && currentUser.id === userId
+
+      // Load profile data in parallel
       const [matches, friends, pendingRequests] = await Promise.all([
-        matchService.getUserMatchHistory(currentUser.id),
-        friendsService.getFriends(),
-        friendsService.getPendingRequests()
+        matchService.getUserMatchHistory(userId),
+        isOwnProfile ? friendsService.getFriends() : Promise.resolve([]),
+        isOwnProfile ? friendsService.getPendingRequests() : Promise.resolve([])
       ])
 
       return {
-        user: currentUser,
+        user,
         matches,
         friends,
         pendingRequests
@@ -108,8 +121,11 @@ export class ProfilePage {
     }
   }
 
-  private renderProfilePage(user: any, matches: any[], friends: any[], pendingRequests: any[]): string {
+  private renderProfilePage(user: any, matches: any[], friends: any[], pendingRequests: any[], userId: number): string {
     const winRate = user.wins + user.losses > 0 ? ((user.wins / (user.wins + user.losses)) * 100).toFixed(1) : '0.0'
+    const participants = sessionService.getParticipants()
+    const currentUser = participants.find(p => p.id)
+    const isOwnProfile = currentUser && currentUser.id === userId
 
     return `
       <div class="min-h-screen mesh-gradient relative overflow-hidden">
@@ -143,11 +159,13 @@ export class ProfilePage {
                     <h2 class="text-2xl font-bold text-white mb-2">${user.displayName}</h2>
                     <p class="text-gray-400 text-sm mb-6">${user.email}</p>
                     
-                    <!-- Edit Profile Button -->
-                    <button id="edit-profile-btn" 
-                            class="w-full px-4 py-2 bg-cyan-600/20 text-white border border-cyan-500/30 rounded-lg hover:bg-cyan-600/30 transition-colors text-sm font-medium">
-                      Edit Profile
-                    </button>
+                    <!-- Edit Profile Button (only for own profile) -->
+                    ${isOwnProfile ? `
+                      <button id="edit-profile-btn" 
+                              class="w-full px-4 py-2 bg-cyan-600/20 text-white border border-cyan-500/30 rounded-lg hover:bg-cyan-600/30 transition-colors text-sm font-medium">
+                        Edit Profile
+                      </button>
+                    ` : ''}
                   </div>
                 </div>
               </div>
@@ -157,13 +175,15 @@ export class ProfilePage {
                 <div class="bg-white/10 backdrop-blur-xl rounded-2xl p-8 border border-white/20 shadow-2xl">
                   <div class="flex items-center justify-between mb-6">
                     <h3 class="text-2xl font-bold text-cyan-400 orbitron-font">Statistics</h3>
-                    <button id="view-insights-btn" 
-                            class="px-4 py-2 bg-gradient-to-r from-cyan-600/20 to-purple-600/20 text-white border border-cyan-500/30 rounded-lg hover:from-cyan-600/30 hover:to-purple-600/30 transition-all duration-300 text-sm font-medium flex items-center space-x-2">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                      </svg>
-                      <span>View Insights</span>
-                    </button>
+                    ${isOwnProfile ? `
+                      <button id="view-insights-btn" 
+                              class="px-4 py-2 bg-gradient-to-r from-cyan-600/20 to-purple-600/20 text-white border border-cyan-500/30 rounded-lg hover:from-cyan-600/30 hover:to-purple-600/30 transition-all duration-300 text-sm font-medium flex items-center space-x-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                        <span>View Insights</span>
+                      </button>
+                    ` : ''}
                   </div>
                   <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
                     <div class="text-center">
@@ -191,25 +211,29 @@ export class ProfilePage {
             <div class="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 shadow-2xl">
               <!-- Tab Navigation -->
               <div class="flex border-b border-white/20">
-                <button id="friends-tab" 
-                        class="flex-1 px-6 py-4 text-white font-medium border-b-2 border-cyan-400 bg-cyan-400/10">
-                  Friends (${friends.length})
-                </button>
+                ${isOwnProfile ? `
+                  <button id="friends-tab" 
+                          class="flex-1 px-6 py-4 text-white font-medium border-b-2 border-cyan-400 bg-cyan-400/10">
+                    Friends (${friends.length})
+                  </button>
+                ` : ''}
                 <button id="matches-tab" 
-                        class="flex-1 px-6 py-4 text-gray-400 font-medium border-b-2 border-transparent hover:text-white hover:border-white/20 transition-colors">
+                        class="${isOwnProfile ? 'flex-1' : 'w-full'} px-6 py-4 ${isOwnProfile ? 'text-gray-400 font-medium border-b-2 border-transparent hover:text-white hover:border-white/20 transition-colors' : 'text-white font-medium border-b-2 border-cyan-400 bg-cyan-400/10'}">
                   Match History (${matches.length})
                 </button>
               </div>
               
               <!-- Tab Content -->
               <div class="p-12">
-                <!-- Friends Tab Content -->
-                <div id="friends-content">
-                  ${this.renderFriendsContent(friends, pendingRequests)}
-                </div>
+                ${isOwnProfile ? `
+                  <!-- Friends Tab Content -->
+                  <div id="friends-content">
+                    ${this.renderFriendsContent(friends, pendingRequests)}
+                  </div>
+                ` : ''}
                 
                 <!-- Matches Tab Content -->
-                <div id="matches-content" class="hidden">
+                <div id="matches-content" class="${isOwnProfile ? 'hidden' : ''}">
                   ${this.renderMatchesContent(matches)}
                 </div>
               </div>
@@ -381,7 +405,7 @@ export class ProfilePage {
       onNavigate('/profile')
     })
 
-    // Tab switching
+    // Tab switching (only if friends tab exists)
     document.getElementById('friends-tab')?.addEventListener('click', (e) => {
       e.preventDefault()
       this.switchProfileTab('friends')
@@ -392,16 +416,21 @@ export class ProfilePage {
       this.switchProfileTab('matches')
     })
 
-    // Friend management
-    this.setupFriendEventListeners(onNavigate)
+    // Friend management (only for own profile)
+    const participants = sessionService.getParticipants()
+    const currentUser = participants.find(p => p.id)
+    const isOwnProfile = currentUser && window.location.pathname === '/profile'
+    if (isOwnProfile) {
+      this.setupFriendEventListeners(onNavigate)
+    }
 
-    // Edit profile
+    // Edit profile (only for own profile)
     document.getElementById('edit-profile-btn')?.addEventListener('click', (e) => {
       e.preventDefault()
       this.showEditProfileModal()
     })
 
-    // View insights button
+    // View insights button (only for own profile)
     document.getElementById('view-insights-btn')?.addEventListener('click', (e) => {
       e.preventDefault()
       this.showInsightsModal()
@@ -491,7 +520,8 @@ export class ProfilePage {
   }
 
   private showEditProfileModal(): void {
-    const currentUser = sessionService.getCurrentUser()
+    const participants = sessionService.getParticipants()
+    const currentUser = participants.find(p => p.id)
     if (!currentUser || !currentUser.id) return
 
     const modalHTML = `
@@ -555,7 +585,8 @@ export class ProfilePage {
   }
 
   private async handleProfileUpdate(): Promise<void> {
-    const currentUser = sessionService.getCurrentUser()
+    const participants = sessionService.getParticipants()
+    const currentUser = participants.find(p => p.id)
     if (!currentUser || !currentUser.id) return
 
     const displayName = (document.getElementById('edit-display-name') as HTMLInputElement)?.value
@@ -572,8 +603,8 @@ export class ProfilePage {
         return
       }
 
-      // Update local user data
-      sessionService.updateUserProfile(response.data!.user)
+      // Update local user data - refresh session to get updated user data
+      await sessionService.checkSessionStatus()
       this.closeEditProfileModal()
       // Refresh the page
       window.location.reload()
@@ -588,7 +619,8 @@ export class ProfilePage {
   }
 
   private async showInsightsModal(): Promise<void> {
-    const currentUser = sessionService.getCurrentUser()
+    const participants = sessionService.getParticipants()
+    const currentUser = participants.find(p => p.id)
     console.log('Current user:', currentUser)
     
     if (!currentUser || !currentUser.id) {

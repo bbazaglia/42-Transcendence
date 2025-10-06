@@ -176,10 +176,45 @@ export class App {
     // Load tournaments from backend
     await this.loadTournaments()
 
+    // Check for selected players from session storage
+    const selectedPlayersData = sessionStorage.getItem('selectedPlayers')
+    let selectedPlayers = null
+    if (selectedPlayersData) {
+      try {
+        selectedPlayers = JSON.parse(selectedPlayersData)
+        // Clear the stored selection after reading
+        sessionStorage.removeItem('selectedPlayers')
+      } catch (error) {
+        console.error('Error parsing selected players:', error)
+      }
+    }
+
     const tournament = this.tournamentManager.getCurrentTournament()
     if (!tournament) {
-      this.showRegistrationPage()
-      return
+      console.log('No current tournament found')
+      console.log('Selected players data:', selectedPlayers)
+      
+      if (selectedPlayers && selectedPlayers.players && selectedPlayers.players.length >= 4) {
+        // Create tournament with selected players
+        console.log('Creating tournament with selected players:', selectedPlayers.players)
+        const playerNames = selectedPlayers.players.map((player: any) => player.displayName)
+        this.tournamentManager.startTournament(playerNames)
+        // Re-render to show the tournament
+        this.render()
+        return
+      } else {
+        console.log('No valid player selection, opening user selection modal')
+        // No tournament set up and no valid selection - open user selection modal
+        this.pageService.showUserSelection('tournament', (path) => {
+          window.history.pushState({}, '', path)
+          this.render()
+        }, () => {
+          // Cancel callback - redirect to homepage
+          window.history.pushState({}, '', '/')
+          this.render()
+        })
+        return
+      }
     }
 
     this.rootElement.innerHTML = `
@@ -205,6 +240,7 @@ export class App {
     `
     this.afterRenderTournamentPage()
   }
+
 
   private showGamePage(isQuickGame: boolean, isAIGame: boolean = false): void {
 
@@ -300,7 +336,7 @@ export class App {
     `
 
     if (isQuickGame) {
-      // Quick game - use selected players
+      // Quick game - require user selection
       console.log(`Starting quick game. Is AI game: ${isAIGame}`)
       console.log('Selected players:', selectedPlayers)
       
@@ -320,12 +356,28 @@ export class App {
             player2: players[1].displayName
           }, this.customization, false)
         } else {
-          // Fallback to default behavior
-          this.gameManager.startGame(undefined, undefined, this.customization, isAIGame)
+          // Invalid selection - open user selection modal
+          this.pageService.showUserSelection(isAIGame ? 'ai-game' : 'quick-game', (path) => {
+            window.history.pushState({}, '', path)
+            this.render()
+          }, () => {
+            // Cancel callback - redirect to homepage
+            window.history.pushState({}, '', '/')
+            this.render()
+          })
+          return
         }
       } else {
-        // No selected players, use default behavior
-        this.gameManager.startGame(undefined, undefined, this.customization, isAIGame)
+        // No selected players - open user selection modal
+        this.pageService.showUserSelection(isAIGame ? 'ai-game' : 'quick-game', (path) => {
+          window.history.pushState({}, '', path)
+          this.render()
+        }, () => {
+          // Cancel callback - redirect to homepage
+          window.history.pushState({}, '', '/')
+          this.render()
+        })
+        return
       }
 
       // Set up game over button handlers for quick games
@@ -350,8 +402,16 @@ export class App {
           player2: nextMatch.player2!
         }, this.customization, false)
       } else {
-        console.log('No next match found, starting game without tournament')
-        this.gameManager.startGame(undefined, undefined, this.customization, false)
+        console.log('No next match found, tournament not properly set up')
+        this.pageService.showUserSelection('tournament', (path) => {
+          window.history.pushState({}, '', path)
+          this.render()
+        }, () => {
+          // Cancel callback - redirect to homepage
+          window.history.pushState({}, '', '/')
+          this.render()
+        })
+        return
       }
       
       // Set up reset button for tournament games
@@ -651,7 +711,7 @@ export class App {
           </h3>
           <p class="text-white text-xl mb-6 font-semibold">Winner: <span class="text-emerald-400">${finalMatch.winner}</span></p>
           <button id="new-tournament-btn" 
-                  class="px-8 py-4 bg-gradient-to-r from-purple-600 to-cyan-600 text-white font-bold rounded-xl shadow-lg hover:shadow-purple-500/25 transition-all duration-300 transform hover:scale-105">
+                  class="px-6 py-3 bg-cyan-600/20 text-white border border-cyan-500/30 font-bold rounded-xl hover:bg-cyan-600/30 transition-colors">
             🏆 New Tournament
           </button>
         </div>

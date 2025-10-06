@@ -148,7 +148,7 @@ export class PageService {
   /**
    * Shows user selection modal for different game types
    */
-  private showUserSelection(gameType: 'quick-game' | 'ai-game' | 'tournament', onNavigate: (path: string) => void): void {
+  showUserSelection(gameType: 'quick-game' | 'ai-game' | 'tournament', onNavigate: (path: string) => void, onCancel?: () => void): void {
     const options = {
       'quick-game': { gameType: 'quick-game' as const, minPlayers: 2, maxPlayers: 2 },
       'ai-game': { gameType: 'ai-game' as const, minPlayers: 1, maxPlayers: 1, allowAI: true },
@@ -170,10 +170,10 @@ export class PageService {
         // Navigate to the appropriate page using correct route
         onNavigate(routeMap[gameType])
       },
-      () => {
-        // User cancelled selection
+      onCancel || (() => {
+        // Default cancel behavior - just log
         console.log('User selection cancelled')
-      }
+      })
     )
   }
 

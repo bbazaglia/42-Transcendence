@@ -54,6 +54,7 @@ export class UserSelectionModal {
    */
   private render(): void {
     const participants = sessionService.getParticipants()
+    console.log('UserSelectionModal: Loading participants:', participants)
     const gameTypeLabels = {
       'quick-game': 'Quick Game',
       'ai-game': 'AI Game',
@@ -233,11 +234,17 @@ export class UserSelectionModal {
    */
   private handleConfirm(): void {
     if (this.selectedPlayers.size < this.minPlayers || this.selectedPlayers.size > this.maxPlayers) {
+      console.log('Invalid selection size:', this.selectedPlayers.size, 'Required:', this.minPlayers, '-', this.maxPlayers)
       return
     }
 
     const participants = sessionService.getParticipants()
     const selectedUsers = participants.filter(p => this.selectedPlayers.has(p.id))
+    console.log('UserSelectionModal: Confirming selection:', {
+      selectedPlayerIds: Array.from(this.selectedPlayers),
+      selectedUsers: selectedUsers,
+      gameType: this.gameType
+    })
 
     if (this.onSelectionComplete) {
       this.onSelectionComplete({

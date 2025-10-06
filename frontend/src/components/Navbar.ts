@@ -30,6 +30,7 @@ export class Navbar {
               <a href="/" class="nav-link text-white hover:text-cyan-400 transition-colors font-medium">Home</a>
               <a href="/tournament" class="nav-link text-white hover:text-cyan-400 transition-colors font-medium">Tournament</a>
               <a href="/quick-game" class="nav-link text-white hover:text-cyan-400 transition-colors font-medium">Quick Game</a>
+              <a href="/lobby" class="nav-link text-white hover:text-cyan-400 transition-colors font-medium">Lobby</a>
             </div>
             
             <!-- Mobile Menu Button -->
@@ -70,6 +71,7 @@ export class Navbar {
             <a href="/" class="block text-white hover:text-cyan-400 transition-colors font-medium py-2">Home</a>
             <a href="/tournament" class="block text-white hover:text-cyan-400 transition-colors font-medium py-2">Tournament</a>
             <a href="/quick-game" class="block text-white hover:text-cyan-400 transition-colors font-medium py-2">Quick Game</a>
+            <a href="/lobby" class="block text-white hover:text-cyan-400 transition-colors font-medium py-2">Lobby</a>
             
             <!-- Mobile Search Bar (only visible when authenticated) -->
             <div id="mobile-search-container" class="hidden">

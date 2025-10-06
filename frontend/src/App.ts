@@ -84,6 +84,7 @@ export class App {
     this.router.addRoute('/play-ai', () => this.showGamePage(true, true))
     this.router.addRoute('/register', () => this.showRegistrationPage())
     this.router.addRoute('/profile', () => this.showProfilePage())
+    this.router.addRoute('/lobby', () => this.showLobbyPage())
     
     // Dynamic route for specific user profiles
     this.router.addDynamicRoute(/^\/profile\/(?<userId>\d+)$/, (params) => {
@@ -189,7 +190,7 @@ export class App {
           <div class="max-w-6xl mx-auto">
             <!-- Header -->
             <div class="text-center mb-12">
-              <h1 class="text-5xl font-black mb-4 bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 bg-clip-text text-transparent orbitron-font">
+              <h1 class="text-5xl font-black mb-6 text-cyan-400 orbitron-font">
                 Tournament Bracket
               </h1>
               <p class="text-gray-300 text-lg">Follow the action and see who advances to the next round</p>
@@ -322,8 +323,8 @@ export class App {
           <div class="max-w-7xl mx-auto">
             <!-- Header -->
             <div class="text-center mb-12">
-              <h1 class="text-5xl font-black mb-6 leading-tight text-cyan-400 orbitron-font">
-              Tournament Registration
+              <h1 class="text-5xl font-black mb-6 text-cyan-400 orbitron-font">
+                Tournament Registration
               </h1>
               <p class="text-gray-300 text-lg">Set up your tournament bracket</p>
             </div>
@@ -342,10 +343,12 @@ export class App {
                 <div id="playerInputs" class="space-y-3">
                   ${this.generatePlayerInputs(4)}
                 </div>
-                <button type="submit" 
-                        class="w-full px-6 py-3 bg-cyan-600/20 text-white border border-cyan-500/30 font-bold rounded-xl hover:bg-cyan-600/30 transition-colors">
-                  Start Tournament
-                </button>
+                <div class="text-center">
+                  <button type="submit" 
+                          class="px-6 py-3 bg-cyan-600/20 text-white border border-cyan-500/30 font-bold rounded-xl hover:bg-cyan-600/30 transition-colors">
+                    Start Tournament
+                  </button>
+                </div>
               </form>
             </div>
           </div>
@@ -686,5 +689,102 @@ export class App {
       window.history.pushState({}, '', `/profile/${userId}`)
       this.render()
     }
+  }
+
+  /**
+   * Shows the lobby page with all active users
+   */
+  private showLobbyPage(): void {
+    // Check if user is authenticated
+    if (!sessionService.isAuthenticated()) {
+      this.rootElement.innerHTML = `
+        <div class="min-h-screen mesh-gradient relative overflow-hidden">
+          <div class="relative z-10 flex items-center justify-center min-h-screen px-4 pt-20">
+            <div class="text-center">
+              <h1 class="text-4xl font-bold text-white mb-4">Login Required</h1>
+              <p class="text-gray-300 mb-6">You need to be logged in to view the lobby</p>
+              <button id="go-home-btn"
+                      class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                Go Home
+              </button>
+            </div>
+          </div>
+        </div>
+      `
+
+      // Add event listener
+      document.getElementById('go-home-btn')?.addEventListener('click', () => {
+        window.history.pushState({}, '', '/')
+        this.render()
+      })
+      return
+    }
+
+    // Get all participants (active users)
+    const participants = sessionService.getParticipants()
+    
+    this.rootElement.innerHTML = `
+      <div class="min-h-screen mesh-gradient relative overflow-hidden">
+        <div class="relative z-10 flex items-center justify-center min-h-screen px-4 pt-20">
+          <div class="max-w-4xl w-full">
+            <div class="text-center mb-8">
+              <h1 class="text-5xl font-black mb-6 text-cyan-400 orbitron-font">Lobby</h1>
+              <p class="text-gray-300">All active players in the tournament</p>
+            </div>
+            
+            <div class="bg-black/40 backdrop-blur-md rounded-lg border border-white/20 p-6">
+              <h2 class="text-2xl font-bold text-white mb-6 text-center">Active Players (${participants.length})</h2>
+              
+              ${participants.length === 0 ? `
+                <div class="text-center py-8">
+                  <p class="text-gray-400 text-lg">No active players at the moment</p>
+                </div>
+              ` : `
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  ${participants.map(participant => `
+                    <div class="bg-white/10 rounded-lg p-4 border border-white/20 hover:bg-white/20 transition-colors cursor-pointer user-card" 
+                         data-user-id="${participant.id}">
+                      <div class="flex items-center space-x-3">
+                        <img src="${participant.avatarUrl || '/avatars/default-avatar.png'}" 
+                             alt="${participant.displayName}" 
+                             class="w-12 h-12 rounded-full object-cover">
+                        <div class="flex-1">
+                          <h3 class="text-white font-medium">${participant.displayName}</h3>
+                          <p class="text-gray-400 text-sm">${participant.email}</p>
+                        </div>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              `}
+              
+              <div class="mt-6 text-center">
+                <button id="back-to-home-btn"
+                        class="px-6 py-3 bg-cyan-600/20 text-white border border-cyan-500/30 font-bold rounded-xl hover:bg-cyan-600/30 transition-colors">
+                  Back to Home
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `
+
+    // Add event listener
+    document.getElementById('back-to-home-btn')?.addEventListener('click', () => {
+      window.history.pushState({}, '', '/')
+      this.render()
+    })
+
+    // Add event listeners for user cards
+    document.querySelectorAll('.user-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const userId = card.getAttribute('data-user-id')
+        if (userId) {
+          window.history.pushState({}, '', `/profile/${userId}`)
+          this.render()
+        }
+      })
+    })
   }
 }

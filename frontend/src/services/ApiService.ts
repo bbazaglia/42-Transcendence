@@ -19,6 +19,7 @@ export interface User {
   avatarUrl: string;
   createdAt: string;
   updatedAt: string;
+  isTwoFaEnabled: boolean; // Changed from totpEnabled to isTwoFaEnabled
 }
 
 export interface RegisterRequest {

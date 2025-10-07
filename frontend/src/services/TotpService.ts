@@ -14,17 +14,27 @@ class TotpService {
   /**
    * Initiates TOTP setup for a user
    * Calls POST /users/:userId/totp/setup
+   * Uses direct fetch to avoid Content-Type header issue
    */
   async setupTotp(userId: number): Promise<{ data?: TotpSetupResponse; error?: string }> {
-    const response = await apiService.request<TotpSetupResponse>(`/users/${userId}/totp/setup`, {
-      method: 'POST',
-    });
+    try {
+      const response = await fetch(`${apiService.getBaseUrl()}/users/${userId}/totp/setup`, {
+        method: 'POST',
+        credentials: 'include',
+        // No Content-Type header, no body
+      });
 
-    if (response.error) {
-      return { error: response.error };
+      const data = await response.json();
+
+      if (!response.ok) {
+        return { error: data?.message || 'Failed to setup TOTP' };
+      }
+
+      return { data: data };
+    } catch (error) {
+      console.error('Error setting up TOTP:', error);
+      return { error: 'An unexpected error occurred' };
     }
-
-    return { data: response.data };
   }
 
   /**

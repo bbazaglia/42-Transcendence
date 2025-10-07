@@ -195,6 +195,21 @@ export class App {
       console.log('Selected players data:', selectedPlayers)
       
       if (selectedPlayers && selectedPlayers.players && selectedPlayers.players.length >= 4) {
+        // Validate power of 2 players before creating tournament
+        const playerCount = selectedPlayers.players.length
+        if (playerCount !== 4 && playerCount !== 8 && playerCount !== 16) {
+          alert('Tournaments require exactly 4, 8, or 16 players. Please adjust your selection.')
+          // Open user selection modal to allow user to select correct number of players
+          this.pageService.showUserSelection('tournament', (path) => {
+            window.history.pushState({}, '', path)
+            this.render()
+          }, () => {
+            window.history.pushState({}, '', '/')
+            this.render()
+          })
+          return
+        }
+        
         // Create tournament with selected players
         console.log('Creating tournament with selected players:', selectedPlayers.players)
         const playerNames = selectedPlayers.players.map((player: any) => player.displayName)
@@ -594,7 +609,7 @@ export class App {
           ${tournament.matches.map((match: any, index: number) => `
             <div class="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10 hover:bg-white/10 transition-all duration-300">
               <div class="text-sm text-cyan-400 font-semibold mb-2">Match ${index + 1}</div>
-              <div class="text-white font-medium mb-2">${match.player1 || 'undefined'} vs ${match.player2 || 'undefined'}</div>
+              <div class="text-white font-medium mb-2">${this.getPlayerDisplayName(match.player1, index, tournament.matches, tournament.players.length, 'player1')} vs ${this.getPlayerDisplayName(match.player2, index, tournament.matches, tournament.players.length, 'player2')}</div>
               ${match.winner ? `<div class="text-emerald-400 text-sm font-semibold">👑 Winner: ${match.winner}</div>` : '<div class="text-gray-400 text-sm">⏳ Pending</div>'}
             </div>
           `).join('')}
@@ -603,6 +618,42 @@ export class App {
     `
   }
 
+  /**
+   * Gets the display name for a player in a tournament match
+   * Shows "winner of match X" for future matches where players haven't been determined yet
+   */
+  private getPlayerDisplayName(player: string | null, matchIndex: number, _allMatches: any[], playerCount: number, playerPosition: 'player1' | 'player2'): string {
+    if (player) {
+      return player
+    }
+    
+    // Calculate the number of first round matches based on the actual player count
+    const firstRoundMatches = Math.ceil(playerCount / 2)
+    
+    if (matchIndex < firstRoundMatches) {
+      // First round - if player is null, it means there's an odd number of players
+      // and this player gets a bye (automatic advancement)
+      return 'Bye'
+    }
+    
+    // For subsequent rounds, find which matches feed into this one
+    // Based on the advanceWinner logic: nextMatchIndex = firstRoundMatches + Math.floor(currentMatchIndex / 2)
+    // We need to reverse this to find which matches feed into the current match
+    
+    const currentRoundStart = firstRoundMatches
+    const currentRoundMatchIndex = matchIndex - currentRoundStart
+    
+    // The two matches that feed into this match are:
+    const previousMatch1 = currentRoundMatchIndex * 2
+    const previousMatch2 = currentRoundMatchIndex * 2 + 1
+    
+    // Determine which previous match corresponds to which player position
+    if (playerPosition === 'player1') {
+      return `Winner of Match ${previousMatch1 + 1}`
+    } else {
+      return `Winner of Match ${previousMatch2 + 1}`
+    }
+  }
 
   private renderNextMatch(tournament: any): string {
     // Check if tournament is actually complete by looking at the final match

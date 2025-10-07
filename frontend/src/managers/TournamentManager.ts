@@ -17,6 +17,11 @@ export class TournamentManager {
   private currentTournament: Tournament | null = null
 
   startTournament(aliases: string[]): void {
+    // Validate power of 2 players for proper tournament bracket
+    if (aliases.length !== 4 && aliases.length !== 8 && aliases.length !== 16) {
+      throw new Error('Tournaments require exactly 4, 8, or 16 players for proper bracket structure')
+    }
+
     // Shuffle players for random seeding
     const shuffledPlayers = [...aliases].sort(() => Math.random() - 0.5)
 

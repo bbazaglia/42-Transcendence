@@ -77,6 +77,7 @@ export class UserSelectionModal {
             <p class="text-gray-300 mt-2">Choose players for ${gameTypeLabels[this.gameType as keyof typeof gameTypeLabels]}</p>
             <div class="mt-3 text-sm text-cyan-400">
               Select ${this.minPlayers === this.maxPlayers ? this.minPlayers : `${this.minPlayers}-${this.maxPlayers}`} player${this.maxPlayers > 1 ? 's' : ''}
+              ${this.gameType === 'tournament' ? '<br><span class="text-yellow-400">⚠️ Tournaments require exactly 4, 8, or 16 players</span>' : ''}
             </div>
           </div>
 
@@ -236,6 +237,15 @@ export class UserSelectionModal {
     if (this.selectedPlayers.size < this.minPlayers || this.selectedPlayers.size > this.maxPlayers) {
       console.log('Invalid selection size:', this.selectedPlayers.size, 'Required:', this.minPlayers, '-', this.maxPlayers)
       return
+    }
+
+    // For tournaments, ensure power of 2 players (4, 8, or 16)
+    if (this.gameType === 'tournament') {
+      const playerCount = this.selectedPlayers.size
+      if (playerCount !== 4 && playerCount !== 8 && playerCount !== 16) {
+        alert('Tournaments require exactly 4, 8, or 16 players. Please adjust your selection.')
+        return
+      }
     }
 
     const participants = sessionService.getParticipants()

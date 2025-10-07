@@ -310,6 +310,12 @@ export default async function (fastify, opts) {
                     throw fastify.httpErrors.forbidden('Tournament must have the exact number of participants to be started.');
                 }
 
+                // Validate power of 2 participants for proper tournament bracket
+                const participantCount = tournament.participants.length;
+                if (participantCount !== 4 && participantCount !== 8 && participantCount !== 16) {
+                    throw fastify.httpErrors.forbidden('Tournaments require exactly 4, 8, or 16 participants for proper bracket structure.');
+                }
+
                 // Check if all participants are still in the main app session.
                 for (const participant of tournament.participants) {
                     if (!onlineUserIds.has(participant.userId)) {

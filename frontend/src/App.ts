@@ -9,6 +9,7 @@ import { PageService } from './services/PageService'
 import { sessionService } from './services/SessionService'
 import { tournamentService } from './services/TournamentService'
 
+
 export class App {
   private router: Router
   private tournamentManager: TournamentManager
@@ -90,6 +91,8 @@ export class App {
     this.router.addDynamicRoute(/^\/profile\/(?<userId>\d+)$/, (params) => {
       this.showProfilePage(parseInt(params.userId))
     })
+
+
 
     // Handle browser back/forward buttons
     window.addEventListener('popstate', () => {
@@ -428,6 +431,8 @@ export class App {
       this.render()
     }, userId)
   }
+
+
 
 
   private async loadTournaments(): Promise<void> {

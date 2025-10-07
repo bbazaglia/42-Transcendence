@@ -5,6 +5,7 @@ import { apiService } from '../services/ApiService'
 import { userService } from '../services/UserService'
 import { InsightsModal } from '../components/InsightsModal'
 import { userSelectionModal } from '../components/UserSelectionModal'
+import { TotpSetupModal } from '../components/TotpSetupModal.ts';
 
 //TODO: remove all currentUser related code as it is obsolete
 export class ProfilePage {
@@ -167,6 +168,12 @@ export class ProfilePage {
                       <button id="edit-profile-btn" 
                               class="w-full px-4 py-2 bg-cyan-600/20 text-white border border-cyan-500/30 rounded-lg hover:bg-cyan-600/30 transition-colors text-sm font-medium">
                         Edit Profile
+                      </button>
+
+                      <!-- 2FA Management Button -->
+                      <button id="manage-2fa-btn" 
+                              class="mt-2 w-full px-4 py-2 bg-purple-600/20 text-white border border-purple-500/30 rounded-lg hover:bg-purple-600/30 transition-colors text-sm font-medium">
+                        Manage 2FA
                       </button>
                     ` : ''}
                   </div>
@@ -467,6 +474,12 @@ export class ProfilePage {
       e.preventDefault()
       this.showEditProfileModal()
     })
+
+    // Manage 2FA
+    document.getElementById('manage-2fa-btn')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.showTotpSetupModal();
+    });
 
     // View insights button (only for own profile)
     document.getElementById('view-insights-btn')?.addEventListener('click', (e) => {
@@ -941,5 +954,20 @@ export class ProfilePage {
 
   private closeAddFriendModal(): void {
     document.getElementById('add-friend-modal')?.remove()
+  }
+
+  private showTotpSetupModal(): void {
+    const modalContainer = document.createElement('div');
+    document.body.appendChild(modalContainer);
+
+    const closeModal = () => {
+        modalContainer.remove();
+        // Optionally, refresh the profile page to show the new 2FA status
+        window.location.reload();
+    };
+
+    const totpModal = new TotpSetupModal(closeModal);
+    modalContainer.innerHTML = totpModal.render();
+    totpModal.setupEventListeners(modalContainer.firstElementChild as HTMLElement);
   }
 }

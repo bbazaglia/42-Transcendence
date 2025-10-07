@@ -8,16 +8,22 @@ async function totpPlugin(fastify, opts) {
     const TOTP_ISSUER = opts.issuer || TOTP.defaults.issuer
     const TOTP_ISSUER_IN_LABEL = opts.issuerInLabel || TOTP.defaults.issuerInLabel;
     const TOTP_PERIOD = opts.period || TOTP.defaults.period;
+    const TOTP_WINDOW = opts.window || 1; // Default window of 1 allows for a 30-second tolerance
 
     // Generates a new TOTP instance with a new secret.
     function setupNewTotp(userLabel) {
-        return TOTP.generate({
-            algorithm: TOTP_ALG,
-            digits: TOTP_DIGITS,
+        const secret = new Secret({
+            size: 20, // 20 bytes for a 160-bit secret
+            encoding: 'base32'
+        });
+
+        return new TOTP({
             issuer: TOTP_ISSUER,
             label: userLabel,
-            issuerInLabel: TOTP_ISSUER_IN_LABEL,
-            period: TOTP_PERIOD
+            algorithm: TOTP_ALG,
+            digits: TOTP_DIGITS,
+            period: TOTP_PERIOD,
+            secret: secret
         });
     }
 

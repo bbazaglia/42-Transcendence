@@ -262,7 +262,11 @@ export default async function (fastify, opts) {
         }
     }, async (request, reply) => {
         try {
-            const { userId } = request.params;
+            const userId = parseInt(request.params.userId, 10);
+            if (isNaN(userId)) {
+                throw fastify.httpErrors.badRequest('User ID must be a valid integer.');
+            }
+
             fastify.log.debug(`Setting up TOTP for user ID: ${userId}`);
 
             const user = await fastify.prisma.user.findUnique({
@@ -326,7 +330,10 @@ export default async function (fastify, opts) {
         }
     }, async (request, reply) => {
         try {
-            const userId = request.params.userId;
+            const userId = parseInt(request.params.userId, 10);
+            if (isNaN(userId)) {
+                throw fastify.httpErrors.badRequest('User ID must be a valid integer.');
+            }
             const { token } = request.body;
             fastify.log.debug(`Verifying TOTP for user ID: ${userId}`);
 

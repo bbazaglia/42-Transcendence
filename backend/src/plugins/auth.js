@@ -40,14 +40,24 @@ async function authPlugin(fastify, opts) {
     const authorizeParticipant = async (request, reply) => {
         await authorize(request, reply);
 
-        // We check for userId in params (for GET/DELETE) or actorId in body (for POST/PUT)
-        const participantId = request.params?.userId ?? request.body?.actorId;
-
+        // The ID of the user being authorized can be in the URL parameters or in the request body.
+        // We prioritize the ID from the URL params if it exists, otherwise we check the body.
+        let participantId = request.params?.userId;
         if (participantId === undefined) {
-            throw fastify.httpErrors.badRequest('Request must include an participantId.');
+            participantId = request.body?.actorId;
         }
 
-        const actorIsParticipant = request.sessionData.participants.includes(parseInt(participantId, 10));
+        if (participantId === undefined) {
+            throw fastify.httpErrors.badRequest('Request must include a participantId in the URL params or as actorId in the body.');
+        }
+
+        // Ensure the ID is an integer before checking for inclusion.
+        const participantIdInt = parseInt(participantId, 10);
+        if (isNaN(participantIdInt)) {
+            throw fastify.httpErrors.badRequest('Participant ID must be an integer.');
+        }
+
+        const actorIsParticipant = request.sessionData.participants.includes(participantIdInt);
 
         if (!actorIsParticipant) {
             throw fastify.httpErrors.forbidden('The specified actor is not part of this session.');

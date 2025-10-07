@@ -18,6 +18,7 @@ class TotpService {
   async setupTotp(userId: number): Promise<{ data?: TotpSetupResponse; error?: string }> {
     const response = await apiService.request<TotpSetupResponse>(`/users/${userId}/totp/setup`, {
       method: 'POST',
+      body: JSON.stringify({}), // Send empty body to satisfy content-type header
     });
 
     if (response.error) {

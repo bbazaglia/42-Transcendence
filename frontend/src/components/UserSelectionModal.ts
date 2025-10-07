@@ -102,7 +102,7 @@ export class UserSelectionModal {
                       </div>
                       <div class="flex-1">
                         <h3 class="text-white font-medium">${participant.displayName}</h3>
-                        <p class="text-gray-400 text-sm">${participant.email}</p>
+                        <p class="text-gray-400 text-sm">${participant.wins}W - ${participant.losses}L</p>
                       </div>
                       <div class="selection-indicator w-6 h-6 rounded-full border-2 border-white/30 flex items-center justify-center">
                         <svg class="w-4 h-4 text-white hidden" fill="currentColor" viewBox="0 0 20 20">

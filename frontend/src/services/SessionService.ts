@@ -98,9 +98,9 @@ class SessionService {
     try {
       const response = await apiService.register(userData);
 
-      if (response.error) {
+      if (response.error || !response.data) {
         this.setState({ isLoading: false });
-        return { success: false, error: response.error };
+        return { success: false, error: response.error || 'Registration failed' };
       }
 
       // After successful registration, automatically login
@@ -108,12 +108,10 @@ class SessionService {
         email: userData.email,
         password: userData.password,
       });
+
     } catch (error) {
       this.setState({ isLoading: false });
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Registration failed'
-      };
+      return { success: false, error: error instanceof Error ? error.message : 'Registration failed' };
     }
   }
 
@@ -124,33 +122,39 @@ class SessionService {
     this.setState({ isLoading: true, isAwaitingTotp: false });
     this.tempToken = null; // Clear any previous temp token
 
-    const response = await apiService.login(credentials);
+    try {
+      const response = await apiService.login(credentials);
 
-    if (response.error || !response.data) {
+      if (response.error || !response.data) {
+        this.setState({ isLoading: false });
+        return { success: false, error: response.error || 'Login failed' };
+      }
+
+      // Case 1: Login is complete, no 2FA needed.
+      if (response.data.participants) {
+        this.setState({
+          participants: response.data.participants,
+          isAuthenticated: true,
+          isLoading: false,
+        });
+        return { success: true };
+      }
+
+      // Case 2: 2FA is required.
+      if (response.data.twoFactorChallenge) {
+        this.tempToken = response.data.twoFactorChallenge.tempToken;
+        this.setState({ isLoading: false, isAwaitingTotp: true });
+        return { success: true, needsTotp: true };
+      }
+
+      // Fallback for unexpected response structure
       this.setState({ isLoading: false });
-      return { success: false, error: response.error || 'Login failed' };
-    }
+      return { success: false, error: 'Unexpected response from server.' };
 
-    // Case 1: Login is complete, no 2FA needed.
-    if (response.data.participants) {
-      this.setState({
-        participants: response.data.participants,
-        isAuthenticated: true,
-        isLoading: false,
-      });
-      return { success: true };
+    } catch (error) {
+      this.setState({ isLoading: false });
+      return { success: false, error: error instanceof Error ? error.message : 'Login failed' };
     }
-
-    // Case 2: 2FA is required.
-    if (response.data.twoFactorChallenge) {
-      this.tempToken = response.data.twoFactorChallenge.tempToken;
-      this.setState({ isLoading: false, isAwaitingTotp: true });
-      return { success: true, needsTotp: true };
-    }
-
-    // Fallback for unexpected response structure
-    this.setState({ isLoading: false });
-    return { success: false, error: 'Unexpected response from server.' };
   }
 
   /**
@@ -223,13 +227,13 @@ class SessionService {
     });
   }
 
-  /**
-   * Debug method to check current auth state
-   */
-  debugSessionState(): void {
-    console.log('Current auth state:', this.state);
-    console.log('Is authenticated:', this.isAuthenticated());
-  }
+  ///**
+  // * Debug method to check current auth state
+  // */
+  //debugSessionState(): void {
+  //  console.log('Current auth state:', this.state);
+  //  console.log('Is authenticated:', this.isAuthenticated());
+  //}
 }
 
 // Export a singleton instance

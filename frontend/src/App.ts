@@ -307,6 +307,18 @@ export class App {
               ${isAIGame ? 'Player vs AI' : (isQuickGame ? 'Quick Game' : 'Tournament Match')}
             </h2>
             <div class="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 shadow-2xl relative">
+              <!-- Player Names Display -->
+              <div class="flex justify-between items-center mb-4 px-4">
+                <div class="text-left">
+                  <div class="text-cyan-400 font-bold text-lg" id="player1-name">Player 1</div>
+                </div>
+                <div class="text-center">
+                  <div class="text-white font-bold text-xl">VS</div>
+                </div>
+                <div class="text-right">
+                  <div class="text-cyan-400 font-bold text-lg" id="player2-name">Player 2</div>
+                </div>
+              </div>
               <canvas id="gameCanvas" width="800" height="400" class="border-2 border-white/30 rounded-lg shadow-2xl"></canvas>
               
               <!-- Game Over Buttons (for quick games only) -->
@@ -364,12 +376,14 @@ export class App {
             player1: players[0].displayName,
             player2: 'AI'
           }, this.customization, true)
+          this.updatePlayerNames(players[0].displayName, 'AI')
         } else if (!isAIGame && players.length === 2) {
           // Quick game with two selected players
           this.gameManager.startGame(undefined, {
             player1: players[0].displayName,
             player2: players[1].displayName
           }, this.customization, false)
+          this.updatePlayerNames(players[0].displayName, players[1].displayName)
         } else {
           // Invalid selection - open user selection modal
           this.pageService.showUserSelection(isAIGame ? 'ai-game' : 'quick-game', (path) => {
@@ -416,6 +430,7 @@ export class App {
           player1: nextMatch.player1!,
           player2: nextMatch.player2!
         }, this.customization, false)
+        this.updatePlayerNames(nextMatch.player1!, nextMatch.player2!)
       } else {
         console.log('No next match found, tournament not properly set up')
         this.pageService.showUserSelection('tournament', (path) => {
@@ -652,6 +667,22 @@ export class App {
       return `Winner of Match ${previousMatch1 + 1}`
     } else {
       return `Winner of Match ${previousMatch2 + 1}`
+    }
+  }
+
+  /**
+   * Updates the player names display on the game screen
+   */
+  private updatePlayerNames(player1Name: string, player2Name: string): void {
+    const player1Element = document.getElementById('player1-name')
+    const player2Element = document.getElementById('player2-name')
+    
+    if (player1Element) {
+      player1Element.textContent = player1Name
+    }
+    
+    if (player2Element) {
+      player2Element.textContent = player2Name
     }
   }
 

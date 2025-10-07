@@ -6,7 +6,6 @@ import { userService } from '../services/UserService'
 import { InsightsModal } from '../components/InsightsModal'
 import { userSelectionModal } from '../components/UserSelectionModal'
 
-//TODO: remove all currentUser related code as it is obsolete
 export class ProfilePage {
   private authModal: any
   private eventListenersSetup = false
@@ -24,10 +23,10 @@ export class ProfilePage {
       }
 
       const participants = sessionService.getParticipants()
-      const currentUser = participants.find(p => p.id) // Get first authenticated user
-      if (!currentUser) return ''
+      const firstLoggedParticipant = participants.find(p => p.id) // Get first authenticated user
+      if (!firstLoggedParticipant) return ''
 
-      userId = currentUser.id
+      userId = firstLoggedParticipant.id
     }
 
     // Show loading state
@@ -458,7 +457,7 @@ export class ProfilePage {
     const participants = sessionService.getParticipants()
     const isOwnProfile = window.location.pathname === '/profile' || participants.some(p => window.location.pathname === `/profile/${p.id}`)
     if (isOwnProfile) {
-      this.setupFriendEventListeners(onNavigate)
+      this.setupFriendEventListeners()
       this.setupAddFriendButtons()
     }
 
@@ -543,7 +542,7 @@ export class ProfilePage {
     }
   }
 
-  private setupFriendEventListeners(onNavigate: (path: string) => void): void {
+  private setupFriendEventListeners(): void {
     // Prevent duplicate event listeners
     if (this.eventListenersSetup) {
       return
@@ -654,7 +653,6 @@ export class ProfilePage {
         }
       }
     })
-
   }
 
   private setupAddFriendButtons(): void {

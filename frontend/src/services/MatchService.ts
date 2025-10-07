@@ -28,6 +28,13 @@ class MatchService {
         return { success: false, error: 'Session not authenticated' };
       }
 
+      const participants = sessionService.getParticipants();
+      const firstLoggedParticipant = participants.find(p => p.id);
+      if (!firstLoggedParticipant) {
+        console.error('No authenticated user found in session participants');
+        return { success: false, error: 'User not found' };
+      }
+
       const matchData: CreateMatchRequest = {
         playerOneId: matchResult.playerOneId,
         playerTwoId: matchResult.playerTwoId,
@@ -47,9 +54,6 @@ class MatchService {
       if (response.data) {
         this.matchHistory.unshift(response.data);
       }
-
-      //// Update user stats locally
-      //this.updateLocalUserStats(matchResult);
 
       console.log('Match created successfully:', response.data);
       return { success: true };
@@ -84,21 +88,6 @@ class MatchService {
     }
   }
 
-  // TODO: Remove after we test is not needed
-  ///**
-  // * Gets local match history
-  // */
-  //getLocalMatchHistory(): Match[] {
-  //  return [...this.matchHistory];
-  //}
-
-  ///**
-  // * Clears local match history
-  // */
-  //clearLocalHistory(): void {
-  //  this.matchHistory = [];
-  //}
-
   /**
    * Creates a match result from game data
    */
@@ -109,13 +98,6 @@ class MatchService {
     score2: number,
     winner: string
   ): MatchResult | null {
-    //TODO: Remove after we make sure AI games are not calling createMatch
-    //// Skip AI games - we don't need to save statistics for AI matches
-    //if (player2Name === 'AI') {
-    //  console.log('Skipping AI match - no statistics to save');
-    //  return null;
-    //}
-
     const participants = sessionService.getParticipants();
 
     // Find both players by their display names
@@ -149,16 +131,6 @@ class MatchService {
       winnerId,
     };
   }
-
-  // TODO: Remove after we test is not needed
-  ///**
-  // * Updates local user stats after a match
-  // */
-  //private updateLocalUserStats(matchResult: MatchResult): void {
-  //  // Note: User stats are updated on the backend when the match is saved
-  //  // This method is kept for potential future local caching needs
-  //  console.log('Match result processed:', matchResult);
-  //}
 }
 
 // Export a singleton instance

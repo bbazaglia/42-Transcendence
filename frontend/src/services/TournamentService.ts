@@ -6,7 +6,6 @@
 import { apiService } from './ApiService.js';
 import { sessionService } from './SessionService.js';
 
-//TODO: remove all currentUser related code as it is obsolete
 export interface Tournament {
   id: number;
   name: string;

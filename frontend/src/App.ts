@@ -894,7 +894,8 @@ export class App {
                       <div class="flex items-center space-x-3">
                         <img src="${participant.avatarUrl || '/avatars/default-avatar.png'}" 
                              alt="${participant.displayName}" 
-                             class="w-12 h-12 rounded-full object-cover">
+                             class="w-12 h-12 rounded-full object-cover"
+                             onerror="this.src='/avatars/default-avatar.png'">
                         <div class="flex-1">
                           <h3 class="text-white font-medium">${participant.displayName}</h3>
                           <p class="text-gray-400 text-sm">${participant.email}</p>

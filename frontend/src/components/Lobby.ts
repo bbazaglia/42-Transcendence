@@ -157,7 +157,7 @@ export class Lobby {
     listElement.innerHTML = participants.map(user => `
       <div class="flex items-center justify-between p-2 bg-white/5 rounded-lg">
         <div class="flex items-center overflow-hidden">
-          <img src="${user.avatarUrl}" alt="Avatar of ${user.displayName}" class="w-6 h-6 rounded-full mr-2 flex-shrink-0">
+          <img src="${user.avatarUrl || '/avatars/default-avatar.png'}" alt="Avatar of ${user.displayName}" class="w-6 h-6 rounded-full mr-2 flex-shrink-0" onerror="this.src='/avatars/default-avatar.png'">
           <span class="text-white text-sm font-medium truncate">${user.displayName}</span>
         </div>
         <div class="flex items-center flex-shrink-0 ml-2">

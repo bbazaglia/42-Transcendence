@@ -262,7 +262,8 @@ export class Navbar {
         <div class="flex items-center space-x-3">
           <img src="${user.avatarUrl || '/avatars/default-avatar.png'}" 
                alt="${user.displayName}" 
-               class="w-8 h-8 rounded-full object-cover">
+               class="w-8 h-8 rounded-full object-cover"
+               onerror="this.src='/avatars/default-avatar.png'">
           <div>
             <div class="text-white font-medium text-sm">${user.displayName}</div>
             <div class="text-gray-400 text-xs">${user.email}</div>

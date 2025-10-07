@@ -98,7 +98,8 @@ export class UserSelectionModal {
                       <div class="relative">
                         <img src="${participant.avatarUrl || '/avatars/default-avatar.png'}" 
                              alt="${participant.displayName}" 
-                             class="w-12 h-12 rounded-full object-cover">
+                             class="w-12 h-12 rounded-full object-cover"
+                             onerror="this.src='/avatars/default-avatar.png'">
                         <div class="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-black"></div>
                       </div>
                       <div class="flex-1">

@@ -881,10 +881,12 @@ export class ProfilePage {
     const loading = document.getElementById('totp-loading')
     const content = document.getElementById('totp-content')
     const error = document.getElementById('totp-error')
+    const messageEl = document.getElementById('verify-message')
 
     loading?.classList.remove('hidden')
     content?.classList.add('hidden')
     error?.classList.add('hidden')
+    messageEl?.classList.add('hidden') // Clear any previous messages
 
     try {
       const result = await totpService.setupTotp(userId)
@@ -896,12 +898,23 @@ export class ProfilePage {
 
       if (result.data) {
         const qrImage = document.getElementById('qr-image') as HTMLImageElement
-        if (qrImage) qrImage.src = result.data.qrCodeUrl
+        if (qrImage) {
+          qrImage.src = result.data.qrCodeUrl
+          qrImage.onerror = () => {
+            this.show2FAError('Failed to load QR code image')
+          }
+        }
         
         loading?.classList.add('hidden')
         content?.classList.remove('hidden')
+        
+        // Focus on the code input for better UX
+        setTimeout(() => {
+          document.getElementById('verification-code')?.focus()
+        }, 100)
       }
     } catch (error) {
+      console.error('Error initializing 2FA setup:', error)
       this.show2FAError('An unexpected error occurred')
     }
   }

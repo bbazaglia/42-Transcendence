@@ -34,7 +34,7 @@ export class FileStore {
 
         try {
             const string = JSON.stringify(session);
-            // Optimization: Don't write to disk if the session data hasn't changed.
+            // Don't write to disk if the session data hasn't changed.
             if (cache[sessionId] && (string === JSON.stringify(cache[sessionId]))) {
                 return callback();
             }
@@ -62,7 +62,7 @@ export class FileStore {
             });
         }
 
-        // First, try to get the session from the in-memory cache.
+        // First, we try to get the session from the in-memory cache.
         if (cache[sessionId]) {
             return callback(null, cache[sessionId]);
         }
@@ -77,8 +77,6 @@ export class FileStore {
             callback(null, session);
 
         } catch (error) {
-            // This is the crucial part: If the file doesn't exist, it's not an error.
-            // It simply means there is no session, so we return null.
             if (error.code === 'ENOENT') {
                 return callback(null);
             }
@@ -105,7 +103,6 @@ export class FileStore {
             callback();
 
         } catch (error) {
-            // If the file doesn't exist, our job is already done.
             if (error.code === 'ENOENT') {
                 return callback();
             }

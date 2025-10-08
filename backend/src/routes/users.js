@@ -9,7 +9,7 @@ export default async function (fastify, opts) {
             body: {
                 type: 'object',
                 properties: {
-                    displayName: { type: 'string', minLength: 1, maxLength: 20 },
+                    displayName: { type: 'string', minLength: 3, maxLength: 20 },
                     email: { type: 'string', format: 'email', maxLength: 100 },
                     password: { type: 'string', minLength: 6, maxLength: 100 }
                 },

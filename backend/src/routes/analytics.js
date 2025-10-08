@@ -63,14 +63,6 @@ export default async function (fastify, opts) {
                                 }
                             }
                         },
-                        tournamentStats: {
-                            type: 'object',
-                            properties: {
-                                tournamentsParticipated: { type: 'integer' },
-                                tournamentsWon: { type: 'integer' },
-                                averageTournamentPosition: { type: 'number' }
-                            }
-                        },
                         recentTrends: {
                             type: 'object',
                             properties: {
@@ -132,11 +124,6 @@ export default async function (fastify, opts) {
                     performanceOverTime: [],
                     scoreDistribution: { playerOneScores: [], playerTwoScores: [] },
                     opponentAnalysis: [],
-                    tournamentStats: {
-                        tournamentsParticipated: 0,
-                        tournamentsWon: 0,
-                        averageTournamentPosition: 0
-                    },
                     recentTrends: {
                         last7Days: { matches: 0, wins: 0, losses: 0, winRate: 0 },
                         last30Days: { matches: 0, wins: 0, losses: 0, winRate: 0 }
@@ -168,9 +155,6 @@ export default async function (fastify, opts) {
             // Calculate opponent analysis
             const opponentAnalysis = calculateOpponentAnalysis(userMatches, userId);
 
-            // Calculate tournament stats
-            const tournamentStats = await calculateTournamentStats(fastify.prisma, userId);
-
             // Calculate recent trends
             const recentTrends = calculateRecentTrends(userMatches, userId);
 
@@ -182,12 +166,11 @@ export default async function (fastify, opts) {
                     winRate: Math.round(winRate * 100) / 100,
                     averageScore: Math.round(averageScore * 100) / 100,
                     bestScore,
-                    totalPlayTime: userMatches.length * 5 // Assuming 5 minutes per match
+                    totalPlayTime: userMatches.length * 2 // Assuming 2 minutes per match
                 },
                 performanceOverTime,
                 scoreDistribution,
                 opponentAnalysis,
-                tournamentStats,
                 recentTrends
             };
 
@@ -259,33 +242,6 @@ function calculateOpponentAnalysis(matches, userId) {
         ...stats,
         winRate: stats.matchesPlayed > 0 ? Math.round((stats.wins / stats.matchesPlayed) * 100 * 100) / 100 : 0
     })).sort((a, b) => b.matchesPlayed - a.matchesPlayed);
-}
-
-// Helper function to calculate tournament stats
-async function calculateTournamentStats(prisma, userId) {
-    const tournamentParticipations = await prisma.tournamentParticipant.findMany({
-        where: { userId },
-        include: {
-            tournament: {
-                select: {
-                    id: true,
-                    status: true,
-                    winnerId: true
-                }
-            }
-        }
-    });
-
-    const tournamentsParticipated = tournamentParticipations.length;
-    const tournamentsWon = tournamentParticipations.filter(tp =>
-        tp.tournament.status === 'COMPLETED' && tp.tournament.winnerId === userId
-    ).length;
-
-    return {
-        tournamentsParticipated,
-        tournamentsWon,
-        averageTournamentPosition: tournamentsParticipated > 0 ? 2.5 : 0 // Simplified calculation
-    };
 }
 
 // Helper function to calculate recent trends

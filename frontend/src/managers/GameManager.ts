@@ -275,8 +275,8 @@ export class GameManager {
     this.rightPaddle.y += this.rightPaddle.dy
 
     // Keep paddles within canvas bounds
-    this.leftPaddle.y = Math.max(0, Math.min(350, this.leftPaddle.y))
-    this.rightPaddle.y = Math.max(0, Math.min(350, this.rightPaddle.y))
+    this.leftPaddle.y = Math.max(0, Math.min(400 - this.leftPaddle.height, this.leftPaddle.y))
+    this.rightPaddle.y = Math.max(0, Math.min(400 - this.rightPaddle.height, this.rightPaddle.y))
 
     // Debug paddle movement (only log occasionally to avoid spam)
     // if (Math.random() < 0.001) { // 0.1% chance per frame = ~once per 16.7 seconds

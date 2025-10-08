@@ -236,7 +236,7 @@ export class ProfilePage {
                 
                 <!-- Matches Tab Content -->
                 <div id="matches-content" class="${isOwnProfile ? 'hidden' : ''}">
-                  ${this.renderMatchesContent(matches)}
+                  ${this.renderMatchesContent(matches, isOwnProfile)}
                 </div>
               </div>
             </div>
@@ -370,7 +370,7 @@ export class ProfilePage {
     `
   }
 
-  private renderMatchesContent(matches: any[]): string {
+  private renderMatchesContent(matches: any[], isOwnProfile: boolean = false): string {
     return matches.length > 0 ? `
       <div class="space-y-4">
         ${matches.map(match => `
@@ -399,11 +399,13 @@ export class ProfilePage {
     ` : `
       <div class="text-center py-8">
         <h3 class="text-xl font-bold mb-2 text-white">No Matches Yet</h3>
-        <p class="text-gray-300 mb-6">Start playing to see your match history here!</p>
-        <button id="play-first-game-btn" 
-                class="px-6 py-3 bg-cyan-600/20 text-white border border-cyan-500/30 font-bold rounded-xl hover:bg-cyan-600/30 transition-colors">
-          Play Your First Game
-        </button>
+        <p class="text-gray-300 mb-6">${isOwnProfile ? 'Start playing to see your match history here!' : 'This player has no match history yet.'}</p>
+        ${isOwnProfile ? `
+          <button id="play-first-game-btn" 
+                  class="px-6 py-3 bg-cyan-600/20 text-white border border-cyan-500/30 font-bold rounded-xl hover:bg-cyan-600/30 transition-colors">
+            Play Your First Game
+          </button>
+        ` : ''}
       </div>
     `
   }

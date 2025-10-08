@@ -11,17 +11,32 @@ async function totpPlugin(fastify, opts) {
     const TOTP_WINDOW = opts.window || 1; // Allow 1 step before/after for clock skew
 
     // Generates a new TOTP instance with a new secret.
+    // function setupNewTotp(userLabel) {
+    //
+    //     return TOTP.generate({
+    //         algorithm: TOTP_ALG,
+    //         digits: TOTP_DIGITS,
+    //         issuer: TOTP_ISSUER,
+    //         label: userLabel,
+    //         issuerInLabel: TOTP_ISSUER_IN_LABEL,
+    //         period: TOTP_PERIOD,
+    //     });
+    // }
+
+    // Generates a new TOTP instance with a new secret.
     function setupNewTotp(userLabel) {
-        // First, generate a new secret
+        // Generate a new random secret
         const secret = new Secret();
-        return TOTP.generate({
+        
+        // Create and return TOTP instance with the secret
+        return new TOTP({
             algorithm: TOTP_ALG,
             digits: TOTP_DIGITS,
             issuer: TOTP_ISSUER,
             label: userLabel,
             issuerInLabel: TOTP_ISSUER_IN_LABEL,
             period: TOTP_PERIOD,
-            secret: secret  // Pass the secret here
+            secret: secret
         });
     }
 

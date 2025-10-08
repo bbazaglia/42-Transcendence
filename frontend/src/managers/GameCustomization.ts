@@ -147,10 +147,10 @@ export class GameCustomization {
     {
       id: 'neon',
       name: 'Neon',
-      backgroundColor: '#0a0a0a',
-      paddleColor: '#00ffff',
-      ballColor: '#ff00ff',
-      lineColor: '#ffff00'
+      backgroundColor: '#049210ff',
+      paddleColor: '#001742ff',
+      ballColor: '#4e194eff',
+      lineColor: '#ffffffff'
     },
     {
       id: 'sunset',
@@ -243,13 +243,13 @@ export class GameCustomization {
   activatePowerUp(powerUpId: string, game: any): void {
     // console.log(`🎁 Attempting to activate power-up: ${powerUpId}`)
     // console.log(`🎁 Power-ups enabled: ${this.settings.powerUpsEnabled}`)
-    
+
     const powerUp = this.powerUps.find(p => p.id === powerUpId)
     if (!powerUp) {
       // console.log(`🎁 Power-up not found: ${powerUpId}`)
       return
     }
-    
+
     if (!this.settings.powerUpsEnabled) {
       // console.log(`🎁 Power-ups are disabled in settings`)
       return
@@ -265,14 +265,14 @@ export class GameCustomization {
   getActivePowerUps(): Array<{ powerUp: PowerUp; endTime: number }> {
     const now = Date.now()
     const active = Array.from(this.activePowerUps.values()).filter(p => p.endTime > now)
-    
+
     // Clean up expired power-ups
     this.activePowerUps.forEach((value, key) => {
       if (value.endTime <= now) {
         this.activePowerUps.delete(key)
       }
     })
-    
+
     return active
   }
 
@@ -310,7 +310,7 @@ export class GameCustomization {
 
   renderCustomizationMenu(): string {
     //const currentTheme = this.getCurrentTheme()
-    
+
     return `
       <div class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[60]">
         <div class="bg-white/10 backdrop-blur-xl rounded-2xl p-8 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto border border-white/20 shadow-2xl">
@@ -327,27 +327,27 @@ export class GameCustomization {
             <!-- Game Settings -->
             <div class="space-y-6">
               <h3 class="text-xl font-bold text-white border-b border-white/20 pb-2 orbitron-font">Game Settings</h3>
-              
+
               <div>
                 <label class="block text-white font-semibold mb-2">Ball Speed: <span id="ballSpeedValue">${this.settings.ballSpeed}</span></label>
-                <input type="range" id="ballSpeed" min="2" max="8" value="${this.settings.ballSpeed}" 
+                <input type="range" id="ballSpeed" min="2" max="8" value="${this.settings.ballSpeed}"
                        class="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer">
               </div>
 
               <div>
                 <label class="block text-white font-semibold mb-2">Paddle Speed: <span id="paddleSpeedValue">${this.settings.paddleSpeed}</span></label>
-                <input type="range" id="paddleSpeed" min="3" max="8" value="${this.settings.paddleSpeed}" 
+                <input type="range" id="paddleSpeed" min="3" max="8" value="${this.settings.paddleSpeed}"
                        class="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer">
               </div>
 
               <div>
                 <label class="block text-white font-semibold mb-2">Winning Score: <span id="winningScoreValue">${this.settings.winningScore}</span></label>
-                <input type="range" id="winningScore" min="3" max="10" value="${this.settings.winningScore}" 
+                <input type="range" id="winningScore" min="3" max="10" value="${this.settings.winningScore}"
                        class="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer">
               </div>
 
               <div class="flex items-center space-x-3">
-                <input type="checkbox" id="powerUpsEnabled" ${this.settings.powerUpsEnabled ? 'checked' : ''} 
+                <input type="checkbox" id="powerUpsEnabled" ${this.settings.powerUpsEnabled ? 'checked' : ''}
                        class="w-5 h-5 text-cyan-400 bg-white/10 border-white/20 rounded focus:ring-cyan-400">
                 <label class="text-white font-semibold">Enable Power-ups</label>
               </div>
@@ -356,16 +356,16 @@ export class GameCustomization {
             <!-- Map Themes -->
             <div class="space-y-6">
               <h3 class="text-xl font-bold text-white border-b border-white/20 pb-2 orbitron-font">Map Themes</h3>
-              
+
               <div class="grid grid-cols-2 gap-4">
                 ${this.mapThemes.map(theme => `
                   <div class="relative">
-                    <input type="radio" id="theme_${theme.id}" name="mapTheme" value="${theme.id}" 
+                    <input type="radio" id="theme_${theme.id}" name="mapTheme" value="${theme.id}"
                            ${this.settings.mapTheme === theme.id ? 'checked' : ''} class="hidden">
                     <label for="theme_${theme.id}" class="block cursor-pointer">
                       <div class="p-4 rounded-lg border-2 transition-all duration-300 ${
-                        this.settings.mapTheme === theme.id 
-                          ? 'border-cyan-400 bg-cyan-400/20' 
+                        this.settings.mapTheme === theme.id
+                          ? 'border-cyan-400 bg-cyan-400/20'
                           : 'border-white/20 bg-white/5 hover:bg-white/10'
                       }">
                         <div class="flex items-center space-x-3">
@@ -399,11 +399,11 @@ export class GameCustomization {
 
           <!-- Action Buttons -->
           <div class="flex justify-end space-x-4 mt-8 pt-6 border-t border-white/20">
-            <button onclick="resetToDefaults()" 
+            <button onclick="resetToDefaults()"
                     class="px-6 py-3 bg-cyan-600/20 text-cyan-400 border border-cyan-500/30 rounded-xl hover:bg-cyan-600/30 transition-colors text-sm font-bold">
               Reset to Defaults
             </button>
-            <button onclick="saveCustomizationSettings()" 
+            <button onclick="saveCustomizationSettings()"
                     class="px-6 py-3 bg-cyan-600/20 text-cyan-400 border border-cyan-500/30 rounded-xl hover:bg-cyan-600/30 transition-colors text-sm font-bold">
               Save Settings
             </button>
@@ -415,7 +415,7 @@ export class GameCustomization {
 
   renderSettingsButton(): string {
     return `
-      <button onclick="openCustomizationMenu()" 
+      <button onclick="openCustomizationMenu()"
               class="fixed top-20 right-4 z-50 px-3 py-2 text-white hover:text-cyan-400 transition-all duration-300 transform hover:scale-110 bg-black/20 backdrop-blur-sm rounded-lg border border-white/10 flex items-center space-x-2">
         <span class="text-xl">⚙️</span>
         <span class="text-sm font-medium">Customize Game</span>
@@ -432,7 +432,7 @@ export class GameCustomization {
         ${active.map(({ powerUp, endTime }) => {
           const remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000))
           const progress = (remaining / (powerUp.duration / 1000)) * 100
-          
+
           return `
             <div class="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20 shadow-lg">
               <div class="flex items-center space-x-3">
@@ -441,7 +441,7 @@ export class GameCustomization {
                   <div class="text-white font-semibold text-sm">${powerUp.name}</div>
                   <div class="text-gray-400 text-xs">${remaining}s remaining</div>
                   <div class="w-full bg-white/20 rounded-full h-1 mt-1">
-                    <div class="bg-gradient-to-r from-cyan-400 to-purple-500 h-1 rounded-full transition-all duration-300" 
+                    <div class="bg-gradient-to-r from-cyan-400 to-purple-500 h-1 rounded-full transition-all duration-300"
                          style="width: ${progress}%"></div>
                   </div>
                 </div>
@@ -452,4 +452,4 @@ export class GameCustomization {
       </div>
     `
   }
-} 
+}

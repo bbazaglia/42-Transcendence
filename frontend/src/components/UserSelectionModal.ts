@@ -1,4 +1,5 @@
 import { sessionService } from '../services/SessionService.js'
+import { showMessage } from '../components/Notifier'
 
 export interface UserSelectionOptions {
   gameType: 'quick-game' | 'ai-game' | 'tournament'
@@ -191,7 +192,7 @@ export class UserSelectionModal {
     const userId = parseInt(card.getAttribute('data-user-id') || '0')
     const indicator = card.querySelector('.selection-indicator')
     const checkmark = card.querySelector('svg')
-    
+
     if (this.selectedPlayers.has(userId)) {
       // Deselect
       this.selectedPlayers.delete(userId)
@@ -203,7 +204,7 @@ export class UserSelectionModal {
       if (this.selectedPlayers.size >= this.maxPlayers) {
         return // Can't select more
       }
-      
+
       // Select
       this.selectedPlayers.add(userId)
       card.classList.add('ring-2', 'ring-cyan-400', 'bg-cyan-500/10')
@@ -220,11 +221,11 @@ export class UserSelectionModal {
   private updateSelectionUI(): void {
     const countElement = document.getElementById('selection-count')
     const confirmBtn = document.getElementById('confirm-btn') as HTMLButtonElement
-    
+
     if (countElement) {
       countElement.textContent = this.selectedPlayers.size.toString()
     }
-    
+
     if (confirmBtn) {
       const canConfirm = this.selectedPlayers.size >= this.minPlayers && this.selectedPlayers.size <= this.maxPlayers
       confirmBtn.disabled = !canConfirm
@@ -244,7 +245,7 @@ export class UserSelectionModal {
     if (this.gameType === 'tournament') {
       const playerCount = this.selectedPlayers.size
       if (playerCount !== 4 && playerCount !== 8 && playerCount !== 16) {
-        alert('Tournaments require exactly 4, 8, or 16 players. Please adjust your selection.')
+        showMessage('Tournaments require exactly 4, 8, or 16 players. Please adjust your selection.', 'error')
         return
       }
     }

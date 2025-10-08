@@ -1,10 +1,10 @@
 import { sessionService } from '../services/SessionService'
 import { matchService } from '../services/MatchService'
 import { friendsService } from '../services/FriendsService'
-import { apiService } from '../services/ApiService'
 import { userService } from '../services/UserService'
 import { InsightsModal } from '../components/InsightsModal'
 import { userSelectionModal } from '../components/UserSelectionModal'
+import { showMessage } from '../components/Notifier'
 
 export class ProfilePage {
   private authModal: any
@@ -559,18 +559,18 @@ export class ProfilePage {
           const participants = sessionService.getParticipants()
           const currentUser = participants.find(p => window.location.pathname === `/profile/${p.id}` || window.location.pathname === '/profile')
           const acceptorId = currentUser?.id
-          
+
           if (acceptorId) {
             const result = await friendsService.acceptFriendRequest(friendshipId, acceptorId)
             if (result.success) {
-              alert('Friend request accepted!')
+              showMessage('Friend request accepted!', 'success')
               // Force a page reload to show updated friends list
               window.location.reload()
             } else {
-              alert(`Failed to accept friend request: ${result.error}`)
+              showMessage(`Failed to accept friend request: ${result.error}`, 'error')
             }
           } else {
-            alert('Error: Could not identify current user for accepting request')
+            showMessage('Error: Could not identify current user for accepting request', 'error')
           }
         }
       }
@@ -586,17 +586,17 @@ export class ProfilePage {
           const participants = sessionService.getParticipants()
           const currentUser = participants.find(p => window.location.pathname === `/profile/${p.id}` || window.location.pathname === '/profile')
           const rejectorId = currentUser?.id
-          
+
           if (rejectorId) {
             const result = await friendsService.rejectFriendRequest(friendshipId, rejectorId)
             if (result.success) {
-              alert('Friend request rejected!')
+              showMessage('Friend request rejected!', 'success')
               window.location.reload() // Refresh the page to show updated pending requests
             } else {
-              alert(`Failed to reject friend request: ${result.error}`)
+              showMessage(`Failed to reject friend request: ${result.error}`, 'error')
             }
           } else {
-            alert('Error: Could not identify current user for rejecting request')
+            showMessage('Error: Could not identify current user for rejecting request', 'error')
           }
         }
       }
@@ -612,17 +612,17 @@ export class ProfilePage {
           const participants = sessionService.getParticipants()
           const currentUser = participants.find(p => window.location.pathname === `/profile/${p.id}` || window.location.pathname === '/profile')
           const senderId = currentUser?.id
-          
+
           if (senderId) {
             const result = await friendsService.cancelFriendRequest(friendshipId, senderId)
             if (result.success) {
-              alert('Friend request canceled!')
+              showMessage('Friend request canceled!', 'success')
               window.location.reload() // Refresh the page to show updated sent requests
             } else {
-              alert(`Failed to cancel friend request: ${result.error}`)
+              showMessage(`Failed to cancel friend request: ${result.error}`, 'error')
             }
           } else {
-            alert('Error: Could not identify current user for canceling request')
+            showMessage('Error: Could not identify current user for canceling request', 'error')
           }
         }
       }
@@ -638,17 +638,17 @@ export class ProfilePage {
           const participants = sessionService.getParticipants()
           const currentUser = participants.find(p => window.location.pathname === `/profile/${p.id}` || window.location.pathname === '/profile')
           const removerId = currentUser?.id
-          
+
           if (removerId) {
             const result = await friendsService.removeFriend(friendshipId, removerId)
             if (result.success) {
-              alert('Friend removed successfully!')
+              showMessage('Friend removed successfully!', 'success')
               window.location.reload() // Refresh the page
             } else {
-              alert(`Failed to remove friend: ${result.error}`)
+              showMessage(`Failed to remove friend: ${result.error}`, 'error')
             }
           } else {
-            alert('Error: Could not identify current user for removing friend')
+            showMessage('Error: Could not identify current user for removing friend', 'error')
           }
         }
       }
@@ -742,23 +742,23 @@ export class ProfilePage {
     const avatarUrl = (document.getElementById('edit-avatar-url') as HTMLInputElement)?.value
 
     try {
-      const response = await apiService.updateUserProfile(currentUser.id, {
+      const result = await userService.updateUserProfile(currentUser.id, {
         displayName,
         avatarUrl: avatarUrl || undefined
       })
 
-      if (response.error) {
-        console.error('Failed to update profile:', response.error)
+      if (!result.success) {
+        showMessage(`Failed to update profile: ${result.error}`, 'error')
+        console.error('Failed to update profile:', result.error)
         return
       }
 
-      // Update local user data - refresh session to get updated user data
-      await sessionService.checkSessionStatus()
       this.closeEditProfileModal()
       // Refresh the page
       window.location.reload()
 
     } catch (error) {
+      showMessage('An unexpected error occurred while updating your profile.', 'error')
       console.error('Error updating profile:', error)
     }
   }
@@ -771,10 +771,10 @@ export class ProfilePage {
     const participants = sessionService.getParticipants()
     const currentUser = participants.find(p => window.location.pathname === `/profile/${p.id}` || window.location.pathname === '/profile')
     console.log('Current user:', currentUser)
-    
+
     if (!currentUser || !currentUser.id) {
       console.error('No current user found - user not authenticated')
-      alert('Please log in to view your analytics')
+      showMessage('Please log in to view your analytics', 'error')
       return
     }
 
@@ -850,11 +850,21 @@ export class ProfilePage {
   private async searchUsers(query: string): Promise<void> {
     try {
       console.log('Searching for users with query:', query)
-      const response = await apiService.searchUsers(query)
-      console.log('Search response:', response)
-      const results = response.data?.users || []
+      const response = await userService.searchUsers(query)
+
+      if (response.error) {
+        console.error('Search failed:', response.error);
+        // Optionally, display an error in the search results area
+        const searchResultsElement = document.getElementById('friend-search-results')
+        if (searchResultsElement) {
+          searchResultsElement.innerHTML = `<div class="text-red-400 p-3">Error: ${response.error}</div>`;
+        }
+        return;
+      }
+
+      const results = response.users || []
       console.log('Search results:', results)
-      
+
       const resultsHTML = results.map((user: any) => `
         <div class="flex items-center justify-between bg-white/5 rounded-lg p-3">
           <div class="flex items-center space-x-3">
@@ -879,12 +889,16 @@ export class ProfilePage {
       const searchResultsElement = document.getElementById('friend-search-results')
       console.log('Search results element:', searchResultsElement)
       console.log('Results HTML:', resultsHTML)
-      
+
       if (searchResultsElement) {
         // Remove hidden class if it exists
         searchResultsElement.classList.remove('hidden')
-        searchResultsElement.innerHTML = resultsHTML
-        
+        if (results.length > 0) {
+          searchResultsElement.innerHTML = resultsHTML
+        } else {
+          searchResultsElement.innerHTML = `<div class="text-gray-400 p-3 text-center">No users found.</div>`
+        }
+
         // Debug visibility
         console.log('Element classes after removal:', searchResultsElement.className)
         console.log('Element style display:', searchResultsElement.style.display)
@@ -907,26 +921,26 @@ export class ProfilePage {
             const participants = sessionService.getParticipants()
             const currentUser = participants.find(p => window.location.pathname === `/profile/${p.id}` || window.location.pathname === '/profile')
             const senderId = currentUser?.id
-            
+
             if (senderId) {
               const result = await friendsService.sendFriendRequest(userId, senderId)
               if (result.success) {
                 this.closeAddFriendModal()
-                alert('Friend request sent successfully!')
+                showMessage('Friend request sent successfully!', 'success')
                 setTimeout(() => {
                   window.location.reload()
                 }, 1000)
               } else {
                 // Handle the case where friendship already exists
                 if (result.error && result.error.includes('already exists')) {
-                  alert('You already have a pending friend request with this user!')
+                  showMessage('You already have a pending friend request with this user!', 'error')
                 } else {
-                  alert(`Failed to send friend request: ${result.error}`)
+                  showMessage(`Failed to send friend request: ${result.error}`, 'error')
                 }
                 this.closeAddFriendModal()
               }
             } else {
-              alert('Error: Could not identify current user')
+              showMessage('Error: Could not identify current user', 'error')
             }
           }
         })

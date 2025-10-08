@@ -7,7 +7,7 @@ import { Navbar } from './components/Navbar'
 import { Lobby } from './components/Lobby'
 import { PageService } from './services/PageService'
 import { sessionService } from './services/SessionService'
-import { tournamentService } from './services/TournamentService'
+import { showMessage } from './components/Notifier'
 
 export class App {
   private router: Router
@@ -85,7 +85,7 @@ export class App {
     this.router.addRoute('/profile', () => this.showProfilePage())
     this.router.addRoute('/lobby', () => this.showLobbyPage())
     this.router.addRoute('/customize', () => this.showCustomizePage())
-    
+
     // Dynamic route for specific user profiles
     this.router.addDynamicRoute(/^\/profile\/(?<userId>\d+)$/, (params) => {
       this.showProfilePage(parseInt(params.userId))
@@ -122,7 +122,7 @@ export class App {
 
     // Setup event listeners once
     this.setupNavbarListeners()
-    
+
     // Update search visibility based on current auth state
     this.navbar.updateSearchVisibility()
   }
@@ -173,9 +173,6 @@ export class App {
       return
     }
 
-    // Load tournaments from backend
-    await this.loadTournaments()
-
     // Check for selected players from session storage
     const selectedPlayersData = sessionStorage.getItem('selectedPlayers')
     let selectedPlayers = null
@@ -193,12 +190,12 @@ export class App {
     if (!tournament) {
       console.log('No current tournament found')
       console.log('Selected players data:', selectedPlayers)
-      
+
       if (selectedPlayers && selectedPlayers.players && selectedPlayers.players.length >= 4) {
         // Validate power of 2 players before creating tournament
         const playerCount = selectedPlayers.players.length
         if (playerCount !== 4 && playerCount !== 8 && playerCount !== 16) {
-          alert('Tournaments require exactly 4, 8, or 16 players. Please adjust your selection.')
+          showMessage('Tournaments require exactly 4, 8, or 16 players. Please adjust your selection.', 'error')
           // Open user selection modal to allow user to select correct number of players
           this.pageService.showUserSelection('tournament', (path) => {
             window.history.pushState({}, '', path)
@@ -209,7 +206,7 @@ export class App {
           })
           return
         }
-        
+
         // Create tournament with selected players
         console.log('Creating tournament with selected players:', selectedPlayers.players)
         const playerNames = selectedPlayers.players.map((player: any) => player.displayName)
@@ -366,7 +363,7 @@ export class App {
       // Quick game - require user selection
       console.log(`Starting quick game. Is AI game: ${isAIGame}`)
       console.log('Selected players:', selectedPlayers)
-      
+
       if (selectedPlayers && selectedPlayers.players && selectedPlayers.players.length > 0) {
         // Use selected players for the game
         const players = selectedPlayers.players
@@ -443,7 +440,7 @@ export class App {
         })
         return
       }
-      
+
       // Set up reset button for tournament games
       this.setupGameResetButton()
     }
@@ -458,18 +455,6 @@ export class App {
       this.render()
     }, userId)
   }
-
-
-  private async loadTournaments(): Promise<void> {
-    try {
-      // Load tournaments from backend
-      await tournamentService.getTournaments()
-      console.log('Tournaments loaded from backend')
-    } catch (error) {
-      console.error('Error loading tournaments:', error)
-    }
-  }
-
 
   private setupCustomizationHandlers(): void {
     // Expose customization functions to window
@@ -515,7 +500,7 @@ export class App {
           powerUpsEnabled: false,
           mapTheme: 'classic'
         })
-        
+
         // Check if we're on the customize page and navigate back to home
         if (window.location.pathname === '/customize') {
           window.history.pushState({}, '', '/')
@@ -533,7 +518,7 @@ export class App {
     if (menu) {
       menu.remove()
     }
-    
+
     // Ensure the current page content is visible after closing the modal
     // This handles cases where the modal might have been opened from a different page
     if (window.location.pathname === '/') {
@@ -641,27 +626,27 @@ export class App {
     if (player) {
       return player
     }
-    
+
     // Calculate the number of first round matches based on the actual player count
     const firstRoundMatches = Math.ceil(playerCount / 2)
-    
+
     if (matchIndex < firstRoundMatches) {
       // First round - if player is null, it means there's an odd number of players
       // and this player gets a bye (automatic advancement)
       return 'Bye'
     }
-    
+
     // For subsequent rounds, find which matches feed into this one
     // Based on the advanceWinner logic: nextMatchIndex = firstRoundMatches + Math.floor(currentMatchIndex / 2)
     // We need to reverse this to find which matches feed into the current match
-    
+
     const currentRoundStart = firstRoundMatches
     const currentRoundMatchIndex = matchIndex - currentRoundStart
-    
+
     // The two matches that feed into this match are:
     const previousMatch1 = currentRoundMatchIndex * 2
     const previousMatch2 = currentRoundMatchIndex * 2 + 1
-    
+
     // Determine which previous match corresponds to which player position
     if (playerPosition === 'player1') {
       return `Winner of Match ${previousMatch1 + 1}`
@@ -676,11 +661,11 @@ export class App {
   private updatePlayerNames(player1Name: string, player2Name: string): void {
     const player1Element = document.getElementById('player1-name')
     const player2Element = document.getElementById('player2-name')
-    
+
     if (player1Element) {
       player1Element.textContent = player1Name
     }
-    
+
     if (player2Element) {
       player2Element.textContent = player2Name
     }
@@ -869,7 +854,7 @@ export class App {
 
     // Get all participants (active users)
     const participants = sessionService.getParticipants()
-    
+
     this.rootElement.innerHTML = `
       <div class="min-h-screen mesh-gradient relative overflow-hidden">
         <div class="relative z-10 flex items-center justify-center min-h-screen px-4 pt-20">

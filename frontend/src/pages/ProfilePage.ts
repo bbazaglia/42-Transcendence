@@ -4,6 +4,7 @@ import { friendsService } from '../services/FriendsService'
 import { userService } from '../services/UserService'
 import { InsightsModal } from '../components/InsightsModal'
 import { userSelectionModal } from '../components/UserSelectionModal'
+import { totpService } from '../services/TotpService'
 import { showMessage } from '../components/Notifier'
 
 export class ProfilePage {
@@ -164,8 +165,12 @@ export class ProfilePage {
                     <!-- Edit Profile Button (only for own profile) -->
                     ${isOwnProfile ? `
                       <button id="edit-profile-btn" 
-                              class="w-full px-4 py-2 bg-cyan-600/20 text-white border border-cyan-500/30 rounded-lg hover:bg-cyan-600/30 transition-colors text-sm font-medium">
+                              class="w-full px-4 py-2 bg-cyan-600/20 text-white border border-cyan-500/30 rounded-lg hover:bg-cyan-600/30 transition-colors text-sm font-medium mb-2">
                         Edit Profile
+                      </button>
+                      <button id="toggle-2fa-btn" 
+                              class="w-full px-4 py-2 ${user.isTwoFaEnabled ? 'bg-red-600/20 border-red-500/30 hover:bg-red-600/30' : 'bg-green-600/20 border-green-500/30 hover:bg-green-600/30'} text-white border rounded-lg transition-colors text-sm font-medium">
+                        ${user.isTwoFaEnabled ? 'Disable 2FA' : 'Enable 2FA'}
                       </button>
                     ` : ''}
                   </div>
@@ -469,6 +474,24 @@ export class ProfilePage {
       this.showEditProfileModal()
     })
 
+    // Toggle 2FA button (only for own profile)
+    document.getElementById('toggle-2fa-btn')?.addEventListener('click', async (e) => {
+      e.preventDefault()
+      const participants = sessionService.getParticipants()
+      const currentUser = participants.find(p => window.location.pathname === `/profile/${p.id}` || window.location.pathname === '/profile')
+      if (currentUser && currentUser.id) {
+        // Re-fetch user data to get current totp status
+        const userResponse = await userService.getUserProfile(currentUser.id)
+        if (userResponse.user) {
+          if (userResponse.user.isTwoFaEnabled) {
+            this.showDisable2FAModal(currentUser.id)
+          } else {
+            this.showSetup2FAModal(currentUser.id)
+          }
+        }
+      }
+    })
+
     // View insights button (only for own profile)
     document.getElementById('view-insights-btn')?.addEventListener('click', (e) => {
       e.preventDefault()
@@ -733,6 +756,363 @@ export class ProfilePage {
         this.closeEditProfileModal()
       }
     })
+  }
+
+  private async showSetup2FAModal(userId: number): Promise<void> {
+    const modalHTML = `
+      <div id="setup-2fa-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+          <div class="bg-white/10 backdrop-blur-xl rounded-2xl p-8 max-w-md w-full mx-4 border border-white/20 shadow-2xl">
+            <h3 class="text-2xl font-bold text-cyan-400 mb-6 text-center orbitron-font">Setup Two-Factor Authentication</h3>
+            
+            <!-- Loading State -->
+            <div id="totp-loading" class="text-center py-12">
+              <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400 mx-auto mb-4"></div>
+              <p class="text-white">Generating QR code...</p>
+            </div>
+
+            <!-- Setup Content -->
+            <div id="totp-content" class="hidden space-y-6">
+              <!-- Step 1 -->
+              <div>
+                <h4 class="text-lg font-bold text-white mb-2">
+                  <span class="bg-cyan-600 text-white rounded-full w-6 h-6 inline-flex items-center justify-center mr-2 text-sm">1</span>
+                  Scan QR Code
+                </h4>
+                <p class="text-gray-300 text-sm mb-3">
+                  Use Google Authenticator, Authy, or any TOTP app
+                </p>
+                <div class="bg-white p-4 rounded-lg mb-3">
+                  <img id="qr-image" src="" alt="QR Code" class="mx-auto" style="max-width: 200px;">
+                </div>
+              </div>
+
+              <!-- Step 2 -->
+              <div>
+                <h4 class="text-lg font-bold text-white mb-2">
+                  <span class="bg-cyan-600 text-white rounded-full w-6 h-6 inline-flex items-center justify-center mr-2 text-sm">2</span>
+                  Verify Code
+                </h4>
+                <p class="text-gray-300 text-sm mb-3">
+                  Enter the 6-digit code from your authenticator app
+                </p>
+
+                <div id="verify-message" class="hidden mb-4 p-3 rounded-lg text-sm"></div>
+
+                <form id="verify-2fa-form" class="space-y-4">
+                  <input 
+                    type="text" 
+                    id="verification-code" 
+                    maxlength="6"
+                    class="w-full p-3 text-center text-xl tracking-widest rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/50 focus:border-cyan-400 focus:outline-none transition-colors font-mono"
+                    placeholder="000000"
+                    required
+                    autocomplete="off">
+                  
+                  <div class="flex space-x-3">
+                    <button 
+                      type="submit" 
+                      id="verify-btn"
+                      class="flex-1 px-4 py-3 bg-gradient-to-r from-purple-600 to-cyan-600 text-white font-bold rounded-xl shadow-lg hover:shadow-purple-500/25 transition-all duration-300 disabled:opacity-50">
+                      <span id="verify-text">Enable 2FA</span>
+                      <span id="verify-spinner" class="hidden">⏳ Verifying...</span>
+                    </button>
+                    <button 
+                      type="button" 
+                      id="cancel-setup-2fa"
+                      class="flex-1 px-4 py-3 bg-gradient-to-r from-gray-600 to-gray-500 text-white font-bold rounded-xl shadow-lg hover:from-gray-700 hover:to-gray-600 transition-all duration-300">
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            <!-- Error State -->
+            <div id="totp-error" class="hidden text-center py-8">
+              <div class="text-red-400 text-4xl mb-3">⚠️</div>
+              <p class="text-white text-lg mb-2">Setup Failed</p>
+              <p id="error-message" class="text-gray-300 text-sm mb-4"></p>
+              <button 
+                id="retry-2fa-btn"
+                class="px-4 py-2 bg-cyan-600 text-white font-bold rounded-lg hover:bg-cyan-700 transition-colors">
+                Try Again
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML)
+
+    // Initialize setup
+    this.initialize2FASetup(userId)
+
+    // Event listeners
+    document.getElementById('verify-2fa-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault()
+      await this.handleVerification(userId)
+    })
+
+    const codeInput = document.getElementById('verification-code') as HTMLInputElement
+    codeInput?.addEventListener('input', (e) => {
+      const input = e.target as HTMLInputElement
+      input.value = input.value.replace(/[^0-9]/g, '')
+    })
+
+    document.getElementById('retry-2fa-btn')?.addEventListener('click', () => {
+      this.initialize2FASetup(userId)
+    })
+
+    document.getElementById('cancel-setup-2fa')?.addEventListener('click', () => {
+      this.closeSetup2FAModal()
+    })
+
+    // Close on outside click
+    document.getElementById('setup-2fa-modal')?.addEventListener('click', (e) => {
+      if (e.target === document.getElementById('setup-2fa-modal')) {
+        this.closeSetup2FAModal()
+      }
+    })
+  }
+
+  private async initialize2FASetup(userId: number): Promise<void> {
+    const loading = document.getElementById('totp-loading')
+    const content = document.getElementById('totp-content')
+    const error = document.getElementById('totp-error')
+    const messageEl = document.getElementById('verify-message')
+
+    loading?.classList.remove('hidden')
+    content?.classList.add('hidden')
+    error?.classList.add('hidden')
+    messageEl?.classList.add('hidden') // Clear any previous messages
+
+    try {
+      const result = await totpService.setupTotp(userId)
+
+      if (result.error) {
+        this.show2FAError(result.error)
+        return
+      }
+
+      if (result.data) {
+        const qrImage = document.getElementById('qr-image') as HTMLImageElement
+        if (qrImage) {
+          qrImage.src = result.data.qrCodeUrl
+          qrImage.onerror = () => {
+            this.show2FAError('Failed to load QR code image')
+          }
+        }
+        
+        loading?.classList.add('hidden')
+        content?.classList.remove('hidden')
+        
+        // Focus on the code input for better UX
+        setTimeout(() => {
+          document.getElementById('verification-code')?.focus()
+        }, 100)
+      }
+    } catch (error) {
+      console.error('Error initializing 2FA setup:', error)
+      this.show2FAError('An unexpected error occurred')
+    }
+  }
+
+  private show2FAError(message: string): void {
+    document.getElementById('totp-loading')?.classList.add('hidden')
+    document.getElementById('totp-content')?.classList.add('hidden')
+    document.getElementById('totp-error')?.classList.remove('hidden')
+    
+    const errorMsg = document.getElementById('error-message')
+    if (errorMsg) errorMsg.textContent = message
+  }
+
+  private async handleVerification(userId: number): Promise<void> {
+    const codeInput = document.getElementById('verification-code') as HTMLInputElement
+    const token = codeInput.value.trim()
+
+    if (token.length !== 6) {
+      this.showVerifyMessage('Please enter a valid 6-digit code', 'error')
+      return
+    }
+
+    this.setVerifyLoading(true)
+
+    try {
+      const result = await totpService.verifyAndEnable(userId, token)
+
+      if (result.success) {
+        this.showVerifyMessage('2FA enabled successfully!', 'success')
+        setTimeout(() => {
+          this.closeSetup2FAModal()
+          window.location.reload()
+        }, 1500)
+      } else {
+        this.showVerifyMessage(result.error || 'Invalid code', 'error')
+      }
+    } catch (error) {
+      this.showVerifyMessage('An unexpected error occurred', 'error')
+    } finally {
+      this.setVerifyLoading(false)
+    }
+  }
+
+  private setVerifyLoading(loading: boolean): void {
+    const btn = document.getElementById('verify-btn') as HTMLButtonElement
+    const text = document.getElementById('verify-text')
+    const spinner = document.getElementById('verify-spinner')
+
+    if (btn && text && spinner) {
+      btn.disabled = loading
+      if (loading) {
+        text.classList.add('hidden')
+        spinner.classList.remove('hidden')
+      } else {
+        text.classList.remove('hidden')
+        spinner.classList.add('hidden')
+      }
+    }
+  }
+
+  private showVerifyMessage(message: string, type: 'success' | 'error'): void {
+    const messageEl = document.getElementById('verify-message')
+    if (!messageEl) return
+
+    messageEl.textContent = message
+    messageEl.className = `mb-4 p-3 rounded-lg text-sm ${
+      type === 'success'
+        ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+        : 'bg-red-500/20 text-red-400 border border-red-500/30'
+    }`
+    messageEl.classList.remove('hidden')
+
+    if (type === 'success') {
+      setTimeout(() => messageEl.classList.add('hidden'), 3000)
+    }
+  }
+
+  private closeSetup2FAModal(): void {
+    document.getElementById('setup-2fa-modal')?.remove()
+  }
+
+  // 5. Add the Disable 2FA Modal method:
+  private showDisable2FAModal(userId: number): void {
+      const modalHTML = `
+        <div id="disable-2fa-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50">
+          <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white/10 backdrop-blur-xl rounded-2xl p-8 max-w-md w-full mx-4 border border-white/20 shadow-2xl">
+              <h3 class="text-2xl font-bold text-cyan-400 mb-6 text-center orbitron-font">Disable Two-Factor Authentication</h3>
+              
+              <!-- Warning -->
+              <div class="bg-red-500/20 border border-red-500/30 rounded-lg p-4 mb-6">
+                <p class="text-red-300 font-semibold mb-2">⚠️ Warning</p>
+                <p class="text-gray-300 text-sm">
+                  Disabling 2FA will make your account less secure. You'll only need your login credentials to access your account.
+                </p>
+              </div>
+
+              <!-- Message Display -->
+              <div id="disable-message" class="hidden mb-4 p-3 rounded-lg text-sm"></div>
+
+              <!-- Confirmation -->
+              <p class="text-white text-center mb-6">
+                Are you sure you want to disable two-factor authentication?
+              </p>
+              
+              <div class="flex space-x-3">
+                <button 
+                  type="button" 
+                  id="confirm-disable-btn"
+                  class="flex-1 py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                  <span id="disable-text">Disable 2FA</span>
+                  <span id="disable-spinner" class="hidden">⏳ Processing...</span>
+                </button>
+                <button 
+                  type="button"
+                  id="cancel-disable-2fa"
+                  class="flex-1 py-3 bg-gradient-to-r from-gray-600 to-gray-500 text-white font-bold rounded-xl hover:from-gray-700 hover:to-gray-600 transition-colors">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `
+
+      document.body.insertAdjacentHTML('beforeend', modalHTML)
+
+      // Event listeners
+      document.getElementById('confirm-disable-btn')?.addEventListener('click', async () => {
+          await this.handleDisable2FA(userId)
+      })
+
+      document.getElementById('cancel-disable-2fa')?.addEventListener('click', () => {
+          this.closeDisable2FAModal()
+      })
+
+      // Close on outside click
+      document.getElementById('disable-2fa-modal')?.addEventListener('click', (e) => {
+          if (e.target === document.getElementById('disable-2fa-modal')) {
+              this.closeDisable2FAModal()
+          }
+      })
+  }
+
+  private async handleDisable2FA(userId: number): Promise<void> {
+      this.setDisableLoading(true)
+
+      try {
+          const result = await totpService.disableTotp(userId)
+
+          if (result.success) {
+              this.showDisableMessage('2FA disabled successfully', 'success')
+              setTimeout(() => {
+                  this.closeDisable2FAModal()
+                  window.location.reload()
+              }, 1500)
+          } else {
+              this.showDisableMessage(result.error || 'Failed to disable 2FA', 'error')
+          }
+      } catch (error) {
+          this.showDisableMessage('An unexpected error occurred', 'error')
+      } finally {
+          this.setDisableLoading(false)
+      }
+  }
+
+  private setDisableLoading(loading: boolean): void {
+    const btn = document.getElementById('disable-btn') as HTMLButtonElement
+    const text = document.getElementById('disable-text')
+    const spinner = document.getElementById('disable-spinner')
+
+    if (btn && text && spinner) {
+      btn.disabled = loading
+      if (loading) {
+        text.classList.add('hidden')
+        spinner.classList.remove('hidden')
+      } else {
+        text.classList.remove('hidden')
+        spinner.classList.add('hidden')
+      }
+    }
+  }
+
+  private showDisableMessage(message: string, type: 'success' | 'error'): void {
+    const messageEl = document.getElementById('disable-message')
+    if (!messageEl) return
+
+    messageEl.textContent = message
+    messageEl.className = `mb-4 p-3 rounded-lg text-sm ${
+      type === 'success'
+        ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+        : 'bg-red-500/20 text-red-400 border border-red-500/30'
+    }`
+    messageEl.classList.remove('hidden')
+  }
+
+  private closeDisable2FAModal(): void {
+    document.getElementById('disable-2fa-modal')?.remove()
   }
 
   private async handleProfileUpdate(): Promise<void> {

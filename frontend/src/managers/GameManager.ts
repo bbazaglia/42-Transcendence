@@ -90,7 +90,7 @@ export class GameManager {
     // console.log('Tournament manager passed:', !!tournamentManager)
     // console.log('Current match passed:', currentMatch)
     // console.log('Customization passed:', !!customization)
-    
+
     this.canvas = document.getElementById('gameCanvas') as HTMLCanvasElement
     if (!this.canvas) return
 
@@ -101,7 +101,7 @@ export class GameManager {
     this.currentMatch = currentMatch || null
     this.customization = customization
     this.isAIGame = isAIGame; // Define se o jogo é contra a IA
-    
+
     // console.log('Game initialized with:')
     // console.log('- Tournament manager:', !!this.tournamentManager)
     // console.log('- Current match:', this.currentMatch)
@@ -127,7 +127,7 @@ export class GameManager {
         this.gamePaused = !this.gamePaused
         return
       }
-      
+
       this.keys[e.key] = true
     })
 
@@ -140,26 +140,20 @@ export class GameManager {
     // Reset scores
     this.score1 = 0
     this.score2 = 0
-    
+
     // Reset pause state
     this.gamePaused = false
-    
+
     // Reset game over state
     this.gameOver = false
     this.gameWinner = null
-    
+
     // Reset ball position and speed
-    this.ball.x = 400
-    this.ball.y = 200
-    const ballSpeed = this.customization?.getSettings().ballSpeed || 4
-    this.ball.speed = ballSpeed
-    this.ball.dx = Math.random() > 0.5 ? ballSpeed : -ballSpeed
-    this.ball.dy = Math.random() > 0.5 ? ballSpeed : -ballSpeed
+    this.resetBall()
 
     // Reset paddle positions
-    this.leftPaddle.y = 175
-    this.rightPaddle.y = 175
-    
+    this.resetPaddles()
+
     // Reset additional game elements
     this.additionalBalls = []
     this.powerUps = []
@@ -167,13 +161,13 @@ export class GameManager {
 
   private applyCustomizationSettings(): void {
     if (!this.customization) return
-    
+
     // console.log('⚙️ Applying customization settings...')
     // console.log('Current winning score before:', this.winningScore)
     // console.log('Current paddle speeds before - Left:', this.leftPaddle.speed, 'Right:', this.rightPaddle.speed)
-    
+
     this.customization.applySettingsToGame(this)
-    
+
     // console.log('Current winning score after:', this.winningScore)
     // console.log('Current paddle speeds after - Left:', this.leftPaddle.speed, 'Right:', this.rightPaddle.speed)
     // console.log('Settings from customization:', this.customization.getSettings())
@@ -181,23 +175,23 @@ export class GameManager {
 
   private checkForSettingsUpdates(): void {
     if (!this.customization) return
-    
+
     // Check if settings have changed (only check occasionally to avoid performance issues)
     if (Math.random() < 0.01) { // 1% chance per frame = ~once per 1.67 seconds
       const currentSettings = this.customization.getSettings()
-      
+
       // Check if winning score changed
       if (currentSettings.winningScore !== this.winningScore) {
         // console.log(`🎯 Winning score updated during game: ${this.winningScore} → ${currentSettings.winningScore}`)
         this.winningScore = currentSettings.winningScore
       }
-      
+
       // Check if ball speed changed
       if (currentSettings.ballSpeed !== this.ball.speed) {
         // console.log(`⚡ Ball speed updated during game: ${this.ball.speed} → ${currentSettings.ballSpeed}`)
         this.applyBallSpeedUpdate(currentSettings.ballSpeed)
       }
-      
+
       // Check if paddle speed changed
       if (currentSettings.paddleSpeed !== this.leftPaddle.speed) {
         // console.log(`🏓 Paddle speed updated during game: ${this.leftPaddle.speed} → ${currentSettings.paddleSpeed}`)
@@ -229,11 +223,11 @@ export class GameManager {
     if (!this.gamePaused && !this.gameOver) {
       this.update()
     }
-    
+
     // Always render (to show pause overlay when paused or game over overlay)
     this.render()
 
-    this.animationId = requestAnimationFrame(() => this.gameLoop())
+    this.animationId = window.setTimeout(() => this.gameLoop(), 1000 / 60)
   }
 
   private update(): void {
@@ -250,7 +244,7 @@ export class GameManager {
   private updatePaddles(): void {
     // Don't update paddles if game is paused
     if (this.gamePaused) return
-    
+
     // Player 1 controls (W/S keys) - Permanece o mesmo
     if (this.keys['w'] || this.keys['W']) {
       this.leftPaddle.dy = -this.leftPaddle.speed
@@ -264,7 +258,7 @@ export class GameManager {
     if (this.isAIGame) {
       // Se for um jogo de IA, a IA decide qual "tecla" apertar
       this.aiOpponent.update(this.ball, this.rightPaddle, this.keys);
-    } 
+    }
     // Se for um jogador humano, os event listeners do navegador já cuidaram de atualizar o objeto `keys`.
 
     // A lógica de movimento da raquete direita agora funciona para ambos (IA e Humano)
@@ -281,8 +275,8 @@ export class GameManager {
     this.rightPaddle.y += this.rightPaddle.dy
 
     // Keep paddles within canvas bounds
-    this.leftPaddle.y = Math.max(0, Math.min(350, this.leftPaddle.y))
-    this.rightPaddle.y = Math.max(0, Math.min(350, this.rightPaddle.y))
+    this.leftPaddle.y = Math.max(0, Math.min(400 - this.leftPaddle.height, this.leftPaddle.y))
+    this.rightPaddle.y = Math.max(0, Math.min(400 - this.rightPaddle.height, this.rightPaddle.y))
 
     // Debug paddle movement (only log occasionally to avoid spam)
     // if (Math.random() < 0.001) { // 0.1% chance per frame = ~once per 16.7 seconds
@@ -326,12 +320,12 @@ export class GameManager {
 
   private spawnPowerUps(): void {
     if (!this.customization || !this.customization.getSettings().powerUpsEnabled) return
-    
+
     // Spawn power-ups randomly (1% chance per frame at 60fps = ~1 power-up per 1.67 seconds)
     if (Math.random() < 0.01 && this.powerUps.length < 2) {
       const powerUpTypes = ['speed_boost', 'paddle_grow', 'slow_motion', 'multi_ball']
       const randomType = powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)]
-      
+
       // Spawn power-ups in the center area where the ball is more likely to be
       const newPowerUp = {
         x: Math.random() * 400 + 200, // Center area: 200-600
@@ -339,7 +333,7 @@ export class GameManager {
         type: randomType,
         id: `powerup_${Date.now()}_${Math.random()}`
       }
-      
+
       this.powerUps.push(newPowerUp)
       // console.log(`🎁 Power-up spawned! Type: ${randomType}, Position: (${newPowerUp.x.toFixed(1)}, ${newPowerUp.y.toFixed(1)}), Total power-ups: ${this.powerUps.length}`)
     }
@@ -348,19 +342,19 @@ export class GameManager {
   private checkCollisions(): void {
     // Main ball collision with paddles
     this.checkBallPaddleCollision(this.ball, this.leftPaddle, this.rightPaddle)
-    
+
     // Additional balls collision with paddles
     this.additionalBalls.forEach(ball => {
       this.checkBallPaddleCollision(ball, this.leftPaddle, this.rightPaddle)
     })
-    
+
     // Power-up collision with paddles
     this.checkPowerUpCollisions()
   }
 
   private checkBallPaddleCollision(ball: Ball, leftPaddle: Paddle, rightPaddle: Paddle): void {
     // Ball collision with left paddle
-    if (ball.x <= leftPaddle.x + leftPaddle.width &&
+    if (ball.x <= leftPaddle.x + leftPaddle.width + 5 &&
         ball.y >= leftPaddle.y &&
         ball.y <= leftPaddle.y + leftPaddle.height &&
         ball.dx < 0) {
@@ -380,7 +374,7 @@ export class GameManager {
 
   private checkPowerUpCollisions(): void {
     if (!this.customization || !this.customization.getSettings().powerUpsEnabled) return
-    
+
     this.powerUps = this.powerUps.filter(powerUp => {
       // Check collision with main ball
       const distanceToMainBall = Math.sqrt(
@@ -394,7 +388,7 @@ export class GameManager {
         this.customization.activatePowerUp(powerUp.type, this)
         return false // Remove power-up
       }
-      
+
       // Check collision with additional balls
       for (const ball of this.additionalBalls) {
         const distanceToBall = Math.sqrt(
@@ -409,19 +403,19 @@ export class GameManager {
           return false // Remove power-up
         }
       }
-      
+
       return true // Keep power-up
     })
   }
 
   /**
   * Calculates and applies a new bounce angle to the ball after it collides with a paddle.
-  * Without this function, the ball would always bounce at a predictable, mirrored angle, 
+  * Without this function, the ball would always bounce at a predictable, mirrored angle,
   * removing the player's ability to aim their shots.
   *
   * The logic works by:
   * 1. Determining the exact point of impact on the paddle's vertical surface.
-  * 2. Mapping this impact point to a new angle (from -30 to +30 degrees). 
+  * 2. Mapping this impact point to a new angle (from -30 to +30 degrees).
   * A hit in the center results in a straight bounce, while hits near the edges result in sharper angles.
   * 3. Recalculating the ball's horizontal (dx) and vertical (dy) velocity components
   * based on this new angle, while preserving the ball's original speed.
@@ -433,7 +427,7 @@ export class GameManager {
     const hitPoint = (ball.y - paddle.y) / paddle.height
     const angle = (hitPoint - 0.5) * Math.PI / 3 // -30 to 30 degrees
     const speed = Math.sqrt(ball.dx * ball.dx + ball.dy * ball.dy)
-    
+
     ball.dx = Math.cos(angle) * speed * (paddle === this.leftPaddle ? 1 : -1)
     ball.dy = Math.sin(angle) * speed
   }
@@ -479,6 +473,11 @@ export class GameManager {
     this.ball.dy = Math.random() > 0.5 ? ballSpeed : -ballSpeed
   }
 
+  private resetPaddles(): void {
+    this.leftPaddle.y = 175
+    this.rightPaddle.y = 175
+  }
+
   private async endGame(): Promise<void> {
     this.gameRunning = false
     if (this.animationId) {
@@ -504,7 +503,7 @@ export class GameManager {
     // console.log('Tournament manager exists:', !!this.tournamentManager)
     // console.log('Current match exists:', !!this.currentMatch)
     // console.log('Current match:', this.currentMatch)
-    
+
     if (this.tournamentManager && this.currentMatch) {
       console.log('Game ended, recording result:', {
         player1: this.currentMatch.player1,
@@ -516,7 +515,7 @@ export class GameManager {
         this.currentMatch.player2,
         winner
       )
-      
+
       // For tournament matches, show game over modal
       this.showTournamentGameOverModal(winner)
     } else {
@@ -535,7 +534,7 @@ export class GameManager {
       // Get actual player names from current match
       const player1Name = this.currentMatch?.player1 || 'Player 1';
       const player2Name = this.currentMatch?.player2 || 'Player 2';
-      
+
       // Create match result data
       const matchResult = matchService.createMatchResult(
         player1Name,
@@ -624,7 +623,7 @@ export class GameManager {
       ctx.fillStyle = this.getPowerUpColor(powerUp.type)
       ctx.fill()
       ctx.closePath()
-      
+
       // Draw power-up icon
       ctx.fillStyle = '#ffffff'
       ctx.font = '16px Arial'
@@ -644,13 +643,13 @@ export class GameManager {
       // Semi-transparent overlay
       ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'
       ctx.fillRect(0, 0, canvas.width, canvas.height)
-      
+
       // Pause text
       ctx.fillStyle = '#ffffff'
       ctx.font = '48px Arial'
       ctx.textAlign = 'center'
       ctx.fillText('PAUSED', canvas.width / 2, canvas.height / 2 - 20)
-      
+
       // Instructions
       ctx.font = '16px Arial'
       ctx.fillText('Press SPACE to resume', canvas.width / 2, canvas.height / 2 + 20)
@@ -689,7 +688,7 @@ export class GameManager {
     this.resetGame()
     this.gameRunning = true
     this.gameLoop()
-    
+
     // Hide the game over buttons
     const gameOverButtons = document.getElementById('game-over-buttons')
     if (gameOverButtons) {
@@ -708,7 +707,7 @@ export class GameManager {
     const gameOverButtons = document.getElementById('game-over-buttons')
     if (gameOverButtons) {
       gameOverButtons.classList.remove('hidden')
-      
+
       // Update the winner text in the HTML
       const winnerText = document.getElementById('winner-text')
       if (winnerText && this.gameWinner) {
@@ -731,10 +730,10 @@ export class GameManager {
             </div>
             <h3 class="text-3xl font-bold text-cyan-400 mb-2 orbitron-font">Match Complete!</h3>
             <p class="text-xl text-yellow-400 mb-6">${winner} Wins!</p>
-            
+
             <!-- Buttons -->
             <div class="flex justify-center">
-              <button id="continue-tournament-btn" 
+              <button id="continue-tournament-btn"
                       class="px-6 py-3 bg-cyan-600/20 text-white border border-cyan-500/30 font-bold rounded-xl hover:bg-cyan-600/30 transition-colors">
                 Continue Tournament
               </button>

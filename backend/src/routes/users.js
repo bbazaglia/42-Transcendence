@@ -24,6 +24,7 @@ export default async function (fastify, opts) {
                     },
                     required: ['user']
                 },
+                400: { $ref: 'httpError#' },
                 409: { $ref: 'httpError#' },
                 500: { $ref: 'httpError#' }
             }

@@ -82,7 +82,8 @@ export class UserProfileComponent {
         const avatar = document.createElement('img');
         avatar.className = 'user-avatar';
         avatar.alt = `${user.displayName} avatar`;
-        avatar.src = user.avatarUrl;
+        avatar.src = user.avatarUrl || '/avatars/default-avatar.png';
+        avatar.onerror = () => { avatar.src = '/avatars/default-avatar.png'; };
         avatar.width = 64;
         avatar.height = 64;
 

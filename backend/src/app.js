@@ -19,7 +19,6 @@ import friendsRoutes from './routes/friends.js';
 import healthRoutes from './routes/health.js';
 import matchesRoutes from './routes/matches.js';
 import sessionRoutes from './routes/session.js';
-import tournamentsRoutes from './routes/tournaments.js';
 import usersRoutes from './routes/users.js';
 
 // This function will contain all our application's setup logic
@@ -45,7 +44,6 @@ async function app(fastify, opts) {
     await fastify.register(healthRoutes, { prefix: '/api/health' });
     await fastify.register(matchesRoutes, { prefix: '/api/matches' });
     await fastify.register(sessionRoutes, { prefix: '/api/session' });
-    await fastify.register(tournamentsRoutes, { prefix: '/api/tournaments' });
     await fastify.register(usersRoutes, { prefix: '/api/users' });
 }
 

@@ -36,13 +36,11 @@ model User {
     friendsAsUserTwo Friendship[] @relation("UserTwoFriends")
     friendActions    Friendship[] @relation("ActionUser")
 
-    matchesAsPlayerOne    Match[]                 @relation("PlayerOneMatches")
-    matchesAsPlayerTwo    Match[]                 @relation("PlayerTwoMatches")
-    matchesWon            Match[]                 @relation("Winner")
-    TournamentParticipant TournamentParticipant[]
-    tournamentsWon        Tournament[]            @relation("TournamentWinner")
+    matchesAsPlayerOne Match[] @relation("PlayerOneMatches")
+    matchesAsPlayerTwo Match[] @relation("PlayerTwoMatches")
+    matchesWon         Match[] @relation("Winner")
 
-    @@map("users") // Maps this model to the 'users' table in SQL
+    @@map("users")
 }
 
 model Friendship {
@@ -69,46 +67,14 @@ model Match {
     playerOneScore Int      @map("player_one_score")
     playerTwoScore Int      @map("player_two_score")
     winnerId       Int?     @map("winner_id")
-    tournamentId   Int?     @map("tournament_id")
-    round          Int?
     playedAt       DateTime @default(now()) @map("played_at")
 
     // --- Foreign key relationships ---
-    playerOne  User        @relation("PlayerOneMatches", fields: [playerOneId], references: [id])
-    playerTwo  User        @relation("PlayerTwoMatches", fields: [playerTwoId], references: [id])
-    winner     User?       @relation("Winner", fields: [winnerId], references: [id])
-    tournament Tournament? @relation(fields: [tournamentId], references: [id])
+    playerOne User  @relation("PlayerOneMatches", fields: [playerOneId], references: [id])
+    playerTwo User  @relation("PlayerTwoMatches", fields: [playerTwoId], references: [id])
+    winner    User? @relation("Winner", fields: [winnerId], references: [id])
 
     @@map("matches")
-}
-
-model Tournament {
-    id              Int              @id @default(autoincrement())
-    name            String
-    maxParticipants Int              @map("max_participants")
-    status          TournamentStatus @default(PENDING)
-    winnerId        Int?             @map("winner_id")
-    createdAt       DateTime         @default(now()) @map("created_at")
-
-    // --- Foreign key and back-relation ---
-    participants TournamentParticipant[]
-    matches      Match[]
-    winner       User?                   @relation("TournamentWinner", fields: [winnerId], references: [id])
-
-    @@map("tournaments")
-}
-
-model TournamentParticipant {
-    id           Int @id @default(autoincrement())
-    tournamentId Int @map("tournament_id")
-    userId       Int @map("user_id")
-
-    // --- Foreign key relationships ---
-    tournament Tournament @relation(fields: [tournamentId], references: [id])
-    user       User       @relation(fields: [userId], references: [id])
-
-    @@unique([tournamentId, userId]) // Replaces the UNIQUE constraint
-    @@map("tournament_participants")
 }
 
 enum FriendshipStatus {
@@ -116,9 +82,8 @@ enum FriendshipStatus {
     ACCEPTED
 }
 
-enum TournamentStatus {
+enum MatchStatus {
     PENDING
-    IN_PROGRESS
     COMPLETED
     CANCELLED
 }

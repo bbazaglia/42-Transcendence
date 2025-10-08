@@ -9,6 +9,7 @@ export class AuthModal {
   private modalElement: HTMLElement | null = null;
   private isLoginMode: boolean = true;
   private isAwaitingTotp: boolean = false;
+  private wasAuthenticated: boolean = false;
 
   constructor() {
     this.render();
@@ -151,10 +152,12 @@ export class AuthModal {
 
     // Listen to auth state changes
     sessionService.subscribe((state) => {
-      if (state.isAuthenticated) {
+      // Only hide the modal if the state changes from unauthenticated to authenticated
+      if (state.isAuthenticated && !this.wasAuthenticated) {
         this.hide();
         this.showMessage('Logged in successfully!', 'success');
       }
+      this.wasAuthenticated = state.isAuthenticated;
     });
   }
 
@@ -268,7 +271,8 @@ export class AuthModal {
         );
         // The modal will be closed automatically by the sessionService listener
       } else {
-        this.showMessage(result.error || 'Authentication error', 'error');
+        const friendlyError = this.translateError(result.error || 'Authentication error');
+        this.showMessage(friendlyError, 'error');
         // If TOTP submission fails, go back to the login screen
         if (this.isAwaitingTotp) {
           this.isAwaitingTotp = false;
@@ -355,6 +359,7 @@ export class AuthModal {
    */
   show(mode: 'login' | 'register' = 'login'): void {
     this.isLoginMode = mode === 'login';
+    this.wasAuthenticated = sessionService.isAuthenticated();
     this.updateUI();
     this.modalElement?.classList.remove('hidden');
     this.clearForm();
@@ -377,4 +382,22 @@ export class AuthModal {
     this.modalElement?.remove();
     this.modalElement = null;
   }
+
+  /**
+   * Translates known backend error messages into user-friendly strings.
+   */
+  private translateError(message: string): string {
+    if (message.includes('body/password must NOT have fewer than 6 characters')) {
+      return 'Password must be at least 6 characters long.';
+    }
+    if (message.includes('body/displayName must NOT have fewer than 3 characters')) {
+      return 'Display name must be at least 3 characters long.';
+    }
+    if (message.includes('body/email must match format "email"')) {
+      return 'Please enter a valid email address.';
+    }
+    // You can keep adding more translations here
+    return message; // Return the original message if no translation is found
+  }
+
 }

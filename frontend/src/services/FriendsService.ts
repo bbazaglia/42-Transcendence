@@ -6,7 +6,6 @@
 import { apiService } from './ApiService.js';
 import { sessionService } from './SessionService.js';
 
-//TODO: remove all currentUser related code as it is obsolete
 export interface Friend {
   id: number;
   displayName: string;
@@ -162,7 +161,7 @@ class FriendsService {
         return { success: false, error: response.error };
       }
 
-      console.log('Solicitação de amizade enviada com sucesso!');
+      console.log('Friend request sent successfully');
       return { success: true };
 
     } catch (error) {

@@ -7,7 +7,7 @@ import { Navbar } from './components/Navbar'
 import { Lobby } from './components/Lobby'
 import { PageService } from './services/PageService'
 import { sessionService } from './services/SessionService'
-import { tournamentService } from './services/TournamentService'
+import { showMessage } from './components/Notifier'
 
 export class App {
   private router: Router
@@ -85,7 +85,7 @@ export class App {
     this.router.addRoute('/profile', () => this.showProfilePage())
     this.router.addRoute('/lobby', () => this.showLobbyPage())
     this.router.addRoute('/customize', () => this.showCustomizePage())
-    
+
     // Dynamic route for specific user profiles
     this.router.addDynamicRoute(/^\/profile\/(?<userId>\d+)$/, (params) => {
       this.showProfilePage(parseInt(params.userId))
@@ -122,7 +122,7 @@ export class App {
 
     // Setup event listeners once
     this.setupNavbarListeners()
-    
+
     // Update search visibility based on current auth state
     this.navbar.updateSearchVisibility()
   }
@@ -173,9 +173,6 @@ export class App {
       return
     }
 
-    // Load tournaments from backend
-    await this.loadTournaments()
-
     // Check for selected players from session storage
     const selectedPlayersData = sessionStorage.getItem('selectedPlayers')
     let selectedPlayers = null
@@ -193,8 +190,23 @@ export class App {
     if (!tournament) {
       console.log('No current tournament found')
       console.log('Selected players data:', selectedPlayers)
-      
+
       if (selectedPlayers && selectedPlayers.players && selectedPlayers.players.length >= 4) {
+        // Validate power of 2 players before creating tournament
+        const playerCount = selectedPlayers.players.length
+        if (playerCount !== 4 && playerCount !== 8 && playerCount !== 16) {
+          showMessage('Tournaments require exactly 4, 8, or 16 players. Please adjust your selection.', 'error')
+          // Open user selection modal to allow user to select correct number of players
+          this.pageService.showUserSelection('tournament', (path) => {
+            window.history.pushState({}, '', path)
+            this.render()
+          }, () => {
+            window.history.pushState({}, '', '/')
+            this.render()
+          })
+          return
+        }
+
         // Create tournament with selected players
         console.log('Creating tournament with selected players:', selectedPlayers.players)
         const playerNames = selectedPlayers.players.map((player: any) => player.displayName)
@@ -292,6 +304,18 @@ export class App {
               ${isAIGame ? 'Player vs AI' : (isQuickGame ? 'Quick Game' : 'Tournament Match')}
             </h2>
             <div class="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 shadow-2xl relative">
+              <!-- Player Names Display -->
+              <div class="flex justify-between items-center mb-4 px-4">
+                <div class="text-left">
+                  <div class="text-cyan-400 font-bold text-lg" id="player1-name">Player 1</div>
+                </div>
+                <div class="text-center">
+                  <div class="text-white font-bold text-xl">VS</div>
+                </div>
+                <div class="text-right">
+                  <div class="text-cyan-400 font-bold text-lg" id="player2-name">Player 2</div>
+                </div>
+              </div>
               <canvas id="gameCanvas" width="800" height="400" class="border-2 border-white/30 rounded-lg shadow-2xl"></canvas>
               
               <!-- Game Over Buttons (for quick games only) -->
@@ -339,7 +363,7 @@ export class App {
       // Quick game - require user selection
       console.log(`Starting quick game. Is AI game: ${isAIGame}`)
       console.log('Selected players:', selectedPlayers)
-      
+
       if (selectedPlayers && selectedPlayers.players && selectedPlayers.players.length > 0) {
         // Use selected players for the game
         const players = selectedPlayers.players
@@ -349,12 +373,14 @@ export class App {
             player1: players[0].displayName,
             player2: 'AI'
           }, this.customization, true)
+          this.updatePlayerNames(players[0].displayName, 'AI')
         } else if (!isAIGame && players.length === 2) {
           // Quick game with two selected players
           this.gameManager.startGame(undefined, {
             player1: players[0].displayName,
             player2: players[1].displayName
           }, this.customization, false)
+          this.updatePlayerNames(players[0].displayName, players[1].displayName)
         } else {
           // Invalid selection - open user selection modal
           this.pageService.showUserSelection(isAIGame ? 'ai-game' : 'quick-game', (path) => {
@@ -401,6 +427,7 @@ export class App {
           player1: nextMatch.player1!,
           player2: nextMatch.player2!
         }, this.customization, false)
+        this.updatePlayerNames(nextMatch.player1!, nextMatch.player2!)
       } else {
         console.log('No next match found, tournament not properly set up')
         this.pageService.showUserSelection('tournament', (path) => {
@@ -413,7 +440,7 @@ export class App {
         })
         return
       }
-      
+
       // Set up reset button for tournament games
       this.setupGameResetButton()
     }
@@ -428,18 +455,6 @@ export class App {
       this.render()
     }, userId)
   }
-
-
-  private async loadTournaments(): Promise<void> {
-    try {
-      // Load tournaments from backend
-      await tournamentService.getTournaments()
-      console.log('Tournaments loaded from backend')
-    } catch (error) {
-      console.error('Error loading tournaments:', error)
-    }
-  }
-
 
   private setupCustomizationHandlers(): void {
     // Expose customization functions to window
@@ -485,7 +500,7 @@ export class App {
           powerUpsEnabled: false,
           mapTheme: 'classic'
         })
-        
+
         // Check if we're on the customize page and navigate back to home
         if (window.location.pathname === '/customize') {
           window.history.pushState({}, '', '/')
@@ -503,7 +518,7 @@ export class App {
     if (menu) {
       menu.remove()
     }
-    
+
     // Ensure the current page content is visible after closing the modal
     // This handles cases where the modal might have been opened from a different page
     if (window.location.pathname === '/') {
@@ -594,7 +609,7 @@ export class App {
           ${tournament.matches.map((match: any, index: number) => `
             <div class="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10 hover:bg-white/10 transition-all duration-300">
               <div class="text-sm text-cyan-400 font-semibold mb-2">Match ${index + 1}</div>
-              <div class="text-white font-medium mb-2">${match.player1 || 'undefined'} vs ${match.player2 || 'undefined'}</div>
+              <div class="text-white font-medium mb-2">${this.getPlayerDisplayName(match.player1, index, tournament.matches, tournament.players.length, 'player1')} vs ${this.getPlayerDisplayName(match.player2, index, tournament.matches, tournament.players.length, 'player2')}</div>
               ${match.winner ? `<div class="text-emerald-400 text-sm font-semibold">👑 Winner: ${match.winner}</div>` : '<div class="text-gray-400 text-sm">⏳ Pending</div>'}
             </div>
           `).join('')}
@@ -603,6 +618,58 @@ export class App {
     `
   }
 
+  /**
+   * Gets the display name for a player in a tournament match
+   * Shows "winner of match X" for future matches where players haven't been determined yet
+   */
+  private getPlayerDisplayName(player: string | null, matchIndex: number, _allMatches: any[], playerCount: number, playerPosition: 'player1' | 'player2'): string {
+    if (player) {
+      return player
+    }
+
+    // Calculate the number of first round matches based on the actual player count
+    const firstRoundMatches = Math.ceil(playerCount / 2)
+
+    if (matchIndex < firstRoundMatches) {
+      // First round - if player is null, it means there's an odd number of players
+      // and this player gets a bye (automatic advancement)
+      return 'Bye'
+    }
+
+    // For subsequent rounds, find which matches feed into this one
+    // Based on the advanceWinner logic: nextMatchIndex = firstRoundMatches + Math.floor(currentMatchIndex / 2)
+    // We need to reverse this to find which matches feed into the current match
+
+    const currentRoundStart = firstRoundMatches
+    const currentRoundMatchIndex = matchIndex - currentRoundStart
+
+    // The two matches that feed into this match are:
+    const previousMatch1 = currentRoundMatchIndex * 2
+    const previousMatch2 = currentRoundMatchIndex * 2 + 1
+
+    // Determine which previous match corresponds to which player position
+    if (playerPosition === 'player1') {
+      return `Winner of Match ${previousMatch1 + 1}`
+    } else {
+      return `Winner of Match ${previousMatch2 + 1}`
+    }
+  }
+
+  /**
+   * Updates the player names display on the game screen
+   */
+  private updatePlayerNames(player1Name: string, player2Name: string): void {
+    const player1Element = document.getElementById('player1-name')
+    const player2Element = document.getElementById('player2-name')
+
+    if (player1Element) {
+      player1Element.textContent = player1Name
+    }
+
+    if (player2Element) {
+      player2Element.textContent = player2Name
+    }
+  }
 
   private renderNextMatch(tournament: any): string {
     // Check if tournament is actually complete by looking at the final match
@@ -787,7 +854,7 @@ export class App {
 
     // Get all participants (active users)
     const participants = sessionService.getParticipants()
-    
+
     this.rootElement.innerHTML = `
       <div class="min-h-screen mesh-gradient relative overflow-hidden">
         <div class="relative z-10 flex items-center justify-center min-h-screen px-4 pt-20">
@@ -812,7 +879,8 @@ export class App {
                       <div class="flex items-center space-x-3">
                         <img src="${participant.avatarUrl || '/avatars/default-avatar.png'}" 
                              alt="${participant.displayName}" 
-                             class="w-12 h-12 rounded-full object-cover">
+                             class="w-12 h-12 rounded-full object-cover"
+                             onerror="this.src='/avatars/default-avatar.png'">
                         <div class="flex-1">
                           <h3 class="text-white font-medium">${participant.displayName}</h3>
                           <p class="text-gray-400 text-sm">${participant.email}</p>

@@ -227,7 +227,7 @@ export class GameManager {
     // Always render (to show pause overlay when paused or game over overlay)
     this.render()
 
-    this.animationId = requestAnimationFrame(() => this.gameLoop())
+    this.animationId = window.setTimeout(() => this.gameLoop(), 1000 / 60)
   }
 
   private update(): void {

@@ -508,7 +508,6 @@ export class App {
         } else {
           // If we're in a modal, close it
           this.closeCustomizationMenu()
-          this.render()
         }
       }
   }

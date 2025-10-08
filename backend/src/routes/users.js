@@ -373,8 +373,7 @@ export default async function (fastify, opts) {
             },
             body: {
                 type: 'object',
-                properties: { password: { type: 'string' } },
-                required: ['password'],
+                properties: {},
                 additionalProperties: false
             },
             response: {
@@ -387,27 +386,21 @@ export default async function (fastify, opts) {
                 },
                 401: { $ref: 'httpError#' },
                 403: { $ref: 'httpError#' },
+                404: { $ref: 'httpError#' },
                 500: { $ref: 'httpError#' }
             }
         }
     }, async (request, reply) => {
         try {
             const userId = request.params.userId;
-            const { password } = request.body;
             fastify.log.debug(`Disabling TOTP for user ID: ${userId}`);
 
             const user = await fastify.prisma.user.findUnique({
-                where: { id: userId },
-                omit: { passwordHash: false }
+                where: { id: userId }
             });
 
-            if (!user || !user.passwordHash) {
-                throw fastify.httpErrors.unauthorized('Invalid user or password configuration.');
-            }
-
-            const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
-            if (!isPasswordValid) {
-                throw fastify.httpErrors.unauthorized('Invalid password.');
+            if (!user) {
+                throw fastify.httpErrors.notFound('User not found.');
             }
 
             const updatedUser = await fastify.prisma.user.update({

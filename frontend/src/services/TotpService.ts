@@ -57,19 +57,19 @@ class TotpService {
   /**
    * Disables TOTP for a user
    * Calls POST /users/:userId/totp/disable
-   * Requires password for verification
+   * No password required - user is already authenticated
    */
-  async disableTotp(userId: number, password: string): Promise<{ success: boolean; user?: User; error?: string }> {
-    const response = await apiService.request<{ user: User }>(`/users/${userId}/totp/disable`, {
-      method: 'POST',
-      body: JSON.stringify({ password }),
-    });
+  async disableTotp(userId: number): Promise<{ success: boolean; user?: User; error?: string }> {
+      const response = await apiService.request<{ user: User }>(`/users/${userId}/totp/disable`, {
+          method: 'POST',
+          body: JSON.stringify({}), // Empty body
+      });
 
-    if (response.error) {
-      return { success: false, error: response.error };
-    }
+      if (response.error) {
+          return { success: false, error: response.error };
+      }
 
-    return { success: true, user: response.data?.user };
+      return { success: true, user: response.data?.user };
   }
 }
 

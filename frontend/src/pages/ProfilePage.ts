@@ -998,42 +998,32 @@ export class ProfilePage {
 
   // 5. Add the Disable 2FA Modal method:
   private showDisable2FAModal(userId: number): void {
-    const modalHTML = `
-      <div id="disable-2fa-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50">
-        <div class="flex items-center justify-center min-h-screen p-4">
-          <div class="bg-white/10 backdrop-blur-xl rounded-2xl p-8 max-w-md w-full mx-4 border border-white/20 shadow-2xl">
-            <h3 class="text-2xl font-bold text-cyan-400 mb-6 text-center orbitron-font">Disable Two-Factor Authentication</h3>
-            
-            <!-- Warning -->
-            <div class="bg-red-500/20 border border-red-500/30 rounded-lg p-4 mb-6">
-              <p class="text-red-300 font-semibold mb-2">⚠️ Warning</p>
-              <p class="text-gray-300 text-sm">
-                Disabling 2FA will make your account less secure. You'll only need your password to log in.
-              </p>
-            </div>
-
-            <!-- Message Display -->
-            <div id="disable-message" class="hidden mb-4 p-3 rounded-lg text-sm"></div>
-
-            <!-- Form -->
-            <form id="disable-2fa-form" class="space-y-4">
-              <div>
-                <label class="block text-white font-semibold mb-2">
-                  Enter your password to confirm:
-                </label>
-                <input 
-                  type="password" 
-                  id="disable-password" 
-                  class="w-full p-3 rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/50 focus:border-red-400 focus:outline-none transition-colors"
-                  placeholder="Your password"
-                  required
-                  autocomplete="current-password">
+      const modalHTML = `
+        <div id="disable-2fa-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50">
+          <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white/10 backdrop-blur-xl rounded-2xl p-8 max-w-md w-full mx-4 border border-white/20 shadow-2xl">
+              <h3 class="text-2xl font-bold text-cyan-400 mb-6 text-center orbitron-font">Disable Two-Factor Authentication</h3>
+              
+              <!-- Warning -->
+              <div class="bg-red-500/20 border border-red-500/30 rounded-lg p-4 mb-6">
+                <p class="text-red-300 font-semibold mb-2">⚠️ Warning</p>
+                <p class="text-gray-300 text-sm">
+                  Disabling 2FA will make your account less secure. You'll only need your login credentials to access your account.
+                </p>
               </div>
+
+              <!-- Message Display -->
+              <div id="disable-message" class="hidden mb-4 p-3 rounded-lg text-sm"></div>
+
+              <!-- Confirmation -->
+              <p class="text-white text-center mb-6">
+                Are you sure you want to disable two-factor authentication?
+              </p>
               
               <div class="flex space-x-3">
                 <button 
-                  type="submit" 
-                  id="disable-btn"
+                  type="button" 
+                  id="confirm-disable-btn"
                   class="flex-1 py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                   <span id="disable-text">Disable 2FA</span>
                   <span id="disable-spinner" class="hidden">⏳ Processing...</span>
@@ -1045,60 +1035,50 @@ export class ProfilePage {
                   Cancel
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
-      </div>
-    `
+      `
 
-    document.body.insertAdjacentHTML('beforeend', modalHTML)
+      document.body.insertAdjacentHTML('beforeend', modalHTML)
 
-    // Event listeners
-    document.getElementById('disable-2fa-form')?.addEventListener('submit', async (e) => {
-      e.preventDefault()
-      await this.handleDisable2FA(userId)
-    })
+      // Event listeners
+      document.getElementById('confirm-disable-btn')?.addEventListener('click', async () => {
+          await this.handleDisable2FA(userId)
+      })
 
-    document.getElementById('cancel-disable-2fa')?.addEventListener('click', () => {
-      this.closeDisable2FAModal()
-    })
+      document.getElementById('cancel-disable-2fa')?.addEventListener('click', () => {
+          this.closeDisable2FAModal()
+      })
 
-    // Close on outside click
-    document.getElementById('disable-2fa-modal')?.addEventListener('click', (e) => {
-      if (e.target === document.getElementById('disable-2fa-modal')) {
-        this.closeDisable2FAModal()
-      }
-    })
+      // Close on outside click
+      document.getElementById('disable-2fa-modal')?.addEventListener('click', (e) => {
+          if (e.target === document.getElementById('disable-2fa-modal')) {
+              this.closeDisable2FAModal()
+          }
+      })
   }
 
   private async handleDisable2FA(userId: number): Promise<void> {
-    const passwordInput = document.getElementById('disable-password') as HTMLInputElement
-    const password = passwordInput.value.trim()
+      this.setDisableLoading(true)
 
-    if (!password) {
-      this.showDisableMessage('Please enter your password', 'error')
-      return
-    }
+      try {
+          const result = await totpService.disableTotp(userId)
 
-    this.setDisableLoading(true)
-
-    try {
-      const result = await totpService.disableTotp(userId, password)
-
-      if (result.success) {
-        this.showDisableMessage('2FA disabled successfully', 'success')
-        setTimeout(() => {
-          this.closeDisable2FAModal()
-          window.location.reload()
-        }, 1500)
-      } else {
-        this.showDisableMessage(result.error || 'Failed to disable 2FA', 'error')
+          if (result.success) {
+              this.showDisableMessage('2FA disabled successfully', 'success')
+              setTimeout(() => {
+                  this.closeDisable2FAModal()
+                  window.location.reload()
+              }, 1500)
+          } else {
+              this.showDisableMessage(result.error || 'Failed to disable 2FA', 'error')
+          }
+      } catch (error) {
+          this.showDisableMessage('An unexpected error occurred', 'error')
+      } finally {
+          this.setDisableLoading(false)
       }
-    } catch (error) {
-      this.showDisableMessage('An unexpected error occurred', 'error')
-    } finally {
-      this.setDisableLoading(false)
-    }
   }
 
   private setDisableLoading(loading: boolean): void {

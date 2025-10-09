@@ -351,16 +351,13 @@ export class InsightsModal {
     if (!ctx) return;
 
     // Combine all scores and create histogram
-    const allScores = [
-      ...scoreDistribution.playerOneScores,
-      ...scoreDistribution.playerTwoScores,
-    ];
+    const allScores = [...scoreDistribution.playerOneScores];
     const scoreRanges = this.createScoreRanges(allScores);
 
     const chart = new Chart(ctx, {
       type: "bar",
       data: {
-        labels: scoreRanges.map((range) => `${range.min}-${range.max}`),
+        labels: scoreRanges.map((range) => `${range.min}`),
         datasets: [
           {
             label: "Score Frequency",

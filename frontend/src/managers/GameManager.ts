@@ -54,7 +54,7 @@ export class GameManager {
 
   constructor() {
     this.leftPaddle = {
-      x: 50,
+      x: 10,
       y: 175,
       width: 10,
       height: 50,
@@ -63,7 +63,7 @@ export class GameManager {
     }
 
     this.rightPaddle = {
-      x: 740,
+      x: 780,
       y: 175,
       width: 10,
       height: 50,
@@ -204,18 +204,6 @@ export class GameManager {
     }
   }
 
-  private applyBallSpeedUpdate(newSpeed: number): void {
-    // Update ball speed while preserving direction
-    const currentSpeed = Math.sqrt(this.ball.dx * this.ball.dx + this.ball.dy * this.ball.dy)
-    if (currentSpeed > 0) {
-      const directionX = this.ball.dx / currentSpeed
-      const directionY = this.ball.dy / currentSpeed
-      this.ball.dx = directionX * newSpeed
-      this.ball.dy = directionY * newSpeed
-    }
-    this.ball.speed = newSpeed
-  }
-
   private gameLoop(): void {
     if (!this.gameRunning && !this.gameOver) return
 
@@ -308,6 +296,70 @@ export class GameManager {
     })
   }
 
+  private applyBallSpeedUpdate(newSpeed: number): void {
+    // Update ball speed while preserving direction
+    const currentSpeed = Math.sqrt(this.ball.dx * this.ball.dx + this.ball.dy * this.ball.dy)
+    if (currentSpeed > 0) {
+      const directionX = this.ball.dx / currentSpeed
+      const directionY = this.ball.dy / currentSpeed
+      this.ball.dx = directionX * newSpeed
+      this.ball.dy = directionY * newSpeed
+    }
+    this.ball.speed = newSpeed
+  }
+
+  private checkBallPaddleCollision(ball: Ball, leftPaddle: Paddle, rightPaddle: Paddle): void {
+    // Ball collision with left paddle
+    if (ball.x <= leftPaddle.x + leftPaddle.width + 5 &&
+        ball.y >= leftPaddle.y &&
+        ball.y <= leftPaddle.y + leftPaddle.height &&
+        ball.dx < 0) {
+      ball.dx = -ball.dx
+      this.adjustBallAngle(ball, leftPaddle)
+    }
+
+    // Ball collision with right paddle
+    if (ball.x + ball.radius >= rightPaddle.x &&
+        ball.y >= rightPaddle.y &&
+        ball.y <= rightPaddle.y + rightPaddle.height &&
+        ball.dx > 0) {
+      ball.dx = -ball.dx
+      this.adjustBallAngle(ball, rightPaddle)
+    }
+  }
+
+  /**
+  * Calculates and applies a new bounce angle to the ball after it collides with a paddle.
+  * Without this function, the ball would always bounce at a predictable, mirrored angle,
+  * removing the player's ability to aim their shots.
+  *
+  * The logic works by:
+  * 1. Determining the exact point of impact on the paddle's vertical surface.
+  * 2. Mapping this impact point to a new angle (from -30 to +30 degrees).
+  * A hit in the center results in a straight bounce, while hits near the edges result in sharper angles.
+  * 3. Recalculating the ball's horizontal (dx) and vertical (dy) velocity components
+  * based on this new angle, while preserving the ball's original speed.
+  *
+  * @param {Ball} ball The ball object that has collided with the paddle.
+  * @param {Paddle} paddle The paddle object that the ball has just collided with.
+  */
+  private adjustBallAngle(ball: Ball, paddle: Paddle): void {
+    const hitPoint = (ball.y - paddle.y) / paddle.height
+    const angle = (hitPoint - 0.5) * Math.PI / 3 // -30 to 30 degrees
+    const speed = Math.sqrt(ball.dx * ball.dx + ball.dy * ball.dy)
+
+    ball.dx = Math.cos(angle) * speed * (paddle === this.leftPaddle ? 1 : -1)
+    ball.dy = Math.sin(angle) * speed
+  }
+
+  private resetBall(): void {
+    this.ball.x = 400
+    this.ball.y = 200
+    const ballSpeed = this.customization?.getSettings().ballSpeed || 4
+    this.ball.dx = Math.random() > 0.5 ? ballSpeed : -ballSpeed
+    this.ball.dy = Math.random() > 0.5 ? ballSpeed : -ballSpeed
+  }
+
   private updatePowerUps(): void {
     // Check if power-ups should be disabled and remove existing ones
     if (this.customization && !this.customization.getSettings().powerUpsEnabled) {
@@ -352,26 +404,6 @@ export class GameManager {
     this.checkPowerUpCollisions()
   }
 
-  private checkBallPaddleCollision(ball: Ball, leftPaddle: Paddle, rightPaddle: Paddle): void {
-    // Ball collision with left paddle
-    if (ball.x <= leftPaddle.x + leftPaddle.width + 5 &&
-        ball.y >= leftPaddle.y &&
-        ball.y <= leftPaddle.y + leftPaddle.height &&
-        ball.dx < 0) {
-      ball.dx = -ball.dx
-      this.adjustBallAngle(ball, leftPaddle)
-    }
-
-    // Ball collision with right paddle
-    if (ball.x + ball.radius >= rightPaddle.x &&
-        ball.y >= rightPaddle.y &&
-        ball.y <= rightPaddle.y + rightPaddle.height &&
-        ball.dx > 0) {
-      ball.dx = -ball.dx
-      this.adjustBallAngle(ball, rightPaddle)
-    }
-  }
-
   private checkPowerUpCollisions(): void {
     if (!this.customization || !this.customization.getSettings().powerUpsEnabled) return
 
@@ -408,30 +440,6 @@ export class GameManager {
     })
   }
 
-  /**
-  * Calculates and applies a new bounce angle to the ball after it collides with a paddle.
-  * Without this function, the ball would always bounce at a predictable, mirrored angle,
-  * removing the player's ability to aim their shots.
-  *
-  * The logic works by:
-  * 1. Determining the exact point of impact on the paddle's vertical surface.
-  * 2. Mapping this impact point to a new angle (from -30 to +30 degrees).
-  * A hit in the center results in a straight bounce, while hits near the edges result in sharper angles.
-  * 3. Recalculating the ball's horizontal (dx) and vertical (dy) velocity components
-  * based on this new angle, while preserving the ball's original speed.
-  *
-  * @param {Ball} ball The ball object that has collided with the paddle.
-  * @param {Paddle} paddle The paddle object that the ball has just collided with.
-  */
-  private adjustBallAngle(ball: Ball, paddle: Paddle): void {
-    const hitPoint = (ball.y - paddle.y) / paddle.height
-    const angle = (hitPoint - 0.5) * Math.PI / 3 // -30 to 30 degrees
-    const speed = Math.sqrt(ball.dx * ball.dx + ball.dy * ball.dy)
-
-    ball.dx = Math.cos(angle) * speed * (paddle === this.leftPaddle ? 1 : -1)
-    ball.dy = Math.sin(angle) * speed
-  }
-
   private checkScoring(): void {
     // Main ball scoring
     if (this.ball.x <= 0) {
@@ -463,14 +471,6 @@ export class GameManager {
       // console.log(`🏆 Game Over! Final Score: ${this.score1}-${this.score2} (Target: ${this.winningScore})`)
       this.endGame()
     }
-  }
-
-  private resetBall(): void {
-    this.ball.x = 400
-    this.ball.y = 200
-    const ballSpeed = this.customization?.getSettings().ballSpeed || 4
-    this.ball.dx = Math.random() > 0.5 ? ballSpeed : -ballSpeed
-    this.ball.dy = Math.random() > 0.5 ? ballSpeed : -ballSpeed
   }
 
   private resetPaddles(): void {
@@ -668,7 +668,7 @@ export class GameManager {
 
   private getPowerUpIcon(type: string): string {
     switch (type) {
-      case 'speed_boost': return '⚡'
+      case 'speed_boost': return '🚀'
       case 'paddle_grow': return '📏'
       case 'slow_motion': return '🐌'
       case 'multi_ball': return '⚽'

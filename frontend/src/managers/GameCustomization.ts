@@ -54,7 +54,7 @@ export class GameCustomization {
         }, 10000)
       },
       duration: 10000,
-      icon: '⚡',
+      icon: '🚀',
       color: '#FFD700'
     },
     {

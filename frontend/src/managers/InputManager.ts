@@ -13,6 +13,12 @@ export class InputManager {
 
   private setupKeyboardControls(): void {
     this.keyDownHandler = (e: KeyboardEvent) => {
+      // Prevent default behavior for game keys
+      if (e.key === " " || e.key === "ArrowUp" || e.key === "ArrowDown" || 
+          e.key.toLowerCase() === "w" || e.key.toLowerCase() === "s") {
+        e.preventDefault();
+      }
+      
       if (!e.repeat) {
         this.keys[e.key] = true;
         this.notifyKeyDown(e.key);
@@ -110,13 +116,6 @@ export class InputManager {
     });
   }
 
-  preventDefaultForKeys(keys: readonly string[]): void {
-    document.addEventListener("keydown", (e) => {
-      if (keys.includes(e.key)) {
-        e.preventDefault();
-      }
-    });
-  }
 
   /**
    * Gets the movement direction for Player 1

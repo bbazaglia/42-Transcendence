@@ -228,8 +228,6 @@ export class GameCustomization {
   }
 
   activatePowerUp(powerUpType: string, game: any): void {
-    console.log(`🎯 Activating power-up: ${powerUpType}`);
-    console.log(`🎯 Available power-ups:`, this.powerUps.map(p => p.id));
     
     const powerUp = this.powerUps.find((p) => p.id === powerUpType);
     if (!powerUp) {
@@ -237,7 +235,6 @@ export class GameCustomization {
       return;
     }
     
-    console.log(`🎯 Found power-up:`, powerUp.name);
 
     if (!this.settings.powerUpsEnabled) {
       return;

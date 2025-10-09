@@ -86,7 +86,6 @@ export class PowerUpManager {
   }
 
   private activatePowerUp(type: string, gameManager: any): void {
-    console.log(`🎯 PowerUpManager: Activating power-up type: ${type}`);
     if (gameManager && gameManager.customization && gameManager.customization.activatePowerUp) {
       gameManager.customization.activatePowerUp(type, gameManager);
     }

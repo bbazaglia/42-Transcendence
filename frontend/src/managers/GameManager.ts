@@ -187,8 +187,7 @@ export class GameManager {
       }
     });
 
-    // Prevent default behavior for space key
-    this.inputManager.preventDefaultForKeys([" "]);
+    // Note: preventDefault is now handled in the InputManager's main keydown handler
   }
 
   private togglePause(): void {
@@ -539,6 +538,8 @@ export class GameManager {
     if (this.animationId) {
       window.cancelAnimationFrame(this.animationId);
     }
+    // Clean up input manager to prevent memory leaks
+    this.inputManager.destroy();
   }
 
   playAgain(): void {

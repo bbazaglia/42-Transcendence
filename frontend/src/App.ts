@@ -410,18 +410,10 @@ export class App {
       this.setupQuickGameButtons()
     } else {
       // Tournament game - get the next match from tournament manager
-      console.log('=== GETTING NEXT MATCH ===')
-      console.log('Tournament manager instance:', this.tournamentManager)
-      console.log('Current tournament:', this.tournamentManager.getCurrentTournament())
 
       const nextMatch = this.tournamentManager.getNextMatch()
-      console.log('Next match found:', nextMatch)
 
       if (nextMatch) {
-        console.log('Starting game with tournament manager and match:', {
-          player1: nextMatch.player1,
-          player2: nextMatch.player2
-        })
         // Tournament games are never AI games for now
         this.gameManager.startGame(this.tournamentManager, {
           player1: nextMatch.player1!,
@@ -429,7 +421,6 @@ export class App {
         }, this.customization, false)
         this.updatePlayerNames(nextMatch.player1!, nextMatch.player2!)
       } else {
-        console.log('No next match found, tournament not properly set up')
         this.pageService.showUserSelection('tournament', (path) => {
           window.history.pushState({}, '', path)
           this.render()
@@ -946,11 +937,10 @@ export class App {
                       <div class="flex items-center space-x-3">
                         <img src="${participant.avatarUrl || '/avatars/default-avatar.png'}" 
                              alt="${participant.displayName}" 
-                             class="w-12 h-12 rounded-full object-cover"
-                             onerror="this.src='/avatars/default-avatar.png'">
+                             class="w-12 h-12 rounded-full object-cover lobby-avatar">
                         <div class="flex-1">
                           <h3 class="text-white font-medium">${participant.displayName}</h3>
-                          <p class="text-gray-400 text-sm">${participant.email}</p>
+                          <p class="text-gray-400 text-sm">W: ${participant.wins || 0} | L: ${participant.losses || 0}</p>
                         </div>
                       </div>
                     </div>
@@ -984,6 +974,13 @@ export class App {
           window.history.pushState({}, '', `/profile/${userId}`)
           this.render()
         }
+      })
+    })
+
+    // Add avatar error handling for lobby
+    document.querySelectorAll('.lobby-avatar').forEach(avatar => {
+      avatar.addEventListener('error', () => {
+        (avatar as HTMLImageElement).src = '/avatars/default-avatar.png'
       })
     })
   }

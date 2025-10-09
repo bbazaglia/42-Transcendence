@@ -154,10 +154,6 @@ export class GameRenderer {
   }
 
   private renderCountdownOverlay(data: { value: number }): void {
-    console.log(
-      "🎯 GameRenderer: Rendering countdown overlay with value:",
-      data.value
-    );
 
     this.ctx.shadowColor = "rgba(0, 0, 0, 0.8)";
     this.ctx.shadowBlur = 10;

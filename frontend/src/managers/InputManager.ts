@@ -4,8 +4,8 @@ export class InputManager {
   private keys: { [key: string]: boolean } = {};
   private keyDownCallbacks: Array<(key: string) => void> = [];
   private keyUpCallbacks: Array<(key: string) => void> = [];
-  private keyDownHandler: (e: KeyboardEvent) => void;
-  private keyUpHandler: (e: KeyboardEvent) => void;
+  private keyDownHandler!: (e: KeyboardEvent) => void;
+  private keyUpHandler!: (e: KeyboardEvent) => void;
 
   constructor() {
     this.setupKeyboardControls();

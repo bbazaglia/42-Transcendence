@@ -1,4 +1,4 @@
-import { PublicUser } from '../components/users';
+import { PublicUser } from '../components/Users';
 
 /**
  * Fetch the public profile for a user ID.

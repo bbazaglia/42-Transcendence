@@ -1,4 +1,4 @@
-import { fetchUserProfile } from "../services/users";
+import { fetchUserProfile } from "../services/Users";
 
 export interface PublicUser {
   id: number;

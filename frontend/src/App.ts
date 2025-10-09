@@ -1,5 +1,5 @@
 import { Router } from './utils/Router'
-import { TournamentManager } from './managers/TournamentManager'
+import { TournamentManager } from './services/TournamentService'
 import { GameManager } from './managers/GameManager'
 import { GameCustomization } from './managers/GameCustomization'
 import { AuthModal } from './components/AuthModal'

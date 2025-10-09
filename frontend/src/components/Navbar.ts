@@ -291,7 +291,7 @@ export class Navbar {
             <div class="text-white font-medium text-sm">${
               user.displayName
             }</div>
-            <div class="text-gray-400 text-xs">${user.email}</div>
+            <div class="text-gray-400 text-xs">W: ${user.wins || 0} | L: ${user.losses || 0}</div>
           </div>
         </div>
       </div>

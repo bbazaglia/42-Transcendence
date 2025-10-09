@@ -1407,6 +1407,18 @@ export class ProfilePage {
     document.getElementById("disable-2fa-modal")?.remove();
   }
 
+  private async validateAvatarUrl(url: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error("Image failed to load"));
+      img.src = url;
+      
+      // Set a timeout to avoid hanging on slow/broken URLs
+      setTimeout(() => reject(new Error("Image load timeout")), 5000);
+    });
+  }
+
   private async handleProfileUpdate(): Promise<void> {
     const participants = sessionService.getParticipants();
     const currentUser = participants.find(
@@ -1422,6 +1434,18 @@ export class ProfilePage {
     const avatarUrl = (
       document.getElementById("edit-avatar-url") as HTMLInputElement
     )?.value;
+
+    // Validate avatar URL if provided
+    if (avatarUrl && avatarUrl.trim()) {
+      try {
+        new URL(avatarUrl);
+        // Test if the URL is accessible by creating a test image
+        await this.validateAvatarUrl(avatarUrl);
+      } catch (error) {
+        showMessage(`Invalid avatar URL: ${avatarUrl}. Please check the URL and try again.`, "error");
+        return;
+      }
+    }
 
     try {
       const result = await userService.updateUserProfile(currentUser.id, {

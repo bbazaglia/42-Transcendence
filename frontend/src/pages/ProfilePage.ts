@@ -391,7 +391,7 @@ export class ProfilePage {
               </div>
               <div class="flex items-center space-x-4">
                 <div class="text-white font-bold text-lg">
-                  ${match.playerOneScore} - ${match.playerTwoScore}
+                  ${match.playerOneScore}
                 </div>
                 <div class="text-emerald-400 text-sm font-semibold">
                   Winner: ${match.winner?.displayName || `Player ${match.winnerId}`}

@@ -60,7 +60,7 @@ export class AIOpponent {
     // Move a raquete para cima se o alvo estiver acima do centro
     if (this.aiTargetY < paddleCenter - aiPaddle.height * 0.1) { // Adiciona uma pequena zona morta para evitar trepidação
       keys['ArrowUp'] = true;
-    } 
+    }
     // Move a raquete para baixo se o alvo estiver abaixo do centro
     else if (this.aiTargetY > paddleCenter + aiPaddle.height * 0.1) {
       keys['ArrowDown'] = true;
@@ -88,7 +88,7 @@ export class AIOpponent {
     let futureDY = ball.dy;
 
     // Simula o movimento da bola frame a frame até cruzar a linha da raquete da IA
-    while (futureX < 740) { // 740 é a posição X da raquete direita
+    while (futureX < 780) { // 780 é a posição X da raquete direita
       futureX += futureDX;
       futureY += futureDY;
 

@@ -148,6 +148,11 @@ class FriendsService {
         targetSenderId = currentUser.id;
       }
 
+      console.log('FriendsService: Making POST request to /friends with data:', {
+        actorId: targetSenderId,
+        friendId: friendId
+      });
+
       const response = await apiService.request('/friends', {
         method: 'POST',
         body: JSON.stringify({
@@ -155,6 +160,8 @@ class FriendsService {
           friendId: friendId
         })
       });
+
+      console.log('FriendsService: Received response:', response);
 
       if (response.error) {
         console.error('Failed to send friend request:', response.error);

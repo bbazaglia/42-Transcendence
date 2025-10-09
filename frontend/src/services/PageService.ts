@@ -11,10 +11,10 @@ export class PageService {
   async renderProfilePage(onNavigate: (path: string) => void, userId?: number): Promise<string> {
     const html = await this.profilePage.render(userId)
     
-    // Setup event listeners after rendering
-    setTimeout(() => {
+    // Setup event listeners after rendering - use requestAnimationFrame for better browser compatibility
+    requestAnimationFrame(() => {
       this.profilePage.setupEventListeners(onNavigate)
-    }, 0)
+    })
     
     return html
   }

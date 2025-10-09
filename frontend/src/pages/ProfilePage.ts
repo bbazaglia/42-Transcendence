@@ -437,6 +437,12 @@ export class ProfilePage {
   }
 
   setupEventListeners(onNavigate: (path: string) => void): void {
+    // Ensure DOM is ready before setting up event listeners
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => this.setupEventListeners(onNavigate))
+      return
+    }
+
     // Login button for non-authenticated users
     document.getElementById('login-btn-profile')?.addEventListener('click', (e) => {
       e.preventDefault()
@@ -1297,33 +1303,58 @@ export class ProfilePage {
       // Add event listeners for send friend request buttons
       document.querySelectorAll('.send-friend-request-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
-          const userId = parseInt((e.target as HTMLElement).getAttribute('data-user-id') || '0')
-          if (userId) {
+          e.preventDefault()
+          e.stopPropagation()
+          
+          const target = e.target as HTMLButtonElement
+          const userId = parseInt(target.getAttribute('data-user-id') || '0')
+          
+          if (!userId) {
+            console.error('No user ID found on button')
+            showMessage('Error: Invalid user ID', 'error')
+            return
+          }
+
+          // Disable button to prevent multiple clicks
+          target.disabled = true
+          target.textContent = 'Sending...'
+
+          try {
             // Get the current user (the one viewing the profile and sending the request)
             const participants = sessionService.getParticipants()
             const currentUser = participants.find(p => window.location.pathname === `/profile/${p.id}` || window.location.pathname === '/profile')
             const senderId = currentUser?.id
 
-            if (senderId) {
-              const result = await friendsService.sendFriendRequest(userId, senderId)
-              if (result.success) {
-                this.closeAddFriendModal()
-                showMessage('Friend request sent successfully!', 'success')
-                setTimeout(() => {
-                  window.location.reload()
-                }, 1000)
-              } else {
-                // Handle the case where friendship already exists
-                if (result.error && result.error.includes('already exists')) {
-                  showMessage('You already have a pending friend request with this user!', 'error')
-                } else {
-                  showMessage(`Failed to send friend request: ${result.error}`, 'error')
-                }
-                this.closeAddFriendModal()
-              }
-            } else {
-              showMessage('Error: Could not identify current user', 'error')
+            if (!senderId) {
+              showMessage('Error: Could not identify current user for sending request', 'error')
+              return
             }
+
+            console.log('Sending friend request from user', senderId, 'to user', userId)
+            const result = await friendsService.sendFriendRequest(userId, senderId)
+            
+            if (result.success) {
+              this.closeAddFriendModal()
+              showMessage('Friend request sent successfully!', 'success')
+              setTimeout(() => {
+                window.location.reload()
+              }, 1000)
+            } else {
+              // Handle the case where friendship already exists
+              if (result.error && result.error.includes('already exists')) {
+                showMessage('You already have a pending friend request with this user!', 'error')
+              } else {
+                showMessage(`Failed to send friend request: ${result.error}`, 'error')
+              }
+              this.closeAddFriendModal()
+            }
+          } catch (error) {
+            console.error('Error in friend request handler:', error)
+            showMessage('An unexpected error occurred while sending friend request', 'error')
+          } finally {
+            // Re-enable button
+            target.disabled = false
+            target.textContent = 'Add'
           }
         })
       })

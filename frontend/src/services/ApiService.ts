@@ -99,6 +99,7 @@ class ApiService {
   ): Promise<ApiResponse<T>> {
     try {
       const url = `${this.baseUrl}${endpoint}`;
+      console.log('ApiService: Making request to:', url, 'with options:', options);
 
       const defaultOptions: RequestInit = {
         headers: {
@@ -108,7 +109,11 @@ class ApiService {
         credentials: 'include', // Important for cookies
       };
 
-      const response = await fetch(url, { ...defaultOptions, ...options });
+      const finalOptions = { ...defaultOptions, ...options };
+      console.log('ApiService: Final request options:', finalOptions);
+
+      const response = await fetch(url, finalOptions);
+      console.log('ApiService: Received response:', response.status, response.statusText);
 
       let data;
       const contentType = response.headers.get('content-type');

@@ -445,6 +445,9 @@ export class App {
       this.setupGameResetButton()
     }
 
+    // Set up customization handlers for the customize button
+    this.setupCustomizationHandlers()
+
     // Auth bar listeners are set up in the main render() method
   }
 
@@ -457,10 +460,17 @@ export class App {
   }
 
   private setupCustomizationHandlers(): void {
+    // Set up customize button event listener
+    const customizeBtn = document.getElementById('customize-game-settings-btn')
+    if (customizeBtn) {
+      customizeBtn.addEventListener('click', () => {
+        this.openCustomizationMenu()
+      })
+    }
+
     // Expose customization functions to window
     ; (window as any).openCustomizationMenu = () => {
-      this.rootElement.insertAdjacentHTML('beforeend', this.customization.renderCustomizationMenu())
-      this.setupCustomizationFormHandlers()
+      this.openCustomizationMenu()
     }
 
       ; (window as any).closeCustomizationMenu = () => {
@@ -512,6 +522,11 @@ export class App {
       }
   }
 
+  private openCustomizationMenu(): void {
+    this.rootElement.insertAdjacentHTML('beforeend', this.customization.renderCustomizationMenu())
+    this.setupCustomizationFormHandlers()
+  }
+
   private closeCustomizationMenu(): void {
     const menu = document.querySelector('.fixed.inset-0.bg-black\\/80')
     if (menu) {
@@ -527,6 +542,59 @@ export class App {
   }
 
   private setupCustomizationFormHandlers(): void {
+    // Set up button event listeners
+    const closeBtn = document.getElementById('close-customization-menu-btn')
+    const resetBtn = document.getElementById('reset-to-defaults-btn')
+    const saveBtn = document.getElementById('save-customization-settings-btn')
+
+    closeBtn?.addEventListener('click', () => {
+      this.closeCustomizationMenu()
+    })
+
+    resetBtn?.addEventListener('click', () => {
+      this.customization.updateSettings({
+        ballSpeed: 4,
+        paddleSpeed: 5,
+        winningScore: 5,
+        powerUpsEnabled: false,
+        mapTheme: 'classic'
+      })
+
+      // Check if we're on the customize page and navigate back to home
+      if (window.location.pathname === '/customize') {
+        window.history.pushState({}, '', '/')
+        this.render()
+      } else {
+        // If we're in a modal, close it
+        this.closeCustomizationMenu()
+      }
+    })
+
+    saveBtn?.addEventListener('click', () => {
+      const ballSpeed = parseInt((document.getElementById('ballSpeed') as HTMLInputElement)?.value || '4')
+      const paddleSpeed = parseInt((document.getElementById('paddleSpeed') as HTMLInputElement)?.value || '5')
+      const winningScore = parseInt((document.getElementById('winningScore') as HTMLInputElement)?.value || '5')
+      const powerUpsEnabled = (document.getElementById('powerUpsEnabled') as HTMLInputElement)?.checked
+      const mapTheme = (document.querySelector('input[name="mapTheme"]:checked') as HTMLInputElement)?.value
+
+      this.customization.updateSettings({
+        ballSpeed,
+        paddleSpeed,
+        winningScore,
+        powerUpsEnabled: powerUpsEnabled || false,
+        mapTheme: mapTheme || 'classic'
+      })
+
+      // Check if we're on the customize page and navigate back to home
+      if (window.location.pathname === '/customize') {
+        window.history.pushState({}, '', '/')
+        this.render()
+      } else {
+        // If we're in a modal, close it
+        this.closeCustomizationMenu()
+      }
+    })
+
     // Update range input values in real-time
     const ballSpeedInput = document.getElementById('ballSpeed') as HTMLInputElement
     const paddleSpeedInput = document.getElementById('paddleSpeed') as HTMLInputElement

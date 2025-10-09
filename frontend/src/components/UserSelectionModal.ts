@@ -1,52 +1,56 @@
-import { sessionService } from '../services/SessionService.js'
-import { showMessage } from '../components/Notifier'
+import { sessionService } from "../services/SessionService.js";
+import { showMessage } from "../components/Notifier";
 
 export interface UserSelectionOptions {
-  gameType: 'quick-game' | 'ai-game' | 'tournament'
-  minPlayers: number
-  maxPlayers: number
-  allowAI?: boolean
+  gameType: "quick-game" | "ai-game" | "tournament";
+  minPlayers: number;
+  maxPlayers: number;
+  allowAI?: boolean;
 }
 
 export interface SelectedUsers {
-  players: any[]
-  gameType: string
+  players: any[];
+  gameType: string;
 }
 
 export class UserSelectionModal {
-  private onSelectionComplete?: (selection: SelectedUsers) => void
-  private onCancel?: () => void
-  private selectedPlayers: Set<number> = new Set()
-  private gameType: string = ''
-  private minPlayers: number = 1
-  private maxPlayers: number = 2
+  private onSelectionComplete?: (selection: SelectedUsers) => void;
+  private onCancel?: () => void;
+  private selectedPlayers: Set<number> = new Set();
+  private gameType: string = "";
+  private minPlayers: number = 1;
+  private maxPlayers: number = 2;
 
   constructor() {
-    this.selectedPlayers = new Set()
+    this.selectedPlayers = new Set();
   }
 
   /**
    * Shows the user selection modal
    */
-  show(options: UserSelectionOptions, onComplete: (selection: SelectedUsers) => void, onCancel?: () => void): void {
-    this.gameType = options.gameType
-    this.minPlayers = options.minPlayers
-    this.maxPlayers = options.maxPlayers
-    this.onSelectionComplete = onComplete
-    this.onCancel = onCancel
-    this.selectedPlayers.clear()
+  show(
+    options: UserSelectionOptions,
+    onComplete: (selection: SelectedUsers) => void,
+    onCancel?: () => void
+  ): void {
+    this.gameType = options.gameType;
+    this.minPlayers = options.minPlayers;
+    this.maxPlayers = options.maxPlayers;
+    this.onSelectionComplete = onComplete;
+    this.onCancel = onCancel;
+    this.selectedPlayers.clear();
 
-    this.render()
-    this.setupEventListeners()
+    this.render();
+    this.setupEventListeners();
   }
 
   /**
    * Hides the modal
    */
   hide(): void {
-    const modal = document.getElementById('user-selection-modal')
+    const modal = document.getElementById("user-selection-modal");
     if (modal) {
-      modal.remove()
+      modal.remove();
     }
   }
 
@@ -54,13 +58,13 @@ export class UserSelectionModal {
    * Renders the modal HTML
    */
   private render(): void {
-    const participants = sessionService.getParticipants()
-    console.log('UserSelectionModal: Loading participants:', participants)
+    const participants = sessionService.getParticipants();
+    console.log("UserSelectionModal: Loading participants:", participants);
     const gameTypeLabels = {
-      'quick-game': 'Quick Game',
-      'ai-game': 'AI Game',
-      'tournament': 'Tournament'
-    }
+      "quick-game": "Quick Game",
+      "ai-game": "AI Game",
+      tournament: "Tournament",
+    };
 
     const modalHTML = `
       <div id="user-selection-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -75,37 +79,58 @@ export class UserSelectionModal {
                 </svg>
               </button>
             </div>
-            <p class="text-gray-300 mt-2">Choose players for ${gameTypeLabels[this.gameType as keyof typeof gameTypeLabels]}</p>
+            <p class="text-gray-300 mt-2">Choose players for ${
+              gameTypeLabels[this.gameType as keyof typeof gameTypeLabels]
+            }</p>
             <div class="mt-3 text-sm text-cyan-400">
-              Select ${this.minPlayers === this.maxPlayers ? this.minPlayers : `${this.minPlayers}-${this.maxPlayers}`} player${this.maxPlayers > 1 ? 's' : ''}
-              ${this.gameType === 'tournament' ? '<br><span class="text-yellow-400">⚠️ Tournaments require exactly 4, 8, or 16 players</span>' : ''}
+              Select ${
+                this.minPlayers === this.maxPlayers
+                  ? this.minPlayers
+                  : `${this.minPlayers}-${this.maxPlayers}`
+              } player${this.maxPlayers > 1 ? "s" : ""}
+              ${
+                this.gameType === "tournament"
+                  ? '<br><span class="text-yellow-400">⚠️ Tournaments require exactly 4, 8, or 16 players</span>'
+                  : ""
+              }
             </div>
           </div>
 
           <!-- Content -->
           <div class="p-6 overflow-y-auto max-h-96">
-            ${participants.length === 0 ? `
+            ${
+              participants.length === 0
+                ? `
               <div class="text-center py-8">
                 <div class="text-4xl mb-4">👥</div>
                 <p class="text-gray-400 text-lg">No players available</p>
                 <p class="text-gray-500 text-sm mt-2">Players need to be logged in to appear here</p>
               </div>
-            ` : `
+            `
+                : `
               <div class="grid grid-cols-1 gap-3">
-                ${participants.map(participant => `
+                ${participants
+                  .map(
+                    (participant) => `
                   <div class="user-card bg-white/5 rounded-lg p-4 border border-white/10 hover:bg-white/10 transition-all duration-300 cursor-pointer" 
                        data-user-id="${participant.id}">
                     <div class="flex items-center space-x-3">
                       <div class="relative">
-                        <img src="${participant.avatarUrl || '/avatars/default-avatar.png'}" 
+                        <img src="${
+                          participant.avatarUrl || "/avatars/default-avatar.png"
+                        }" 
                              alt="${participant.displayName}" 
                              class="w-12 h-12 rounded-full object-cover"
                              onerror="this.src='/avatars/default-avatar.png'">
                         <div class="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-black"></div>
                       </div>
                       <div class="flex-1">
-                        <h3 class="text-white font-medium">${participant.displayName}</h3>
-                        <p class="text-gray-400 text-sm">${participant.wins}W - ${participant.losses}L</p>
+                        <h3 class="text-white font-medium">${
+                          participant.displayName
+                        }</h3>
+                        <p class="text-gray-400 text-sm">${
+                          participant.wins
+                        }W - ${participant.losses}L</p>
                       </div>
                       <div class="selection-indicator w-6 h-6 rounded-full border-2 border-white/30 flex items-center justify-center">
                         <svg class="w-4 h-4 text-white hidden" fill="currentColor" viewBox="0 0 20 20">
@@ -114,16 +139,21 @@ export class UserSelectionModal {
                       </div>
                     </div>
                   </div>
-                `).join('')}
+                `
+                  )
+                  .join("")}
               </div>
-            `}
+            `
+            }
           </div>
 
           <!-- Footer -->
           <div class="p-6 border-t border-white/10 bg-black/20">
             <div class="flex items-center justify-between">
               <div class="text-sm text-gray-400">
-                <span id="selection-count">0</span> of ${this.maxPlayers} selected
+                <span id="selection-count">0</span> of ${
+                  this.maxPlayers
+                } selected
               </div>
               <div class="flex space-x-3">
                 <button id="cancel-btn" 
@@ -140,9 +170,9 @@ export class UserSelectionModal {
           </div>
         </div>
       </div>
-    `
+    `;
 
-    document.body.insertAdjacentHTML('beforeend', modalHTML)
+    document.body.insertAdjacentHTML("beforeend", modalHTML);
   }
 
   /**
@@ -150,85 +180,91 @@ export class UserSelectionModal {
    */
   private setupEventListeners(): void {
     // Close modal
-    document.getElementById('close-modal')?.addEventListener('click', () => {
-      this.handleCancel()
-    })
+    document.getElementById("close-modal")?.addEventListener("click", () => {
+      this.handleCancel();
+    });
 
-    document.getElementById('cancel-btn')?.addEventListener('click', () => {
-      this.handleCancel()
-    })
+    document.getElementById("cancel-btn")?.addEventListener("click", () => {
+      this.handleCancel();
+    });
 
     // Confirm button
-    document.getElementById('confirm-btn')?.addEventListener('click', () => {
-      this.handleConfirm()
-    })
+    document.getElementById("confirm-btn")?.addEventListener("click", () => {
+      this.handleConfirm();
+    });
 
     // User selection
-    document.querySelectorAll('.user-card').forEach(card => {
-      card.addEventListener('click', () => {
-        this.handleUserSelection(card)
-      })
-    })
+    document.querySelectorAll(".user-card").forEach((card) => {
+      card.addEventListener("click", () => {
+        this.handleUserSelection(card);
+      });
+    });
 
     // Close on backdrop click
-    document.getElementById('user-selection-modal')?.addEventListener('click', (e) => {
-      if (e.target === e.currentTarget) {
-        this.handleCancel()
-      }
-    })
+    document
+      .getElementById("user-selection-modal")
+      ?.addEventListener("click", (e) => {
+        if (e.target === e.currentTarget) {
+          this.handleCancel();
+        }
+      });
 
     // Escape key
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        this.handleCancel()
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        this.handleCancel();
       }
-    })
+    });
   }
 
   /**
    * Handles user selection/deselection
    */
   private handleUserSelection(card: Element): void {
-    const userId = parseInt(card.getAttribute('data-user-id') || '0')
-    const indicator = card.querySelector('.selection-indicator')
-    const checkmark = card.querySelector('svg')
+    const userId = parseInt(card.getAttribute("data-user-id") || "0");
+    const indicator = card.querySelector(".selection-indicator");
+    const checkmark = card.querySelector("svg");
 
     if (this.selectedPlayers.has(userId)) {
       // Deselect
-      this.selectedPlayers.delete(userId)
-      card.classList.remove('ring-2', 'ring-cyan-400', 'bg-cyan-500/10')
-      indicator?.classList.remove('bg-cyan-500', 'border-cyan-500')
-      checkmark?.classList.add('hidden')
+      this.selectedPlayers.delete(userId);
+      card.classList.remove("ring-2", "ring-cyan-400", "bg-cyan-500/10");
+      indicator?.classList.remove("bg-cyan-500", "border-cyan-500");
+      checkmark?.classList.add("hidden");
     } else {
       // Check if we can select more players
       if (this.selectedPlayers.size >= this.maxPlayers) {
-        return // Can't select more
+        return; // Can't select more
       }
 
       // Select
-      this.selectedPlayers.add(userId)
-      card.classList.add('ring-2', 'ring-cyan-400', 'bg-cyan-500/10')
-      indicator?.classList.add('bg-cyan-500', 'border-cyan-500')
-      checkmark?.classList.remove('hidden')
+      this.selectedPlayers.add(userId);
+      card.classList.add("ring-2", "ring-cyan-400", "bg-cyan-500/10");
+      indicator?.classList.add("bg-cyan-500", "border-cyan-500");
+      checkmark?.classList.remove("hidden");
     }
 
-    this.updateSelectionUI()
+    this.updateSelectionUI();
   }
 
   /**
    * Updates the selection UI
    */
   private updateSelectionUI(): void {
-    const countElement = document.getElementById('selection-count')
-    const confirmBtn = document.getElementById('confirm-btn') as HTMLButtonElement
+    const countElement = document.getElementById("selection-count");
+    const confirmBtn = document.getElementById(
+      "confirm-btn"
+    ) as HTMLButtonElement;
 
     if (countElement) {
-      countElement.textContent = this.selectedPlayers.size.toString()
+      countElement.textContent = this.selectedPlayers.size.toString();
     }
 
     if (confirmBtn) {
-      const canConfirm = this.selectedPlayers.size >= this.minPlayers && this.selectedPlayers.size <= this.maxPlayers
-      confirmBtn.disabled = !canConfirm
+      const canConfirm =
+        this.selectedPlayers.size >= this.minPlayers &&
+        this.selectedPlayers.size <= this.maxPlayers;
+      confirmBtn.disabled = !canConfirm;
     }
   }
 
@@ -236,36 +272,51 @@ export class UserSelectionModal {
    * Handles confirmation
    */
   private handleConfirm(): void {
-    if (this.selectedPlayers.size < this.minPlayers || this.selectedPlayers.size > this.maxPlayers) {
-      console.log('Invalid selection size:', this.selectedPlayers.size, 'Required:', this.minPlayers, '-', this.maxPlayers)
-      return
+    if (
+      this.selectedPlayers.size < this.minPlayers ||
+      this.selectedPlayers.size > this.maxPlayers
+    ) {
+      console.log(
+        "Invalid selection size:",
+        this.selectedPlayers.size,
+        "Required:",
+        this.minPlayers,
+        "-",
+        this.maxPlayers
+      );
+      return;
     }
 
     // For tournaments, ensure power of 2 players (4, 8, or 16)
-    if (this.gameType === 'tournament') {
-      const playerCount = this.selectedPlayers.size
+    if (this.gameType === "tournament") {
+      const playerCount = this.selectedPlayers.size;
       if (playerCount !== 4 && playerCount !== 8 && playerCount !== 16) {
-        showMessage('Tournaments require exactly 4, 8, or 16 players. Please adjust your selection.', 'error')
-        return
+        showMessage(
+          "Tournaments require exactly 4, 8, or 16 players. Please adjust your selection.",
+          "error"
+        );
+        return;
       }
     }
 
-    const participants = sessionService.getParticipants()
-    const selectedUsers = participants.filter(p => this.selectedPlayers.has(p.id))
-    console.log('UserSelectionModal: Confirming selection:', {
+    const participants = sessionService.getParticipants();
+    const selectedUsers = participants.filter((p) =>
+      this.selectedPlayers.has(p.id)
+    );
+    console.log("UserSelectionModal: Confirming selection:", {
       selectedPlayerIds: Array.from(this.selectedPlayers),
       selectedUsers: selectedUsers,
-      gameType: this.gameType
-    })
+      gameType: this.gameType,
+    });
 
     if (this.onSelectionComplete) {
       this.onSelectionComplete({
         players: selectedUsers,
-        gameType: this.gameType
-      })
+        gameType: this.gameType,
+      });
     }
 
-    this.hide()
+    this.hide();
   }
 
   /**
@@ -273,12 +324,12 @@ export class UserSelectionModal {
    */
   private handleCancel(): void {
     if (this.onCancel) {
-      this.onCancel()
+      this.onCancel();
     }
-    this.hide()
+    this.hide();
   }
 }
 
 // Export singleton instance
-export const userSelectionModal = new UserSelectionModal()
-export default userSelectionModal
+export const userSelectionModal = new UserSelectionModal();
+export default userSelectionModal;

@@ -1,5 +1,11 @@
 import { matchService } from "../services/MatchService.js";
 import { AIOpponent } from "./AIOpponent.js";
+import { GAME_CONFIG, DEFAULT_THEME, GameState } from "./GameConfig.js";
+import { GameRenderer } from "./GameRenderer.js";
+import { GameStateManager } from "./GameStateManager.js";
+import { CollisionDetector } from "./CollisionDetector.js";
+import { PowerUpManager } from "./PowerUpManager.js";
+import { InputManager } from "./InputManager.js";
 
 interface Paddle {
   x: number;
@@ -23,14 +29,10 @@ export class GameManager {
   private canvas: HTMLCanvasElement | null = null;
   private ctx: CanvasRenderingContext2D | null = null;
   private animationId: number | null = null;
-  private gameRunning: boolean = false;
-  private gamePaused: boolean = false;
-  private gameOver: boolean = false;
   private gameWinner: string | null = null;
 
   // Countdown state
-  private countdownActive: boolean = false;
-  private countdownValue: number = 3;
+  private countdownValue: number = GAME_CONFIG.COUNTDOWN.INITIAL_VALUE;
   private countdownInterval: number | null = null;
 
   // Game objects
@@ -38,14 +40,15 @@ export class GameManager {
   private rightPaddle: Paddle;
   private ball: Ball;
   private additionalBalls: Ball[] = [];
-  private powerUps: Array<{ x: number; y: number; type: string; id: string }> =
-    [];
   private score1: number = 0;
   private score2: number = 0;
-  private winningScore: number = 5;
+  private winningScore: number = GAME_CONFIG.SCORING.DEFAULT_WINNING_SCORE;
 
-  // Keys state
-  private keys: { [key: string]: boolean } = {};
+  // Managers
+  private gameRenderer: GameRenderer | null = null;
+  private gameStateManager: GameStateManager;
+  private powerUpManager: PowerUpManager;
+  private inputManager: InputManager;
 
   // Tournament integration
   private currentMatch: { player1: string; player2: string } | null = null;
@@ -59,36 +62,41 @@ export class GameManager {
   private isAIGame: boolean = false;
 
   constructor() {
+    // Initialize game objects with constants
     this.leftPaddle = {
-      x: 10,
-      y: 175,
-      width: 10,
-      height: 50,
-      speed: 5,
+      x: GAME_CONFIG.PADDLE.LEFT_X,
+      y: GAME_CONFIG.PADDLE.INITIAL_Y,
+      width: GAME_CONFIG.PADDLE.WIDTH,
+      height: GAME_CONFIG.PADDLE.HEIGHT,
+      speed: GAME_CONFIG.PADDLE.SPEED,
       dy: 0,
     };
 
     this.rightPaddle = {
-      x: 780,
-      y: 175,
-      width: 10,
-      height: 50,
-      speed: 5,
+      x: GAME_CONFIG.PADDLE.RIGHT_X,
+      y: GAME_CONFIG.PADDLE.INITIAL_Y,
+      width: GAME_CONFIG.PADDLE.WIDTH,
+      height: GAME_CONFIG.PADDLE.HEIGHT,
+      speed: GAME_CONFIG.PADDLE.SPEED,
       dy: 0,
     };
 
     this.ball = {
-      x: 400,
-      y: 200,
-      radius: 5,
-      dx: 4,
-      dy: 4,
-      speed: 4,
+      x: GAME_CONFIG.BALL.INITIAL_X,
+      y: GAME_CONFIG.BALL.INITIAL_Y,
+      radius: GAME_CONFIG.BALL.RADIUS,
+      dx: GAME_CONFIG.BALL.INITIAL_SPEED,
+      dy: GAME_CONFIG.BALL.INITIAL_SPEED,
+      speed: GAME_CONFIG.BALL.INITIAL_SPEED,
     };
 
+    // Initialize managers
+    this.gameStateManager = new GameStateManager();
+    this.powerUpManager = new PowerUpManager();
+    this.inputManager = new InputManager();
     this.aiOpponent = new AIOpponent();
 
-    this.setupKeyboardControls();
+    this.setupInputHandling();
   }
 
   startGame(
@@ -109,16 +117,19 @@ export class GameManager {
       return;
     }
 
+    // Initialize renderer
+    this.gameRenderer = new GameRenderer(this.ctx, this.canvas);
+
     this.tournamentManager = tournamentManager || null;
     this.currentMatch = currentMatch || null;
     this.customization = customization;
-    this.isAIGame = isAIGame; // Defines if the game is against AI
+    this.isAIGame = isAIGame;
 
     this.applyCustomizationSettings();
 
     // If it's an AI game, slightly reduce the AI paddle speed for fairness
     if (this.isAIGame) {
-      this.rightPaddle.speed *= 0.9;
+      this.rightPaddle.speed *= GAME_CONFIG.AI.SPEED_MULTIPLIER;
     }
 
     this.resetGame();
@@ -129,8 +140,8 @@ export class GameManager {
 
   private startCountdown(): void {
     console.log("Starting countdown...");
-    this.countdownActive = true;
-    this.countdownValue = 3;
+    this.gameStateManager.setState(GameState.COUNTDOWN);
+    this.countdownValue = GAME_CONFIG.COUNTDOWN.INITIAL_VALUE;
 
     // Start the countdown display loop
     this.gameLoop();
@@ -142,46 +153,50 @@ export class GameManager {
       if (this.countdownValue <= 0) {
         this.endCountdown();
       }
-    }, 1000);
+    }, GAME_CONFIG.COUNTDOWN.INTERVAL_MS);
   }
 
   private endCountdown(): void {
     console.log("Ending countdown, starting game...");
-    this.countdownActive = false;
     if (this.countdownInterval) {
       clearInterval(this.countdownInterval);
       this.countdownInterval = null;
     }
 
     // Now start the actual game
-    this.gameRunning = true;
+    this.gameStateManager.setState(GameState.RUNNING);
   }
 
-  private setupKeyboardControls(): void {
-    document.addEventListener("keydown", (e) => {
-      // Handle space key
-      if (e.key === " " && !e.repeat) {
-        e.preventDefault(); // Prevent page scrolling
-
+  private setupInputHandling(): void {
+    // Handle space key for countdown skip and pause
+    this.inputManager.onKeyDown((key) => {
+      if (key === " ") {
         // If countdown is active, skip countdown
-        if (this.countdownActive) {
+        if (this.gameStateManager.isCountdownActive()) {
           this.endCountdown();
           return;
         }
 
         // Otherwise handle pause/unpause
-        if (this.gameRunning && !this.gameOver) {
-          this.gamePaused = !this.gamePaused;
+        if (
+          this.gameStateManager.isGameRunning() ||
+          this.gameStateManager.isGamePaused()
+        ) {
+          this.togglePause();
         }
-        return;
       }
-
-      this.keys[e.key] = true;
     });
 
-    document.addEventListener("keyup", (e) => {
-      this.keys[e.key] = false;
-    });
+    // Prevent default behavior for space key
+    this.inputManager.preventDefaultForKeys([" "]);
+  }
+
+  private togglePause(): void {
+    if (this.gameStateManager.isGamePaused()) {
+      this.gameStateManager.setState(GameState.RUNNING);
+    } else if (this.gameStateManager.isGameRunning()) {
+      this.gameStateManager.setState(GameState.PAUSED);
+    }
   }
 
   resetGame(): void {
@@ -189,11 +204,8 @@ export class GameManager {
     this.score1 = 0;
     this.score2 = 0;
 
-    // Reset pause state
-    this.gamePaused = false;
-
-    // Reset game over state
-    this.gameOver = false;
+    // Reset game state
+    this.gameStateManager.reset();
     this.gameWinner = null;
 
     // Reset ball position and speed
@@ -204,7 +216,7 @@ export class GameManager {
 
     // Reset additional game elements
     this.additionalBalls = [];
-    this.powerUps = [];
+    this.powerUpManager.reset();
   }
 
   private applyCustomizationSettings(): void {
@@ -217,8 +229,7 @@ export class GameManager {
     if (!this.customization) return;
 
     // Check if settings have changed (only check occasionally to avoid performance issues)
-    if (Math.random() < 0.01) {
-      // 1% chance per frame = ~once per 1.67 seconds
+    if (Math.random() < GAME_CONFIG.SETTINGS_CHECK.CHANCE_PER_FRAME) {
       const currentSettings = this.customization.getSettings();
 
       // Check if winning score changed
@@ -241,10 +252,15 @@ export class GameManager {
 
   private gameLoop(): void {
     // Continue loop if countdown is active, game is running, or game is over
-    if (!this.countdownActive && !this.gameRunning && !this.gameOver) return;
+    if (
+      !this.gameStateManager.isCountdownActive() &&
+      !this.gameStateManager.isGameActive() &&
+      !this.gameStateManager.isGameOver()
+    )
+      return;
 
-    // Only update game state if not in countdown, not paused, and not game over
-    if (!this.countdownActive && !this.gamePaused && !this.gameOver) {
+    // Only update game state if game is running
+    if (this.gameStateManager.isGameRunning()) {
       this.update();
     }
 
@@ -258,55 +274,43 @@ export class GameManager {
     this.updatePaddles();
     this.updateBall();
     this.updateAdditionalBalls();
-    this.updatePowerUps();
+    this.powerUpManager.update(
+      [this.ball, ...this.additionalBalls],
+      this
+    );
     this.checkCollisions();
     this.checkScoring();
-    this.spawnPowerUps();
     this.checkForSettingsUpdates();
   }
 
   private updatePaddles(): void {
     // Don't update paddles if game is paused
-    if (this.gamePaused) return;
+    if (this.gameStateManager.isGamePaused()) return;
 
-    // Player 1 controls (W/S keys) - Permanece o mesmo
-    if (this.keys["w"] || this.keys["W"]) {
-      this.leftPaddle.dy = -this.leftPaddle.speed;
-    } else if (this.keys["s"] || this.keys["S"]) {
-      this.leftPaddle.dy = this.leftPaddle.speed;
-    } else {
-      this.leftPaddle.dy = 0;
-    }
+    // Player 1 controls (W/S keys)
+    const player1Movement = this.inputManager.getPlayer1Movement();
+    this.leftPaddle.dy = player1Movement * this.leftPaddle.speed;
 
-    // Lógica de controle do Jogador 2 ou da IA
+    // Player 2 controls or AI
     if (this.isAIGame) {
-      // Se for um jogo de IA, a IA decide qual "tecla" apertar
-      this.aiOpponent.update(this.ball, this.rightPaddle, this.keys);
+      // AI opponent updates the input manager's key state
+      this.aiOpponent.update(
+        this.ball,
+        this.rightPaddle,
+        this.inputManager.getKeysObject()
+      );
     }
-    // Se for um jogador humano, os event listeners do navegador já cuidaram de atualizar o objeto `keys`.
 
-    // A lógica de movimento da raquete direita agora funciona para ambos (IA e Humano)
-    if (this.keys["ArrowUp"]) {
-      this.rightPaddle.dy = -this.rightPaddle.speed;
-    } else if (this.keys["ArrowDown"]) {
-      this.rightPaddle.dy = this.rightPaddle.speed;
-    } else {
-      this.rightPaddle.dy = 0;
-    }
+    const player2Movement = this.inputManager.getPlayer2Movement();
+    this.rightPaddle.dy = player2Movement * this.rightPaddle.speed;
 
     // Update paddle positions
     this.leftPaddle.y += this.leftPaddle.dy;
     this.rightPaddle.y += this.rightPaddle.dy;
 
     // Keep paddles within canvas bounds
-    this.leftPaddle.y = Math.max(
-      0,
-      Math.min(400 - this.leftPaddle.height, this.leftPaddle.y)
-    );
-    this.rightPaddle.y = Math.max(
-      0,
-      Math.min(400 - this.rightPaddle.height, this.rightPaddle.y)
-    );
+    CollisionDetector.constrainPaddleToBounds(this.leftPaddle);
+    CollisionDetector.constrainPaddleToBounds(this.rightPaddle);
   }
 
   private updateBall(): void {
@@ -314,8 +318,8 @@ export class GameManager {
     this.ball.y += this.ball.dy;
 
     // Ball collision with top and bottom walls
-    if (this.ball.y <= 0 || this.ball.y >= 400) {
-      this.ball.dy = -this.ball.dy;
+    if (CollisionDetector.checkBallWallCollision(this.ball)) {
+      CollisionDetector.applyWallBounce(this.ball);
     }
   }
 
@@ -325,8 +329,8 @@ export class GameManager {
       ball.y += ball.dy;
 
       // Ball collision with top and bottom walls
-      if (ball.y <= 0 || ball.y >= 400) {
-        ball.dy = -ball.dy;
+      if (CollisionDetector.checkBallWallCollision(ball)) {
+        CollisionDetector.applyWallBounce(ball);
       }
     });
   }
@@ -351,103 +355,24 @@ export class GameManager {
     rightPaddle: Paddle
   ): void {
     // Ball collision with left paddle
-    if (
-      ball.x <= leftPaddle.x + leftPaddle.width + 5 &&
-      ball.y >= leftPaddle.y &&
-      ball.y <= leftPaddle.y + leftPaddle.height &&
-      ball.dx < 0
-    ) {
-      ball.dx = -ball.dx;
-      this.adjustBallAngle(ball, leftPaddle);
+    if (CollisionDetector.checkBallLeftPaddleCollision(ball, leftPaddle)) {
+      CollisionDetector.applyPaddleBounce(ball, leftPaddle, true);
     }
 
     // Ball collision with right paddle
-    if (
-      ball.x + ball.radius >= rightPaddle.x &&
-      ball.y >= rightPaddle.y &&
-      ball.y <= rightPaddle.y + rightPaddle.height &&
-      ball.dx > 0
-    ) {
-      ball.dx = -ball.dx;
-      this.adjustBallAngle(ball, rightPaddle);
+    if (CollisionDetector.checkBallRightPaddleCollision(ball, rightPaddle)) {
+      CollisionDetector.applyPaddleBounce(ball, rightPaddle, false);
     }
-  }
-
-  /**
-   * Calculates and applies a new bounce angle to the ball after it collides with a paddle.
-   * Without this function, the ball would always bounce at a predictable, mirrored angle,
-   * removing the player's ability to aim their shots.
-   *
-   * The logic works by:
-   * 1. Determining the exact point of impact on the paddle's vertical surface.
-   * 2. Mapping this impact point to a new angle (from -30 to +30 degrees).
-   * A hit in the center results in a straight bounce, while hits near the edges result in sharper angles.
-   * 3. Recalculating the ball's horizontal (dx) and vertical (dy) velocity components
-   * based on this new angle, while preserving the ball's original speed.
-   *
-   * @param {Ball} ball The ball object that has collided with the paddle.
-   * @param {Paddle} paddle The paddle object that the ball has just collided with.
-   */
-  private adjustBallAngle(ball: Ball, paddle: Paddle): void {
-    const hitPoint = (ball.y - paddle.y) / paddle.height;
-    const angle = ((hitPoint - 0.5) * Math.PI) / 3; // -30 to 30 degrees
-    const speed = Math.sqrt(ball.dx * ball.dx + ball.dy * ball.dy);
-
-    ball.dx = Math.cos(angle) * speed * (paddle === this.leftPaddle ? 1 : -1);
-    ball.dy = Math.sin(angle) * speed;
   }
 
   private resetBall(): void {
-    this.ball.x = 400;
-    this.ball.y = 200;
-    const ballSpeed = this.customization?.getSettings().ballSpeed || 4;
+    this.ball.x = GAME_CONFIG.BALL.INITIAL_X;
+    this.ball.y = GAME_CONFIG.BALL.INITIAL_Y;
+    const ballSpeed =
+      this.customization?.getSettings().ballSpeed ||
+      GAME_CONFIG.BALL.INITIAL_SPEED;
     this.ball.dx = Math.random() > 0.5 ? ballSpeed : -ballSpeed;
     this.ball.dy = Math.random() > 0.5 ? ballSpeed : -ballSpeed;
-  }
-
-  private updatePowerUps(): void {
-    // Check if power-ups should be disabled and remove existing ones
-    if (
-      this.customization &&
-      !this.customization.getSettings().powerUpsEnabled
-    ) {
-      if (this.powerUps.length > 0) {
-        console.log(
-          `🚫 Power-ups disabled - removing ${this.powerUps.length} existing power-ups`
-        );
-        this.powerUps = [];
-      }
-    }
-  }
-
-  private spawnPowerUps(): void {
-    if (
-      !this.customization ||
-      !this.customization.getSettings().powerUpsEnabled
-    )
-      return;
-
-    // Spawn power-ups randomly (1% chance per frame at 60fps = ~1 power-up per 1.67 seconds)
-    if (Math.random() < 0.01 && this.powerUps.length < 2) {
-      const powerUpTypes = [
-        "speed_boost",
-        "paddle_grow",
-        "slow_motion",
-        "multi_ball",
-      ];
-      const randomType =
-        powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)];
-
-      // Spawn power-ups in the center area where the ball is more likely to be
-      const newPowerUp = {
-        x: Math.random() * 400 + 200, // Center area: 200-600
-        y: Math.random() * 200 + 100, // Center area: 100-300
-        type: randomType,
-        id: `powerup_${Date.now()}_${Math.random()}`,
-      };
-
-      this.powerUps.push(newPowerUp);
-    }
   }
 
   private checkCollisions(): void {
@@ -458,61 +383,29 @@ export class GameManager {
     this.additionalBalls.forEach((ball) => {
       this.checkBallPaddleCollision(ball, this.leftPaddle, this.rightPaddle);
     });
-
-    // Power-up collision with paddles
-    this.checkPowerUpCollisions();
-  }
-
-  private checkPowerUpCollisions(): void {
-    if (
-      !this.customization ||
-      !this.customization.getSettings().powerUpsEnabled
-    )
-      return;
-
-    this.powerUps = this.powerUps.filter((powerUp) => {
-      // Check collision with main ball
-      const distanceToMainBall = Math.sqrt(
-        Math.pow(powerUp.x - this.ball.x, 2) +
-          Math.pow(powerUp.y - this.ball.y, 2)
-      );
-      if (distanceToMainBall <= this.ball.radius + 15) {
-        // 15 is power-up radius
-        this.customization.activatePowerUp(powerUp.type, this);
-        return false; // Remove power-up
-      }
-
-      // Check collision with additional balls
-      for (const ball of this.additionalBalls) {
-        const distanceToBall = Math.sqrt(
-          Math.pow(powerUp.x - ball.x, 2) + Math.pow(powerUp.y - ball.y, 2)
-        );
-        if (distanceToBall <= ball.radius + 15) {
-          this.customization.activatePowerUp(powerUp.type, this);
-          return false; // Remove power-up
-        }
-      }
-
-      return true; // Keep power-up
-    });
   }
 
   private checkScoring(): void {
     // Main ball scoring
-    if (this.ball.x <= 0) {
+    const sideWallCollision = CollisionDetector.checkBallSideWallCollision(
+      this.ball
+    );
+    if (sideWallCollision === "left") {
       this.score2++;
       this.resetBall();
-    } else if (this.ball.x >= 800) {
+    } else if (sideWallCollision === "right") {
       this.score1++;
       this.resetBall();
     }
 
     // Additional balls scoring
     this.additionalBalls = this.additionalBalls.filter((ball) => {
-      if (ball.x <= 0) {
+      const ballSideWallCollision =
+        CollisionDetector.checkBallSideWallCollision(ball);
+      if (ballSideWallCollision === "left") {
         this.score2++;
         return false;
-      } else if (ball.x >= 800) {
+      } else if (ballSideWallCollision === "right") {
         this.score1++;
         return false;
       }
@@ -526,14 +419,14 @@ export class GameManager {
   }
 
   private resetPaddles(): void {
-    this.leftPaddle.y = 175;
-    this.rightPaddle.y = 175;
+    this.leftPaddle.y = GAME_CONFIG.PADDLE.INITIAL_Y;
+    this.rightPaddle.y = GAME_CONFIG.PADDLE.INITIAL_Y;
   }
 
   private async endGame(): Promise<void> {
-    this.gameRunning = false;
+    this.gameStateManager.setState(GameState.GAME_OVER);
     if (this.animationId) {
-      cancelAnimationFrame(this.animationId);
+      window.cancelAnimationFrame(this.animationId);
     }
 
     // Determine winner using actual player names if available
@@ -548,13 +441,11 @@ export class GameManager {
       winner = this.score1 > this.score2 ? "Player 1" : "Player 2";
     }
     this.gameWinner = winner;
-    this.gameOver = true;
 
     // Save match to backend
     await this.saveMatchToBackend(winner);
 
     // Record the match result if this is a tournament match
-
     if (this.tournamentManager && this.currentMatch) {
       console.log("Game ended, recording result:", {
         player1: this.currentMatch.player1,
@@ -577,16 +468,11 @@ export class GameManager {
     }
   }
 
-  /**
-   * Saves the match result to the backend
-   */
   private async saveMatchToBackend(winner: string): Promise<void> {
     try {
-      // Get actual player names from current match
       const player1Name = this.currentMatch?.player1 || "Player 1";
       const player2Name = this.currentMatch?.player2 || "Player 2";
 
-      // Create match result data
       const matchResult = matchService.createMatchResult(
         player1Name,
         player2Name,
@@ -611,171 +497,41 @@ export class GameManager {
   }
 
   private render(): void {
-    if (!this.ctx || !this.canvas) {
-      console.error("🎨 Render: Canvas or context not available");
+    if (!this.gameRenderer) {
+      console.error("🎨 Render: GameRenderer not available");
       return;
     }
 
-    const ctx = this.ctx;
-    const canvas = this.canvas;
+    const theme = this.customization?.getCurrentTheme() || DEFAULT_THEME;
+    const allBalls = [this.ball, ...this.additionalBalls];
+    const powerUps = this.powerUpManager.getPowerUps();
 
-    const theme = this.customization?.getCurrentTheme() || {
-      backgroundColor: "#000000",
-      paddleColor: "#ffffff",
-      ballColor: "#ffffff",
-      lineColor: "#ffffff",
-    };
+    let overlay: { type: "countdown" | "pause"; data: any } | undefined;
 
-    // Clear canvas
-    ctx.fillStyle = theme.backgroundColor;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Draw center line
-    ctx.strokeStyle = theme.lineColor;
-    ctx.setLineDash([5, 15]);
-    ctx.beginPath();
-    ctx.moveTo(400, 0);
-    ctx.lineTo(400, 400);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    // Draw paddles
-    ctx.fillStyle = theme.paddleColor;
-    ctx.fillRect(
-      this.leftPaddle.x,
-      this.leftPaddle.y,
-      this.leftPaddle.width,
-      this.leftPaddle.height
-    );
-    ctx.fillRect(
-      this.rightPaddle.x,
-      this.rightPaddle.y,
-      this.rightPaddle.width,
-      this.rightPaddle.height
-    );
-
-    // Draw main ball
-    ctx.beginPath();
-    ctx.arc(this.ball.x, this.ball.y, this.ball.radius, 0, Math.PI * 2);
-    ctx.fillStyle = theme.ballColor;
-    ctx.fill();
-    ctx.closePath();
-
-    // Draw additional balls
-    this.additionalBalls.forEach((ball) => {
-      ctx.beginPath();
-      ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-      ctx.fillStyle = theme.ballColor;
-      ctx.fill();
-      ctx.closePath();
-    });
-
-    // Draw power-ups
-    this.powerUps.forEach((powerUp) => {
-      ctx.beginPath();
-      ctx.arc(powerUp.x, powerUp.y, 15, 0, Math.PI * 2);
-      ctx.fillStyle = this.getPowerUpColor(powerUp.type);
-      ctx.fill();
-      ctx.closePath();
-
-      // Draw power-up icon
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "16px Arial";
-      ctx.textAlign = "center";
-      ctx.fillText(this.getPowerUpIcon(powerUp.type), powerUp.x, powerUp.y + 5);
-    });
-
-    // Draw score
-    ctx.fillStyle = theme.lineColor;
-    ctx.font = "32px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText(this.score1.toString(), 200, 50);
-    ctx.fillText(this.score2.toString(), 600, 50);
-
-    // Draw countdown overlay if countdown is active
-    if (this.countdownActive) {
+    if (this.gameStateManager.isCountdownActive()) {
       console.log(
         "🎯 Rendering countdown overlay, value:",
-        this.countdownValue
+        this.countdownValue,
+        "state:",
+        this.gameStateManager.getState()
       );
-      // Semi-transparent overlay
-      ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // Countdown text
-      ctx.fillStyle = "#00ffff";
-      ctx.font = "bold 72px Arial"; // Use Arial instead of Orbitron for better compatibility
-      ctx.textAlign = "center";
-      ctx.fillText(
-        this.countdownValue.toString(),
-        canvas.width / 2,
-        canvas.height / 2 - 20
-      );
-
-      // Instructions
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "18px Arial";
-      ctx.fillText(
-        "Press SPACE to start now",
-        canvas.width / 2,
-        canvas.height / 2 + 40
-      );
+      overlay = { type: "countdown", data: { value: this.countdownValue } };
+    } else if (this.gameStateManager.isGamePaused()) {
+      overlay = { type: "pause", data: {} };
     }
-    // Draw pause overlay if game is paused
-    else if (this.gamePaused) {
-      // Semi-transparent overlay
-      ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Pause text
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "48px Arial";
-      ctx.textAlign = "center";
-      ctx.fillText("PAUSED", canvas.width / 2, canvas.height / 2 - 20);
-
-      // Instructions
-      ctx.font = "16px Arial";
-      ctx.fillText(
-        "Press SPACE to resume",
-        canvas.width / 2,
-        canvas.height / 2 + 20
-      );
-    }
-  }
-
-  private getPowerUpColor(type: string): string {
-    switch (type) {
-      case "speed_boost":
-        return "#FFD700";
-      case "paddle_grow":
-        return "#00FF00";
-      case "slow_motion":
-        return "#87CEEB";
-      case "multi_ball":
-        return "#FF69B4";
-      default:
-        return "#ffffff";
-    }
-  }
-
-  private getPowerUpIcon(type: string): string {
-    switch (type) {
-      case "speed_boost":
-        return "🚀";
-      case "paddle_grow":
-        return "📏";
-      case "slow_motion":
-        return "🐌";
-      case "multi_ball":
-        return "⚽";
-      default:
-        return "?";
-    }
+    this.gameRenderer.render(
+      { left: this.leftPaddle, right: this.rightPaddle },
+      allBalls,
+      powerUps,
+      { player1: this.score1, player2: this.score2 },
+      theme,
+      overlay
+    );
   }
 
   stopGame(): void {
-    this.gameRunning = false;
-    this.countdownActive = false;
+    this.gameStateManager.setState(GameState.GAME_OVER);
     if (this.countdownInterval) {
       clearInterval(this.countdownInterval);
       this.countdownInterval = null;
@@ -785,12 +541,10 @@ export class GameManager {
     }
   }
 
-  // Methods for quick game game over screen
   playAgain(): void {
     this.resetGame();
     this.startCountdown();
 
-    // Hide the game over buttons
     const gameOverButtons = document.getElementById("game-over-buttons");
     if (gameOverButtons) {
       gameOverButtons.classList.add("hidden");
@@ -803,13 +557,11 @@ export class GameManager {
     window.dispatchEvent(new CustomEvent("tournament-updated"));
   }
 
-  // Show game over buttons for quick games
   showGameOverButtons(): void {
     const gameOverButtons = document.getElementById("game-over-buttons");
     if (gameOverButtons) {
       gameOverButtons.classList.remove("hidden");
 
-      // Update the winner text in the HTML
       const winnerText = document.getElementById("winner-text");
       if (winnerText && this.gameWinner) {
         winnerText.textContent = `${this.gameWinner} Wins!`;
@@ -817,9 +569,6 @@ export class GameManager {
     }
   }
 
-  /**
-   * Shows game over modal for tournament games
-   */
   private showTournamentGameOverModal(winner: string): void {
     const modalHTML = `
       <div id="tournament-game-over-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -844,29 +593,22 @@ export class GameManager {
       </div>
     `;
 
-    // Remove any existing modal
     const existingModal = document.getElementById("tournament-game-over-modal");
     if (existingModal) {
       existingModal.remove();
     }
 
-    // Add the modal to the page
     document.body.insertAdjacentHTML("beforeend", modalHTML);
 
-    // Set up event listener
     document
       .getElementById("continue-tournament-btn")
       ?.addEventListener("click", () => {
         this.hideTournamentGameOverModal();
-        // Navigate to tournament page
         window.history.pushState({}, "", "/tournament");
         window.dispatchEvent(new CustomEvent("tournament-updated"));
       });
   }
 
-  /**
-   * Hides the tournament game over modal
-   */
   private hideTournamentGameOverModal(): void {
     const modal = document.getElementById("tournament-game-over-modal");
     if (modal) {

@@ -1,18 +1,17 @@
-import { userService } from '../services/UserService.js'
-import { sessionService } from '../services/SessionService.js'
+import { userService } from "../services/UserService.js";
+import { sessionService } from "../services/SessionService.js";
 
 export class Navbar {
-  private authModal: any
-  private onSearchResults?: (users: any[]) => void
-  private searchTimeout?: NodeJS.Timeout
+  private authModal: any;
+  private onSearchResults?: (users: any[]) => void;
+  private searchTimeout?: NodeJS.Timeout;
 
   constructor(authModal: any, onSearchResults?: (users: any[]) => void) {
-    this.authModal = authModal
-    this.onSearchResults = onSearchResults
+    this.authModal = authModal;
+    this.onSearchResults = onSearchResults;
   }
 
   render(): string {
-    
     return `
       <!-- Auth Bar -->
       <div class="fixed top-0 left-0 right-0 z-50 bg-black/20 backdrop-blur-md border-b border-white/10">
@@ -96,75 +95,83 @@ export class Navbar {
           </div>
         </div>
       </div>
-    `
+    `;
   }
 
   setupEventListeners(onNavigate: (path: string) => void): void {
     // Desktop Auth button listeners
-    document.getElementById('login-btn')?.addEventListener('click', (e) => {
-      e.preventDefault()
-      this.authModal.show('login')
-    })
+    document.getElementById("login-btn")?.addEventListener("click", (e) => {
+      e.preventDefault();
+      this.authModal.show("login");
+    });
 
-    document.getElementById('mobile-login-btn')?.addEventListener('click', (e) => {
-      e.preventDefault()
-      this.authModal.show('login')
-    })
+    document
+      .getElementById("mobile-login-btn")
+      ?.addEventListener("click", (e) => {
+        e.preventDefault();
+        this.authModal.show("login");
+      });
 
     // Mobile menu toggle
-    document.getElementById('mobile-menu-btn')?.addEventListener('click', (e) => {
-      e.preventDefault()
-      this.toggleMobileMenu()
-    })
+    document
+      .getElementById("mobile-menu-btn")
+      ?.addEventListener("click", (e) => {
+        e.preventDefault();
+        this.toggleMobileMenu();
+      });
 
     // Search functionality
-    this.setupSearchListeners()
+    this.setupSearchListeners();
 
     // Navigation link listeners
-    document.querySelectorAll('.nav-link').forEach(link => {
-      link.addEventListener('click', (e) => {
-        e.preventDefault()
-        const href = (link as HTMLAnchorElement).getAttribute('href')
+    document.querySelectorAll(".nav-link").forEach((link) => {
+      link.addEventListener("click", (e) => {
+        e.preventDefault();
+        const href = (link as HTMLAnchorElement).getAttribute("href");
         if (href) {
-          onNavigate(href)
+          onNavigate(href);
         }
-      })
-    })
+      });
+    });
 
     // Mobile navigation link listeners
-    document.querySelectorAll('#mobile-menu a').forEach(link => {
-      link.addEventListener('click', (e) => {
-        e.preventDefault()
-        const href = (link as HTMLAnchorElement).getAttribute('href')
+    document.querySelectorAll("#mobile-menu a").forEach((link) => {
+      link.addEventListener("click", (e) => {
+        e.preventDefault();
+        const href = (link as HTMLAnchorElement).getAttribute("href");
         if (href) {
-          this.closeMobileMenu()
-          onNavigate(href)
+          this.closeMobileMenu();
+          onNavigate(href);
         }
-      })
-    })
+      });
+    });
 
     // Close mobile menu when clicking outside
-    document.addEventListener('click', (e) => {
-      const mobileMenu = document.getElementById('mobile-menu')
-      const mobileMenuBtn = document.getElementById('mobile-menu-btn')
-      
-      if (mobileMenu && !mobileMenu.contains(e.target as Node) && !mobileMenuBtn?.contains(e.target as Node)) {
-        this.closeMobileMenu()
+    document.addEventListener("click", (e) => {
+      const mobileMenu = document.getElementById("mobile-menu");
+      const mobileMenuBtn = document.getElementById("mobile-menu-btn");
+
+      if (
+        mobileMenu &&
+        !mobileMenu.contains(e.target as Node) &&
+        !mobileMenuBtn?.contains(e.target as Node)
+      ) {
+        this.closeMobileMenu();
       }
-    })
+    });
   }
 
   private toggleMobileMenu(): void {
-    const mobileMenu = document.getElementById('mobile-menu')
+    const mobileMenu = document.getElementById("mobile-menu");
     if (mobileMenu) {
-      mobileMenu.classList.toggle('hidden')
+      mobileMenu.classList.toggle("hidden");
     }
   }
 
   private closeMobileMenu(): void {
-    const mobileMenu = document.getElementById('mobile-menu')
+    const mobileMenu = document.getElementById("mobile-menu");
     if (mobileMenu) {
-      mobileMenu.classList.add('hidden')
+      mobileMenu.classList.add("hidden");
     }
   }
 
@@ -172,159 +179,183 @@ export class Navbar {
    * Sets up search event listeners for both desktop and mobile search inputs
    */
   private setupSearchListeners(): void {
-    const desktopSearch = document.getElementById('player-search') as HTMLInputElement
-    const mobileSearch = document.getElementById('mobile-player-search') as HTMLInputElement
+    const desktopSearch = document.getElementById(
+      "player-search"
+    ) as HTMLInputElement;
+    const mobileSearch = document.getElementById(
+      "mobile-player-search"
+    ) as HTMLInputElement;
 
     if (desktopSearch) {
-      desktopSearch.addEventListener('input', (e) => {
-        this.handleSearch((e.target as HTMLInputElement).value, 'desktop')
-      })
+      desktopSearch.addEventListener("input", (e) => {
+        this.handleSearch((e.target as HTMLInputElement).value, "desktop");
+      });
     }
 
     if (mobileSearch) {
-      mobileSearch.addEventListener('input', (e) => {
-        this.handleSearch((e.target as HTMLInputElement).value, 'mobile')
-      })
+      mobileSearch.addEventListener("input", (e) => {
+        this.handleSearch((e.target as HTMLInputElement).value, "mobile");
+      });
     }
 
     // Close search results when clicking outside
-    document.addEventListener('click', (e) => {
-      const searchContainer = document.getElementById('search-container')
-      const mobileSearchContainer = document.getElementById('mobile-search-container')
-      
-      if (!searchContainer?.contains(e.target as Node) && !mobileSearchContainer?.contains(e.target as Node)) {
-        this.hideSearchResults('desktop')
-        this.hideSearchResults('mobile')
+    document.addEventListener("click", (e) => {
+      const searchContainer = document.getElementById("search-container");
+      const mobileSearchContainer = document.getElementById(
+        "mobile-search-container"
+      );
+
+      if (
+        !searchContainer?.contains(e.target as Node) &&
+        !mobileSearchContainer?.contains(e.target as Node)
+      ) {
+        this.hideSearchResults("desktop");
+        this.hideSearchResults("mobile");
       }
-    })
+    });
   }
 
   /**
    * Handles search input with debouncing
    */
-  private handleSearch(query: string, type: 'desktop' | 'mobile'): void {
+  private handleSearch(query: string, type: "desktop" | "mobile"): void {
     // Clear previous timeout
     if (this.searchTimeout) {
-      clearTimeout(this.searchTimeout)
+      clearTimeout(this.searchTimeout);
     }
 
     // Hide results if query is empty
     if (!query.trim()) {
-      this.hideSearchResults(type)
-      return
+      this.hideSearchResults(type);
+      return;
     }
 
     // Only search if user is authenticated
     if (!sessionService.isAuthenticated()) {
-      return
+      return;
     }
 
     // Debounce search requests
     this.searchTimeout = setTimeout(async () => {
-      await this.performSearch(query, type)
-    }, 300)
+      await this.performSearch(query, type);
+    }, 300);
   }
 
   /**
    * Performs the actual search and displays results
    */
-  private async performSearch(query: string, type: 'desktop' | 'mobile'): Promise<void> {
+  private async performSearch(
+    query: string,
+    type: "desktop" | "mobile"
+  ): Promise<void> {
     try {
-      const result = await userService.searchUsers(query)
-      
+      const result = await userService.searchUsers(query);
+
       if (result.error) {
-        console.error('Search error:', result.error)
-        this.showSearchError(type)
-        return
+        console.error("Search error:", result.error);
+        this.showSearchError(type);
+        return;
       }
 
       if (result.users && result.users.length > 0) {
-        this.showSearchResults(result.users, type)
+        this.showSearchResults(result.users, type);
       } else {
-        this.showNoResults(type)
+        this.showNoResults(type);
       }
     } catch (error) {
-      console.error('Search failed:', error)
-      this.showSearchError(type)
+      console.error("Search failed:", error);
+      this.showSearchError(type);
     }
   }
 
   /**
    * Displays search results in the dropdown
    */
-  private showSearchResults(users: any[], type: 'desktop' | 'mobile'): void {
-    const resultsContainer = document.getElementById(`${type === 'desktop' ? '' : 'mobile-'}search-results`)
-    if (!resultsContainer) return
+  private showSearchResults(users: any[], type: "desktop" | "mobile"): void {
+    const resultsContainer = document.getElementById(
+      `${type === "desktop" ? "" : "mobile-"}search-results`
+    );
+    if (!resultsContainer) return;
 
-    const resultsHTML = users.map(user => `
-      <div class="px-3 py-2 hover:bg-white/10 cursor-pointer border-b border-white/10 last:border-b-0" 
-           onclick="this.handleUserClick(${user.id})">
+    const resultsHTML = users
+      .map(
+        (user) => `
+      <div class="px-3 py-2 hover:bg-white/10 cursor-pointer border-b border-white/10 last:border-b-0 search-result-item" 
+           data-user-id="${user.id}">
         <div class="flex items-center space-x-3">
-          <img src="${user.avatarUrl || '/avatars/default-avatar.png'}" 
+          <img src="${user.avatarUrl || "/avatars/default-avatar.png"}" 
                alt="${user.displayName}" 
                class="w-8 h-8 rounded-full object-cover"
                onerror="this.src='/avatars/default-avatar.png'">
           <div>
-            <div class="text-white font-medium text-sm">${user.displayName}</div>
+            <div class="text-white font-medium text-sm">${
+              user.displayName
+            }</div>
             <div class="text-gray-400 text-xs">${user.email}</div>
           </div>
         </div>
       </div>
-    `).join('')
+    `
+      )
+      .join("");
 
-    resultsContainer.innerHTML = resultsHTML
-    resultsContainer.classList.remove('hidden')
+    resultsContainer.innerHTML = resultsHTML;
+    resultsContainer.classList.remove("hidden");
 
     // Add click handlers for each result
-    resultsContainer.querySelectorAll('[onclick]').forEach(element => {
-      const onclick = element.getAttribute('onclick')
-      if (onclick) {
-        element.removeAttribute('onclick')
-        element.addEventListener('click', () => {
-          const userId = parseInt(onclick.match(/\d+/)?.[0] || '0')
-          this.handleUserClick(userId)
-        })
+    resultsContainer.querySelectorAll(".search-result-item").forEach((element) => {
+      const userId = element.getAttribute("data-user-id");
+      if (userId) {
+        element.addEventListener("click", () => {
+          this.handleUserClick(parseInt(userId));
+        });
       }
-    })
+    });
   }
 
   /**
    * Shows "no results" message
    */
-  private showNoResults(type: 'desktop' | 'mobile'): void {
-    const resultsContainer = document.getElementById(`${type === 'desktop' ? '' : 'mobile-'}search-results`)
-    if (!resultsContainer) return
+  private showNoResults(type: "desktop" | "mobile"): void {
+    const resultsContainer = document.getElementById(
+      `${type === "desktop" ? "" : "mobile-"}search-results`
+    );
+    if (!resultsContainer) return;
 
     resultsContainer.innerHTML = `
       <div class="px-3 py-4 text-center text-gray-400 text-sm">
         No players found
       </div>
-    `
-    resultsContainer.classList.remove('hidden')
+    `;
+    resultsContainer.classList.remove("hidden");
   }
 
   /**
    * Shows search error message
    */
-  private showSearchError(type: 'desktop' | 'mobile'): void {
-    const resultsContainer = document.getElementById(`${type === 'desktop' ? '' : 'mobile-'}search-results`)
-    if (!resultsContainer) return
+  private showSearchError(type: "desktop" | "mobile"): void {
+    const resultsContainer = document.getElementById(
+      `${type === "desktop" ? "" : "mobile-"}search-results`
+    );
+    if (!resultsContainer) return;
 
     resultsContainer.innerHTML = `
       <div class="px-3 py-4 text-center text-red-400 text-sm">
         Search failed. Please try again.
       </div>
-    `
-    resultsContainer.classList.remove('hidden')
+    `;
+    resultsContainer.classList.remove("hidden");
   }
 
   /**
    * Hides search results dropdown
    */
-  private hideSearchResults(type: 'desktop' | 'mobile'): void {
-    const resultsContainer = document.getElementById(`${type === 'desktop' ? '' : 'mobile-'}search-results`)
+  private hideSearchResults(type: "desktop" | "mobile"): void {
+    const resultsContainer = document.getElementById(
+      `${type === "desktop" ? "" : "mobile-"}search-results`
+    );
     if (resultsContainer) {
-      resultsContainer.classList.add('hidden')
+      resultsContainer.classList.add("hidden");
     }
   }
 
@@ -333,22 +364,26 @@ export class Navbar {
    */
   private handleUserClick(userId: number): void {
     // Clear search inputs
-    const desktopSearch = document.getElementById('player-search') as HTMLInputElement
-    const mobileSearch = document.getElementById('mobile-player-search') as HTMLInputElement
-    
-    if (desktopSearch) desktopSearch.value = ''
-    if (mobileSearch) mobileSearch.value = ''
+    const desktopSearch = document.getElementById(
+      "player-search"
+    ) as HTMLInputElement;
+    const mobileSearch = document.getElementById(
+      "mobile-player-search"
+    ) as HTMLInputElement;
+
+    if (desktopSearch) desktopSearch.value = "";
+    if (mobileSearch) mobileSearch.value = "";
 
     // Hide results
-    this.hideSearchResults('desktop')
-    this.hideSearchResults('mobile')
+    this.hideSearchResults("desktop");
+    this.hideSearchResults("mobile");
 
     // Close mobile menu if open
-    this.closeMobileMenu()
+    this.closeMobileMenu();
 
     // Notify parent component about the selected user
     if (this.onSearchResults) {
-      this.onSearchResults([{ id: userId }])
+      this.onSearchResults([{ id: userId }]);
     }
   }
 
@@ -356,15 +391,17 @@ export class Navbar {
    * Updates search bar visibility based on authentication status
    */
   updateSearchVisibility(): void {
-    const searchContainer = document.getElementById('search-container')
-    const mobileSearchContainer = document.getElementById('mobile-search-container')
-    
+    const searchContainer = document.getElementById("search-container");
+    const mobileSearchContainer = document.getElementById(
+      "mobile-search-container"
+    );
+
     if (sessionService.isAuthenticated()) {
-      searchContainer?.classList.remove('hidden')
-      mobileSearchContainer?.classList.remove('hidden')
+      searchContainer?.classList.remove("hidden");
+      mobileSearchContainer?.classList.remove("hidden");
     } else {
-      searchContainer?.classList.add('hidden')
-      mobileSearchContainer?.classList.add('hidden')
+      searchContainer?.classList.add("hidden");
+      mobileSearchContainer?.classList.add("hidden");
     }
   }
 }

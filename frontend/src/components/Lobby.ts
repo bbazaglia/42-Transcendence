@@ -1,4 +1,4 @@
-import { sessionService } from '../services/SessionService'
+import { sessionService } from "../services/SessionService";
 
 export class Lobby {
   private authModal: any;
@@ -10,8 +10,8 @@ export class Lobby {
 
   public init(): void {
     // Create a container for the lobby to be re-rendered into
-    this.lobbyContainer = document.createElement('div');
-    this.lobbyContainer.id = 'lobby-container';
+    this.lobbyContainer = document.createElement("div");
+    this.lobbyContainer.id = "lobby-container";
     document.body.appendChild(this.lobbyContainer);
 
     // Initial render
@@ -30,7 +30,9 @@ export class Lobby {
 
   private render(): void {
     const isAuthenticated = sessionService.isAuthenticated();
-    const html = isAuthenticated ? this.renderAuthenticatedLobby() : this.renderGuestLobby();
+    const html = isAuthenticated
+      ? this.renderAuthenticatedLobby()
+      : this.renderGuestLobby();
 
     if (this.lobbyContainer) {
       this.lobbyContainer.innerHTML = html;
@@ -87,7 +89,7 @@ export class Lobby {
           </div>
         </div>
       </div>
-    `
+    `;
   }
 
   private renderGuestLobby(): string {
@@ -137,87 +139,115 @@ export class Lobby {
           </div>
         </div>
       </div>
-    `
+    `;
   }
 
   private renderParticipantsList(): void {
     const participants = sessionService.getParticipants();
-    const listElement = document.getElementById('participants-list');
-    const countElement = document.getElementById('participant-count');
+    const listElement = document.getElementById("participants-list");
+    const countElement = document.getElementById("participant-count");
 
     if (!listElement || !countElement) return;
 
-    countElement.textContent = `${participants.length} player${participants.length !== 1 ? 's' : ''}`;
+    countElement.textContent = `${participants.length} player${
+      participants.length !== 1 ? "s" : ""
+    }`;
 
     if (participants.length === 0) {
-      listElement.innerHTML = '<div class="px-2 py-2 text-sm text-gray-400">No players in session.</div>';
+      listElement.innerHTML =
+        '<div class="px-2 py-2 text-sm text-gray-400">No players in session.</div>';
       return;
     }
 
-    listElement.innerHTML = participants.map(user => `
+    listElement.innerHTML = participants
+      .map(
+        (user) => `
       <div class="flex items-center justify-between p-2 bg-white/5 rounded-lg">
         <div class="flex items-center overflow-hidden">
-          <img src="${user.avatarUrl || '/avatars/default-avatar.png'}" alt="Avatar of ${user.displayName}" class="w-6 h-6 rounded-full mr-2 flex-shrink-0" onerror="this.src='/avatars/default-avatar.png'">
-          <span class="text-white text-sm font-medium truncate">${user.displayName}</span>
+          <img src="${
+            user.avatarUrl || "/avatars/default-avatar.png"
+          }" alt="Avatar of ${
+          user.displayName
+        }" class="w-6 h-6 rounded-full mr-2 flex-shrink-0" onerror="this.src='/avatars/default-avatar.png'">
+          <span class="text-white text-sm font-medium truncate">${
+            user.displayName
+          }</span>
         </div>
         <div class="flex items-center flex-shrink-0 ml-2">
-          <button data-user-id="${user.id}" class="view-profile-btn text-cyan-400 hover:text-cyan-300 text-xs font-semibold mr-2">
+          <button data-user-id="${
+            user.id
+          }" class="view-profile-btn text-cyan-400 hover:text-cyan-300 text-xs font-semibold mr-2">
             Profile
           </button>
-          <button data-user-id="${user.id}" class="logout-user-btn text-red-400 hover:text-red-300 text-xs font-semibold">
+          <button data-user-id="${
+            user.id
+          }" class="logout-user-btn text-red-400 hover:text-red-300 text-xs font-semibold">
             Logout
           </button>
         </div>
       </div>
-    `).join('');
+    `
+      )
+      .join("");
   }
 
   private setupEventListeners(): void {
     if (!this.lobbyContainer) return;
 
     // Find elements *within* the lobby container
-    const toggleBtn = this.lobbyContainer.querySelector('#lobby-toggle');
-    const loginBtn = this.lobbyContainer.querySelector('#lobby-login-btn');
-    const addPlayerBtn = this.lobbyContainer.querySelector('#lobby-add-player-btn');
-    const participantsList = this.lobbyContainer.querySelector('#participants-list');
+    const toggleBtn = this.lobbyContainer.querySelector("#lobby-toggle");
+    const loginBtn = this.lobbyContainer.querySelector("#lobby-login-btn");
+    const addPlayerBtn = this.lobbyContainer.querySelector(
+      "#lobby-add-player-btn"
+    );
+    const participantsList =
+      this.lobbyContainer.querySelector("#participants-list");
 
     // Toggle lobby panel
-    toggleBtn?.addEventListener('click', () => {
-      this.lobbyContainer?.querySelector('#lobby-panel')?.classList.toggle('hidden');
+    toggleBtn?.addEventListener("click", () => {
+      this.lobbyContainer
+        ?.querySelector("#lobby-panel")
+        ?.classList.toggle("hidden");
     });
 
     // Button to open the login modal (for guests)
-    loginBtn?.addEventListener('click', (e) => {
+    loginBtn?.addEventListener("click", (e) => {
       e.preventDefault();
-      this.authModal.show('login');
+      this.authModal.show("login");
     });
 
     // Button to open the login modal (for adding a new player)
-    addPlayerBtn?.addEventListener('click', (e) => {
+    addPlayerBtn?.addEventListener("click", (e) => {
       e.preventDefault();
-      this.authModal.show('login');
+      this.authModal.show("login");
     });
 
     // Delegated event listener for profile and logout buttons
-    participantsList?.addEventListener('click', async (e) => {
+    participantsList?.addEventListener("click", async (e) => {
       const target = e.target as HTMLElement;
-      
+
       // Handle profile button click
-      const profileButton = target.closest('.view-profile-btn');
+      const profileButton = target.closest(".view-profile-btn");
       if (profileButton) {
-        const userId = parseInt(profileButton.getAttribute('data-user-id') || '0', 10);
+        const userId = parseInt(
+          profileButton.getAttribute("data-user-id") || "0",
+          10
+        );
         if (userId) {
           // Navigate to user profile page
-          window.history.pushState({}, '', `/profile/${userId}`);
-          window.dispatchEvent(new PopStateEvent('popstate'));
+          window.history.pushState({}, "", `/profile/${userId}`);
+          window.dispatchEvent(new PopStateEvent("popstate"));
         }
         return;
       }
 
       // Handle logout button click
-      const logoutButton = target.closest('.logout-user-btn');
+      const logoutButton = target.closest(".logout-user-btn");
       if (logoutButton) {
-        const userId = parseInt(logoutButton.getAttribute('data-user-id') || '0', 10);
+        const userId = parseInt(
+          logoutButton.getAttribute("data-user-id") || "0",
+          10
+        );
         if (userId) {
           await sessionService.logout(userId);
           // The view will automatically update via the sessionService subscription

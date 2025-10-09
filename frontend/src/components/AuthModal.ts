@@ -1,9 +1,4 @@
-/**
- * Authentication Modal (Login/Register)
- * Reusable component for authentication
- */
-
-import { sessionService } from '../services/SessionService.js';
+import { sessionService } from "../services/SessionService.js";
 
 export class AuthModal {
   private modalElement: HTMLElement | null = null;
@@ -16,9 +11,6 @@ export class AuthModal {
     this.setupEventListeners();
   }
 
-  /**
-   * Renders the authentication modal
-   */
   private render(): void {
     const modalHTML = `
       <div id="auth-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden">
@@ -112,50 +104,46 @@ export class AuthModal {
       </div>
     `;
 
-    // Add the modal to the body
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-    this.modalElement = document.getElementById('auth-modal');
+    document.body.insertAdjacentHTML("beforeend", modalHTML);
+    this.modalElement = document.getElementById("auth-modal");
   }
 
-  /**
-   * Sets up event listeners
-   */
   private setupEventListeners(): void {
-    // Toggle between login and register
-    document.getElementById('toggle-mode-btn')?.addEventListener('click', () => {
-      this.toggleMode();
-    });
+    document
+      .getElementById("toggle-mode-btn")
+      ?.addEventListener("click", () => {
+        this.toggleMode();
+      });
 
-    // Close modal
-    document.getElementById('close-auth-modal')?.addEventListener('click', () => {
-      this.hide();
-    });
+    document
+      .getElementById("close-auth-modal")
+      ?.addEventListener("click", () => {
+        this.hide();
+      });
 
-    // Close when clicking outside the modal
-    this.modalElement?.addEventListener('click', (e) => {
+    this.modalElement?.addEventListener("click", (e) => {
       if (e.target === this.modalElement) {
         this.hide();
       }
     });
 
-    // Form submit
-    document.getElementById('auth-form')?.addEventListener('submit', (e) => {
+    document.getElementById("auth-form")?.addEventListener("submit", (e) => {
       e.preventDefault();
       this.handleSubmit();
     });
 
-    // Google Sign-In
-    document.getElementById('google-signin-btn')?.addEventListener('click', (e) => {
-      e.preventDefault();
-      this.handleGoogleAuthentication();
-    });
+    document
+      .getElementById("google-signin-btn")
+      ?.addEventListener("click", (e) => {
+        e.preventDefault();
+        this.handleGoogleAuthentication();
+      });
 
-    // Listen to auth state changes
     sessionService.subscribe((state) => {
       // Only hide the modal if the state changes from unauthenticated to authenticated
       if (state.isAuthenticated && !this.wasAuthenticated) {
         this.hide();
-        this.showMessage('Logged in successfully!', 'success');
+        this.showMessage("Logged in successfully!", "success");
       }
       this.wasAuthenticated = state.isAuthenticated;
     });
@@ -173,64 +161,68 @@ export class AuthModal {
    * Updates the interface based on the current mode
    */
   private updateUI(): void {
-    const title = document.getElementById('auth-title');
-    const submitText = document.getElementById('submit-text');
-    const toggleText = document.getElementById('toggle-text');
-    const toggleBtn = document.getElementById('toggle-mode-btn');
-    const displayNameField = document.getElementById('display-name-field');
-    const displayNameInput = document.getElementById('displayName') as HTMLInputElement;
-    const googleAuthText = document.getElementById('google-auth-text');
+    const title = document.getElementById("auth-title");
+    const submitText = document.getElementById("submit-text");
+    const toggleText = document.getElementById("toggle-text");
+    const toggleBtn = document.getElementById("toggle-mode-btn");
+    const displayNameField = document.getElementById("display-name-field");
+    const displayNameInput = document.getElementById(
+      "displayName"
+    ) as HTMLInputElement;
+    const googleAuthText = document.getElementById("google-auth-text");
 
-    const emailField = (document.getElementById('email') as HTMLInputElement).parentElement;
-    const passwordField = (document.getElementById('password') as HTMLInputElement).parentElement;
-    const totpField = document.getElementById('totp-field');
-    const totpCodeInput = document.getElementById('totp-code') as HTMLInputElement;
-    const toggleSection = document.querySelector('.text-center.mt-6');
-    const googleSection = document.getElementById('google-auth-section');
+    const emailField = (document.getElementById("email") as HTMLInputElement)
+      .parentElement;
+    const passwordField = (
+      document.getElementById("password") as HTMLInputElement
+    ).parentElement;
+    const totpField = document.getElementById("totp-field");
+    const totpCodeInput = document.getElementById(
+      "totp-code"
+    ) as HTMLInputElement;
+    const toggleSection = document.querySelector(".text-center.mt-6");
+    const googleSection = document.getElementById("google-auth-section");
 
     // Reset all fields first
-    displayNameField!.classList.add('hidden');
-    emailField!.classList.remove('hidden');
-    passwordField!.classList.remove('hidden');
-    totpField!.classList.add('hidden');
-    toggleSection!.classList.remove('hidden');
-    googleSection!.classList.remove('hidden');
+    displayNameField!.classList.add("hidden");
+    emailField!.classList.remove("hidden");
+    passwordField!.classList.remove("hidden");
+    totpField!.classList.add("hidden");
+    toggleSection!.classList.remove("hidden");
+    googleSection!.classList.remove("hidden");
     displayNameInput!.required = false;
     totpCodeInput!.required = false;
 
     if (this.isAwaitingTotp) {
-      title!.textContent = 'Enter 2FA Code';
-      submitText!.textContent = 'Verify Code';
-      emailField!.classList.add('hidden');
-      passwordField!.classList.add('hidden');
-      totpField!.classList.remove('hidden');
+      title!.textContent = "Enter 2FA Code";
+      submitText!.textContent = "Verify Code";
+      emailField!.classList.add("hidden");
+      passwordField!.classList.add("hidden");
+      totpField!.classList.remove("hidden");
       totpCodeInput!.required = true;
-      toggleSection!.classList.add('hidden');
-      googleSection!.classList.add('hidden');
+      toggleSection!.classList.add("hidden");
+      googleSection!.classList.add("hidden");
     } else if (this.isLoginMode) {
-      title!.textContent = 'Login';
-      submitText!.textContent = 'Sign In';
+      title!.textContent = "Login";
+      submitText!.textContent = "Sign In";
       toggleText!.textContent = "Don't have an account?";
-      toggleBtn!.textContent = 'Create an account';
-      googleAuthText!.textContent = 'Sign in with Google';
-    } else { // Register mode
-      title!.textContent = 'Create Account';
-      submitText!.textContent = 'Create Account';
-      toggleText!.textContent = 'Already have an account?';
-      toggleBtn!.textContent = 'Sign in';
-      displayNameField!.classList.remove('hidden');
+      toggleBtn!.textContent = "Create an account";
+      googleAuthText!.textContent = "Sign in with Google";
+    } else {
+      // Register mode
+      title!.textContent = "Create Account";
+      submitText!.textContent = "Create Account";
+      toggleText!.textContent = "Already have an account?";
+      toggleBtn!.textContent = "Sign in";
+      displayNameField!.classList.remove("hidden");
       displayNameInput!.required = true;
-      googleAuthText!.textContent = 'Register with Google';
+      googleAuthText!.textContent = "Register with Google";
     }
 
-    // Clear messages and fields
     this.hideMessage();
     this.clearForm();
   }
 
-  /**
-   * Handles form submission
-   */
   private async handleSubmit(): Promise<void> {
     this.setLoading(true);
 
@@ -238,41 +230,59 @@ export class AuthModal {
       let result;
 
       if (this.isAwaitingTotp) {
-        const code = (document.getElementById('totp-code') as HTMLInputElement).value;
+        const code = (document.getElementById("totp-code") as HTMLInputElement)
+          .value;
         result = await sessionService.submitTotp(code);
       } else if (this.isLoginMode) {
-        const email = (document.getElementById('email') as HTMLInputElement).value;
-        const password = (document.getElementById('password') as HTMLInputElement).value;
+        const email = (document.getElementById("email") as HTMLInputElement)
+          .value;
+        const password = (
+          document.getElementById("password") as HTMLInputElement
+        ).value;
         result = await sessionService.login({ email, password });
 
         if (result.success && result.needsTotp) {
           this.isAwaitingTotp = true;
           this.updateUI();
-          this.showMessage('Please enter your 2FA code.', 'success');
+          this.showMessage("Please enter your 2FA code.", "success");
           this.setLoading(false);
           return; // Stop here and wait for TOTP submission
         }
-      } else { // Register mode
-        const email = (document.getElementById('email') as HTMLInputElement).value;
-        const password = (document.getElementById('password') as HTMLInputElement).value;
-        const displayName = (document.getElementById('displayName') as HTMLInputElement).value;
+      } else {
+        // Register mode
+        const email = (document.getElementById("email") as HTMLInputElement)
+          .value;
+        const password = (
+          document.getElementById("password") as HTMLInputElement
+        ).value;
+        const displayName = (
+          document.getElementById("displayName") as HTMLInputElement
+        ).value;
         if (!displayName.trim()) {
-          this.showMessage('Username is required.', 'error');
+          this.showMessage("Username is required.", "error");
           this.setLoading(false);
           return;
         }
-        result = await sessionService.register({ displayName, email, password });
+        result = await sessionService.register({
+          displayName,
+          email,
+          password,
+        });
       }
 
       if (result.success) {
         this.showMessage(
-          this.isLoginMode ? 'Logged in successfully!!' : 'Account successfully created!',
-          'success'
+          this.isLoginMode
+            ? "Logged in successfully!!"
+            : "Account successfully created!",
+          "success"
         );
         // The modal will be closed automatically by the sessionService listener
       } else {
-        const friendlyError = this.translateError(result.error || 'Authentication error');
-        this.showMessage(friendlyError, 'error');
+        const friendlyError = this.translateError(
+          result.error || "Authentication error"
+        );
+        this.showMessage(friendlyError, "error");
         // If TOTP submission fails, go back to the login screen
         if (this.isAwaitingTotp) {
           this.isAwaitingTotp = false;
@@ -280,104 +290,83 @@ export class AuthModal {
         }
       }
     } catch (error) {
-      this.showMessage('Unexpected error. Try again.', 'error');
+      this.showMessage("Unexpected error. Try again.", "error");
     } finally {
       this.setLoading(false);
     }
   }
 
-  /**
-   * Handles Google Authentication
-   */
   private async handleGoogleAuthentication(): Promise<void> {
     sessionService.initiateGoogleLogin();
   }
 
-  /**
-   * Sets the loading state
-   */
   private setLoading(loading: boolean): void {
-    const submitBtn = document.getElementById('auth-submit-btn') as HTMLButtonElement;
-    const submitText = document.getElementById('submit-text');
-    const loadingSpinner = document.getElementById('loading-spinner');
+    const submitBtn = document.getElementById(
+      "auth-submit-btn"
+    ) as HTMLButtonElement;
+    const submitText = document.getElementById("submit-text");
+    const loadingSpinner = document.getElementById("loading-spinner");
 
     submitBtn.disabled = loading;
 
     if (loading) {
-      submitText!.classList.add('hidden');
-      loadingSpinner!.classList.remove('hidden');
+      submitText!.classList.add("hidden");
+      loadingSpinner!.classList.remove("hidden");
     } else {
-      submitText!.classList.remove('hidden');
-      loadingSpinner!.classList.add('hidden');
+      submitText!.classList.remove("hidden");
+      loadingSpinner!.classList.add("hidden");
     }
   }
 
-  /**
-   * Shows a message in the modal
-   */
-  private showMessage(message: string, type: 'success' | 'error'): void {
-    const messageElement = document.getElementById('auth-message');
+  private showMessage(message: string, type: "success" | "error"): void {
+    const messageElement = document.getElementById("auth-message");
     if (!messageElement) return;
 
     messageElement.textContent = message;
-    messageElement.className = `mb-6 p-4 rounded-lg ${type === 'success'
-      ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-      : 'bg-red-500/20 text-red-400 border border-red-500/30'
-      }`;
-    messageElement.classList.remove('hidden');
+    messageElement.className = `mb-6 p-4 rounded-lg ${
+      type === "success"
+        ? "bg-green-500/20 text-green-400 border border-green-500/30"
+        : "bg-red-500/20 text-red-400 border border-red-500/30"
+    }`;
+    messageElement.classList.remove("hidden");
 
     // Auto-hide success messages
-    if (type === 'success') {
+    if (type === "success") {
       setTimeout(() => {
         this.hideMessage();
       }, 3000);
     }
   }
 
-  /**
-   * Hides the message
-   */
   private hideMessage(): void {
-    const messageElement = document.getElementById('auth-message');
+    const messageElement = document.getElementById("auth-message");
     if (messageElement) {
-      messageElement.classList.add('hidden');
+      messageElement.classList.add("hidden");
     }
   }
 
-  /**
-   * Clears the form
-   */
   private clearForm(): void {
-    (document.getElementById('email') as HTMLInputElement).value = '';
-    (document.getElementById('password') as HTMLInputElement).value = '';
-    (document.getElementById('displayName') as HTMLInputElement).value = '';
-    (document.getElementById('totp-code') as HTMLInputElement).value = '';
+    (document.getElementById("email") as HTMLInputElement).value = "";
+    (document.getElementById("password") as HTMLInputElement).value = "";
+    (document.getElementById("displayName") as HTMLInputElement).value = "";
+    (document.getElementById("totp-code") as HTMLInputElement).value = "";
   }
 
-  /**
-   * Shows the modal
-   */
-  show(mode: 'login' | 'register' = 'login'): void {
-    this.isLoginMode = mode === 'login';
+  show(mode: "login" | "register" = "login"): void {
+    this.isLoginMode = mode === "login";
     this.wasAuthenticated = sessionService.isAuthenticated();
     this.updateUI();
-    this.modalElement?.classList.remove('hidden');
+    this.modalElement?.classList.remove("hidden");
     this.clearForm();
     this.hideMessage();
   }
 
-  /**
-   * Hides the modal
-   */
   hide(): void {
-    this.modalElement?.classList.add('hidden');
+    this.modalElement?.classList.add("hidden");
     this.clearForm();
     this.hideMessage();
   }
 
-  /**
-   * Removes the modal from the DOM
-   */
   destroy(): void {
     this.modalElement?.remove();
     this.modalElement = null;
@@ -387,17 +376,19 @@ export class AuthModal {
    * Translates known backend error messages into user-friendly strings.
    */
   private translateError(message: string): string {
-    if (message.includes('body/password must NOT have fewer than 6 characters')) {
-      return 'Password must be at least 6 characters long.';
+    if (
+      message.includes("body/password must NOT have fewer than 6 characters")
+    ) {
+      return "Password must be at least 6 characters long.";
     }
-    if (message.includes('body/displayName must NOT have fewer than 3 characters')) {
-      return 'Display name must be at least 3 characters long.';
+    if (
+      message.includes("body/displayName must NOT have fewer than 3 characters")
+    ) {
+      return "Display name must be at least 3 characters long.";
     }
     if (message.includes('body/email must match format "email"')) {
-      return 'Please enter a valid email address.';
+      return "Please enter a valid email address.";
     }
-    // You can keep adding more translations here
     return message; // Return the original message if no translation is found
   }
-
 }

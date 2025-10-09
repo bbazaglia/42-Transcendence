@@ -10,7 +10,7 @@ services:
       - ./.env
     environment:
       - NODE_ENV=production
-      - FRONTEND_URL=https://localhost:443
+      - FRONTEND_URL=https://localhost:8443
       - DATABASE_PATH=file:/app/data/database.sqlite
     restart: unless-stopped
     networks:
@@ -23,7 +23,7 @@ services:
     init: true
     ports:
       - "80:80"
-      - "443:443"
+      - "8443:443"
     depends_on:
       - backend
     restart: unless-stopped

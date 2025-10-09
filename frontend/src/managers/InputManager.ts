@@ -4,23 +4,28 @@ export class InputManager {
   private keys: { [key: string]: boolean } = {};
   private keyDownCallbacks: Array<(key: string) => void> = [];
   private keyUpCallbacks: Array<(key: string) => void> = [];
+  private keyDownHandler: (e: KeyboardEvent) => void;
+  private keyUpHandler: (e: KeyboardEvent) => void;
 
   constructor() {
     this.setupKeyboardControls();
   }
 
   private setupKeyboardControls(): void {
-    document.addEventListener("keydown", (e) => {
+    this.keyDownHandler = (e: KeyboardEvent) => {
       if (!e.repeat) {
         this.keys[e.key] = true;
         this.notifyKeyDown(e.key);
       }
-    });
+    };
 
-    document.addEventListener("keyup", (e) => {
+    this.keyUpHandler = (e: KeyboardEvent) => {
       this.keys[e.key] = false;
       this.notifyKeyUp(e.key);
-    });
+    };
+
+    document.addEventListener("keydown", this.keyDownHandler);
+    document.addEventListener("keyup", this.keyUpHandler);
   }
 
   isKeyPressed(key: string): boolean {
@@ -134,10 +139,19 @@ export class InputManager {
   }
 
   destroy(): void {
-    // Note: In a real implementation, you'd want to store references to the event listeners
-    // and remove them specifically. For now, this is a placeholder.
+    // Remove event listeners from the DOM
+    if (this.keyDownHandler) {
+      document.removeEventListener("keydown", this.keyDownHandler);
+    }
+    if (this.keyUpHandler) {
+      document.removeEventListener("keyup", this.keyUpHandler);
+    }
+    
+    // Clear callback arrays
     this.keyDownCallbacks = [];
     this.keyUpCallbacks = [];
+    
+    // Clear key states
     this.clearKeys();
   }
 }

@@ -16,9 +16,9 @@ export function showMessage(message: string, type: "success" | "error"): void {
     "fixed top-24 left-1/2 -translate-x-1/2 p-4 rounded-lg shadow-lg z-[100] border text-white transition-all duration-300";
 
   if (type === "success") {
-    messageElement.classList.add("bg-green-500/20", "border-green-500/30");
+    messageElement.classList.add("bg-green-500/80", "border-green-500/95");
   } else {
-    messageElement.classList.add("bg-red-500/20", "border-red-500/30");
+    messageElement.classList.add("bg-red-500/80", "border-red-500/95");
   }
 
   document.body.appendChild(messageElement);

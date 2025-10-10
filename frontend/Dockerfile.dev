@@ -5,15 +5,8 @@ WORKDIR /app
 # Copy package files
 COPY package.json package-lock.json ./
 
-# Update npm to the latest version
-RUN npm install -g npm@latest
-
-# Fix vulnerabilities in dependencies
-RUN npm i --package-lock-only
-RUN npm audit fix --force
-
-# Install dependencies
-RUN npm install
+# Perform a clean install of dependencies
+RUN npm ci
 
 # Copy all project files
 COPY . .

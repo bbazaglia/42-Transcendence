@@ -3,10 +3,7 @@ FROM node:lts-alpine AS deps
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm install -g npm@latest
-RUN npm i --package-lock-only
-RUN npm audit fix --force
-RUN npm install
+RUN npm ci
 
 # Stage 2: Run the application
 FROM node:lts-alpine

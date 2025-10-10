@@ -228,13 +228,13 @@ export class GameCustomization {
   }
 
   activatePowerUp(powerUpType: string, game: any): void {
-    
+
     const powerUp = this.powerUps.find((p) => p.id === powerUpType);
     if (!powerUp) {
       console.warn(`Power-up type not found: ${powerUpType}`);
       return;
     }
-    
+
 
     if (!this.settings.powerUpsEnabled) {
       return;
@@ -308,7 +308,7 @@ export class GameCustomization {
                 <label class="block text-white font-semibold mb-2">Ball Speed: <span id="ballSpeedValue">${
                   this.settings.ballSpeed
                 }</span></label>
-                <input type="range" id="ballSpeed" min="2" max="8" value="${
+                <input type="range" id="ballSpeed" min="2" max="16" value="${
                   this.settings.ballSpeed
                 }"
                        class="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer">

@@ -364,15 +364,22 @@ export class GameManager {
     }
   }
 
-  private resetBall(): void {
-    this.ball.x = GAME_CONFIG.BALL.INITIAL_X;
-    this.ball.y = GAME_CONFIG.BALL.INITIAL_Y;
-    const ballSpeed =
-      this.customization?.getSettings().ballSpeed ||
-      GAME_CONFIG.BALL.INITIAL_SPEED;
-    this.ball.dx = Math.random() > 0.5 ? ballSpeed : -ballSpeed;
-    this.ball.dy = Math.random() > 0.5 ? ballSpeed : -ballSpeed;
-  }
+private resetBall(): void {
+  this.ball.x = GAME_CONFIG.BALL.INITIAL_X;
+  this.ball.y = GAME_CONFIG.BALL.INITIAL_Y;
+
+  const ballSpeed = this.customization?.getSettings().ballSpeed || GAME_CONFIG.BALL.INITIAL_SPEED;
+
+  const minAngle = Math.PI / 6;
+  const maxAngle = Math.PI / 3;
+  const randomAngle = minAngle + Math.random() * (maxAngle - minAngle);
+
+  const direction = Math.random() > 0.5 ? 1 : -1;
+
+  this.ball.dx = Math.cos(randomAngle) * ballSpeed * direction;
+  this.ball.dy = Math.sin(randomAngle) * ballSpeed * (Math.random() > 0.5 ? 1 : -1);
+  this.ball.speed = ballSpeed;
+}
 
   private checkCollisions(): void {
     // Main ball collision with paddles
@@ -543,6 +550,11 @@ export class GameManager {
   }
 
   playAgain(): void {
+    this.stopGame();
+
+    this.inputManager = new InputManager();
+    this.setupInputHandling();
+
     this.resetGame();
     this.startCountdown();
 

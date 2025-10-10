@@ -30,9 +30,9 @@ export class CollisionDetector {
   }
 
   static checkBallSideWallCollision(ball: Ball): "left" | "right" | null {
-    if (ball.x <= 0) {
+    if (ball.x <= 10) {
       return "left";
-    } else if (ball.x >= GAME_CONFIG.CANVAS.WIDTH) {
+    } else if (ball.x >= GAME_CONFIG.CANVAS.WIDTH - 10) {
       return "right";
     }
     return null;

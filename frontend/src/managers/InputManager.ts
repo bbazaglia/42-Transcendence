@@ -11,25 +11,42 @@ export class InputManager {
     this.setupKeyboardControls();
   }
 
-  private setupKeyboardControls(): void {
+    private setupKeyboardControls(): void {
     this.keyDownHandler = (e: KeyboardEvent) => {
-      // Prevent default behavior for game keys
-      if (e.key === " " || e.key === "ArrowUp" || e.key === "ArrowDown" || 
-          e.key.toLowerCase() === "w" || e.key.toLowerCase() === "s") {
-        e.preventDefault();
+      // Don't prevent default if user is typing in an input/textarea
+      const target = e.target as HTMLElement;
+      const isTyping = target.tagName === 'INPUT' || 
+                       target.tagName === 'TEXTAREA' || 
+                       target.isContentEditable;
+      
+      if (!isTyping) {
+        // Prevent default behavior for game keys only when not typing
+        if (e.key === " " || e.key === "ArrowUp" || e.key === "ArrowDown" || 
+            e.key.toLowerCase() === "w" || e.key.toLowerCase() === "s") {
+          e.preventDefault();
+        }
       }
       
-      if (!e.repeat) {
+      // Only register key presses when not typing
+      if (!isTyping && !e.repeat) {
         this.keys[e.key] = true;
         this.notifyKeyDown(e.key);
       }
     };
-
+  
     this.keyUpHandler = (e: KeyboardEvent) => {
-      this.keys[e.key] = false;
-      this.notifyKeyUp(e.key);
+      // Don't process keyup if user was typing
+      const target = e.target as HTMLElement;
+      const isTyping = target.tagName === 'INPUT' || 
+                       target.tagName === 'TEXTAREA' || 
+                       target.isContentEditable;
+      
+      if (!isTyping) {
+        this.keys[e.key] = false;
+        this.notifyKeyUp(e.key);
+      }
     };
-
+  
     document.addEventListener("keydown", this.keyDownHandler);
     document.addEventListener("keyup", this.keyUpHandler);
   }

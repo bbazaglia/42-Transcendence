@@ -19,7 +19,11 @@ services:
     restart: unless-stopped
     networks:
       - app-network
-
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+      - 1.1.1.1
+    
   frontend:
     build:
       context: ./frontend

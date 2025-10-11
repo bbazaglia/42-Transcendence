@@ -150,11 +150,6 @@ export class GameManager {
 
     this.applyCustomizationSettings();
 
-    // If it's an AI game, slightly reduce the AI paddle speed for fairness
-    if (this.isAIGame) {
-      this.rightPaddle.speed *= GAME_CONFIG.AI.SPEED_MULTIPLIER;
-    }
-
     this.resetGame();
 
     // Start countdown instead of immediately starting the game

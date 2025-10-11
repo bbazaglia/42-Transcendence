@@ -40,9 +40,6 @@ export const GAME_CONFIG = {
   SETTINGS_CHECK: {
     CHANCE_PER_FRAME: 0.01, // 1% chance per frame
   },
-  AI: {
-    SPEED_MULTIPLIER: 0.9, // AI paddle speed reduction for fairness
-  },
   ANGLES: {
     MAX_BOUNCE_ANGLE: Math.PI / 3, // 30 degrees
   },

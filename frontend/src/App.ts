@@ -518,17 +518,28 @@ export class App {
     this.setupCustomizationFormHandlers()
   }
 
-  private closeCustomizationMenu(): void {
+    private closeCustomizationMenu(): void {
     const menu = document.querySelector('.fixed.inset-0.bg-black\\/80')
     if (menu) {
       menu.remove()
     }
-
-    // Ensure the current page content is visible after closing the modal
-    // This handles cases where the modal might have been opened from a different page
+    
+    // Remove any existing modal first to prevent duplicates
+    const existingModal = document.getElementById('customization-menu')
+    if (existingModal) {
+      existingModal.remove()
+    }
+  
+    // Reload the home page to reflect any changes
     if (window.location.pathname === '/') {
-      // If we're on the home page, make sure it's properly rendered
       this.showHomePage()
+    } else if (window.location.pathname === '/customize') {
+      // If on customize page, go back to home
+      window.history.pushState({}, '', '/')
+      this.render()
+    } else {
+      // If we're on a different page, re-render it
+      this.render()
     }
   }
 

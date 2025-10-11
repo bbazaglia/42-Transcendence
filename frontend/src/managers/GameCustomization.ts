@@ -227,24 +227,26 @@ export class GameCustomization {
     );
   }
 
-  activatePowerUp(powerUpType: string, game: any): void {
+  activatePowerUp(powerUpId: string, game: any): void {
+  const powerUp = this.powerUps.find((p) => p.id === powerUpId);
+  if (!powerUp) return;
 
-    const powerUp = this.powerUps.find((p) => p.id === powerUpType);
-    if (!powerUp) {
-      console.warn(`Power-up type not found: ${powerUpType}`);
-      return;
-    }
+  console.log(`Activating power-up: ${powerUp.name}`);
 
+  // Apply the power-up effect
+  powerUp.effect(game);
 
-    if (!this.settings.powerUpsEnabled) {
-      return;
-    }
+  // Track active power-up
+  const endTime = Date.now() + powerUp.duration;
+  this.activePowerUps.set(powerUp.id, { powerUp, endTime });
 
-    const endTime = Date.now() + powerUp.duration;
-    this.activePowerUps.set(powerUpType, { powerUp, endTime });
-    powerUp.effect(game);
-  }
+  // Clean up after duration
+  setTimeout(() => {
+    this.activePowerUps.delete(powerUp.id);
+  }, powerUp.duration);
+}
 
+  
   getActivePowerUps(): Array<{ powerUp: PowerUp; endTime: number }> {
     const now = Date.now();
     const active = Array.from(this.activePowerUps.values()).filter(
@@ -434,37 +436,6 @@ export class GameCustomization {
   }
 
   renderActivePowerUps(): string {
-    const active = this.getActivePowerUps();
-    if (active.length === 0) return "";
-
-    return `
-      <div class="fixed top-16 left-4 z-50 space-y-2">
-        ${active
-          .map(({ powerUp, endTime }) => {
-            const remaining = Math.max(
-              0,
-              Math.ceil((endTime - Date.now()) / 1000)
-            );
-            const progress = (remaining / (powerUp.duration / 1000)) * 100;
-
-            return `
-            <div class="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20 shadow-lg">
-              <div class="flex items-center space-x-3">
-                <span class="text-2xl">${powerUp.icon}</span>
-                <div class="flex-1">
-                  <div class="text-white font-semibold text-sm">${powerUp.name}</div>
-                  <div class="text-gray-400 text-xs">${remaining}s remaining</div>
-                  <div class="w-full bg-white/20 rounded-full h-1 mt-1">
-                    <div class="bg-gradient-to-r from-cyan-400 to-purple-500 h-1 rounded-full transition-all duration-300"
-                         style="width: ${progress}%"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          `;
-          })
-          .join("")}
-      </div>
-    `;
+    return '';
   }
 }

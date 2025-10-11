@@ -952,6 +952,8 @@ export class ProfilePage {
   }
 
   private showEditProfileModal(): void {
+    this.closeEditProfileModal();
+
     const participants = sessionService.getParticipants();
     const currentUser = participants.find(
       (p) =>
@@ -1032,6 +1034,7 @@ export class ProfilePage {
   }
 
   private async showSetup2FAModal(userId: number): Promise<void> {
+    this.closeSetup2FAModal(); 
     const modalHTML = `
       <div id="setup-2fa-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50">
         <div class="flex items-center justify-center min-h-screen p-4">
@@ -1281,6 +1284,8 @@ export class ProfilePage {
 
   // 5. Add the Disable 2FA Modal method:
   private showDisable2FAModal(userId: number): void {
+    this.closeDisable2FAModal();
+
     const modalHTML = `
         <div id="disable-2fa-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50">
           <div class="flex items-center justify-center min-h-screen p-4">
@@ -1495,82 +1500,92 @@ export class ProfilePage {
     await insightsModal.show();
   }
 
-  private showAddFriendModal(): void {
-    const modalHTML = `
-      <div id="add-friend-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50">
-        <div class="flex items-center justify-center min-h-screen p-4">
-          <div class="bg-white/10 backdrop-blur-xl rounded-2xl p-8 max-w-md w-full mx-4 border border-white/20 shadow-2xl">
-            <h3 class="text-2xl font-bold text-cyan-400 mb-6 text-center orbitron-font">Add Friend</h3>
-            
-            <form id="add-friend-form" class="space-y-4">
-              <div>
-                <label class="block text-white font-semibold mb-2">Search by Display Name:</label>
-                <input type="text" id="friend-search" 
-                       placeholder="Enter friend's display name"
-                       class="w-full p-3 rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/50 focus:border-cyan-400 focus:outline-none transition-colors"
-                       required>
-              </div>
+    private showAddFriendModal(): void {
+      // Remove any existing modal first to prevent duplicates
+      this.closeAddFriendModal();
+      
+      const modalHTML = `
+        <div id="add-friend-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50">
+          <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white/10 backdrop-blur-xl rounded-2xl p-8 max-w-md w-full mx-4 border border-white/20 shadow-2xl">
+              <h3 class="text-2xl font-bold text-cyan-400 mb-6 text-center orbitron-font">Add Friend</h3>
               
-              <div id="friend-search-results" class="space-y-2 max-h-40 overflow-y-auto">
-                <!-- Search results will appear here -->
-              </div>
-              
-              <div class="flex justify-center">
-                <button type="button" id="cancel-add-friend" 
-                        class="px-6 py-3 bg-gradient-to-r from-gray-600 to-gray-500 text-white font-bold rounded-xl shadow-lg hover:from-gray-700 hover:to-gray-600 transition-all duration-300">
-                  Cancel
-                </button>
-              </div>
-            </form>
+              <form id="add-friend-form" class="space-y-4">
+                <div>
+                  <label class="block text-white font-semibold mb-2">Search by Display Name:</label>
+                  <input type="text" id="friend-search" 
+                         placeholder="Enter friend's display name"
+                         class="w-full p-3 rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/50 focus:border-cyan-400 focus:outline-none transition-colors"
+                         required>
+                </div>
+                
+                <div id="friend-search-results" class="space-y-2 max-h-40 overflow-y-auto">
+                  <!-- Search results will appear here -->
+                </div>
+                
+                <div class="flex justify-center">
+                  <button type="button" id="cancel-add-friend" 
+                          class="px-6 py-3 bg-gradient-to-r from-gray-600 to-gray-500 text-white font-bold rounded-xl shadow-lg hover:from-gray-700 hover:to-gray-600 transition-all duration-300">
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
-      </div>
-    `;
-
-    document.body.insertAdjacentHTML("beforeend", modalHTML);
-
-    // Event listeners
-    document
-      .getElementById("friend-search")
-      ?.addEventListener("input", async (e) => {
-        const query = (e.target as HTMLInputElement).value;
-        console.log(
-          "Input event triggered, query:",
-          query,
-          "length:",
-          query.length
-        );
-        if (query.length > 2) {
-          console.log("Query length > 2, calling searchUsers");
-          await this.searchUsers(query);
-        } else {
-          console.log("Query length <= 2, clearing results");
-          const searchResultsElement = document.getElementById(
-            "friend-search-results"
+      `;
+  
+      document.body.insertAdjacentHTML("beforeend", modalHTML);
+  
+      // Use named functions for easier cleanup if needed
+      const handleSearchInput = async (e: Event) => {
+          const query = (e.target as HTMLInputElement).value;
+          console.log(
+            "Input event triggered, query:",
+            query,
+            "length:",
+            query.length
           );
-          if (searchResultsElement) {
-            searchResultsElement.innerHTML = "";
-            searchResultsElement.classList.add("hidden");
+          if (query.length > 2) {
+            console.log("Query length > 2, calling searchUsers");
+            await this.searchUsers(query);
+          } else {
+            console.log("Query length <= 2, clearing results");
+            const searchResultsElement = document.getElementById(
+              "friend-search-results"
+            );
+            if (searchResultsElement) {
+              searchResultsElement.innerHTML = "";
+              searchResultsElement.classList.add("hidden");
+            }
           }
-        }
-      });
-
-    document
-      .getElementById("cancel-add-friend")
-      ?.addEventListener("click", (e) => {
-        e.preventDefault();
-        this.closeAddFriendModal();
-      });
-
-    // Close on outside click
-    document
-      .getElementById("add-friend-modal")
-      ?.addEventListener("click", (e) => {
-        if (e.target === document.getElementById("add-friend-modal")) {
+      };
+  
+      const handleCancelClick = (e: Event) => {
+          e.preventDefault();
           this.closeAddFriendModal();
-        }
-      });
-  }
+      };
+  
+      const handleOutsideClick = (e: Event) => {
+          if (e.target === document.getElementById("add-friend-modal")) {
+            this.closeAddFriendModal();
+          }
+      };
+  
+      // Event listeners
+      document
+        .getElementById("friend-search")
+        ?.addEventListener("input", handleSearchInput);
+  
+      document
+        .getElementById("cancel-add-friend")
+        ?.addEventListener("click", handleCancelClick);
+  
+      // Close on outside click
+      document
+        .getElementById("add-friend-modal")
+        ?.addEventListener("click", handleOutsideClick);
+    }
 
   private async searchUsers(query: string): Promise<void> {
     try {

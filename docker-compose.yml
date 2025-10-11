@@ -12,6 +12,10 @@ services:
       - NODE_ENV=production
       - FRONTEND_URL=https://localhost:8443
       - DATABASE_PATH=file:/app/data/database.sqlite
+      - GOOGLE_OAUTH_START_REDIRECT_PATH=/api/session/google
+      - GOOGLE_OAUTH_TOKEN_URL=https://oauth2.googleapis.com/token
+      - GOOGLE_OAUTH_USER_INFO_URL=https://www.googleapis.com/oauth2/v2/userinfo
+      - GOOGLE_CALLBACK_URL=https://localhost:8443/api/session/google/callback
     restart: unless-stopped
     networks:
       - app-network
@@ -22,7 +26,6 @@ services:
       dockerfile: Dockerfile
     init: true
     ports:
-      - "80:80"
       - "8443:443"
     depends_on:
       - backend

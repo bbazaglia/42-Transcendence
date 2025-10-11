@@ -20,6 +20,10 @@ services:
       - JWT_SECRET=dev-jwt-secret-replace-in-prod
       - COOKIE_SECRET=dev-cookie-secret-replace-in-prod
       - SESSION_SECRET=dev-session-secret-replace-in-prod
+      - GOOGLE_OAUTH_START_REDIRECT_PATH=/api/session/google
+      - GOOGLE_OAUTH_TOKEN_URL=https://oauth2.googleapis.com/token
+      - GOOGLE_OAUTH_USER_INFO_URL=https://www.googleapis.com/oauth2/v2/userinfo
+      - GOOGLE_CALLBACK_URL=http://localhost:5173/api/session/google/callback
     restart: unless-stopped
     networks:
       - app-network

@@ -119,6 +119,9 @@ export class AuthModal {
       .getElementById("close-auth-modal")
       ?.addEventListener("click", () => {
         this.hide();
+		this.isAwaitingTotp = false;
+		this.isLoginMode = true;
+		this.updateUI();
       });
 
     this.modalElement?.addEventListener("click", (e) => {

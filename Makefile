@@ -2,69 +2,69 @@
 
 # Production commands
 up:
-	docker-compose up --build
+	docker compose up --build
 
 down:
-	docker-compose down
+	docker compose down
 
 build:
-	docker-compose build
+	docker compose build
 
 # Development commands
 dev: 
-	docker-compose -f docker-compose.dev.yml up --build
+	docker compose -f docker compose.dev.yml up --build
 
 dev-down:
-	docker-compose -f docker-compose.dev.yml down
+	docker compose -f docker compose.dev.yml down
 
 # Utility commands
 logs:
-	docker-compose logs -f
+	docker compose logs -f
 
 logs-dev:
-	docker-compose -f docker-compose.dev.yml logs -f
+	docker compose -f docker compose.dev.yml logs -f
 
 frontend:
-	docker-compose exec frontend sh
+	docker compose exec frontend sh
 
 backend:
-	docker-compose exec backend sh
+	docker compose exec backend sh
 
 frontend-dev:
-	docker-compose -f docker-compose.dev.yml exec frontend sh
+	docker compose -f docker compose.dev.yml exec frontend sh
 
 backend-dev:
-	docker-compose -f docker-compose.dev.yml exec backend sh
+	docker compose -f docker compose.dev.yml exec backend sh
 
 # Database management commands
 db-migrate:
 	@echo "Running database migrations..."
-	docker-compose -f docker-compose.dev.yml exec backend npx prisma migrate dev --schema=src/schemas/schema.prisma
+	docker compose -f docker compose.dev.yml exec backend npx prisma migrate dev --schema=src/schemas/schema.prisma
 
 db-reset:
 	@echo "Resetting database..."
-	docker-compose -f docker-compose.dev.yml exec backend npx prisma migrate reset --schema=src/schemas/schema.prisma
+	docker compose -f docker compose.dev.yml exec backend npx prisma migrate reset --schema=src/schemas/schema.prisma
 
 db-studio:
 	@echo "Opening Prisma Studio..."
-	docker-compose -f docker-compose.dev.yml exec backend npx prisma studio --schema=src/schemas/schema.prisma
+	docker compose -f docker compose.dev.yml exec backend npx prisma studio --schema=src/schemas/schema.prisma
 
 db-status:
 	@echo "Checking database status..."
-	docker-compose -f docker-compose.dev.yml exec backend npx prisma migrate status --schema=src/schemas/schema.prisma
+	docker compose -f docker compose.dev.yml exec backend npx prisma migrate status --schema=src/schemas/schema.prisma
 
 frontend-down:
-	docker-compose stop frontend
+	docker compose stop frontend
 
 backend-down:
-	docker-compose stop backend
+	docker compose stop backend
 
 # Cleanup commands
 clean:
-	docker-compose down -v --remove-orphans
+	docker compose down -v --remove-orphans
 
 clean-dev:
-	docker-compose -f docker-compose.dev.yml down -v --remove-orphans
+	docker compose -f docker compose.dev.yml down -v --remove-orphans
 
 fclean: clean
 	docker system prune -af --volumes

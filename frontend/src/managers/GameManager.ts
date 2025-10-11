@@ -35,6 +35,16 @@ export class GameManager {
   private countdownValue: number = GAME_CONFIG.COUNTDOWN.INITIAL_VALUE;
   private countdownInterval: number | null = null;
 
+  // Power-up effect tracking
+  private activePowerUpEffects: Map<string, number> = new Map();
+  private baseValues: {
+    ballSpeed: number;
+    paddleHeight: number;
+  } = {
+    ballSpeed: GAME_CONFIG.BALL.INITIAL_SPEED,
+    paddleHeight: GAME_CONFIG.PADDLE.HEIGHT,
+  };
+
   // Game objects
   private leftPaddle: Paddle;
   private rightPaddle: Paddle;
@@ -536,6 +546,29 @@ private resetBall(): void {
     );
   }
 
+  // Power-up effect management methods
+  storeBaseValues(): void {
+    this.baseValues.ballSpeed = this.ball.speed;
+    this.baseValues.paddleHeight = this.leftPaddle.height;
+  }
+
+  getBaseValues() {
+    return this.baseValues;
+  }
+
+  clearPowerUpEffect(powerUpId: string): void {
+    const existingTimeout = this.activePowerUpEffects.get(powerUpId);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+      this.activePowerUpEffects.delete(powerUpId);
+    }
+  }
+
+  setPowerUpEffect(powerUpId: string, timeout: number): void {
+    this.clearPowerUpEffect(powerUpId);
+    this.activePowerUpEffects.set(powerUpId, timeout);
+  }
+
   stopGame(): void {
     this.gameStateManager.setState(GameState.GAME_OVER);
     if (this.countdownInterval) {
@@ -545,6 +578,9 @@ private resetBall(): void {
     if (this.animationId) {
       window.cancelAnimationFrame(this.animationId);
     }
+    // Clean up power-up effects
+    this.activePowerUpEffects.forEach((timeout) => clearTimeout(timeout));
+    this.activePowerUpEffects.clear();
     // Clean up input manager to prevent memory leaks
     this.inputManager.destroy();
   }

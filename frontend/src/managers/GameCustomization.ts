@@ -38,16 +38,35 @@ export class GameCustomization {
       name: "Speed Boost",
       description: "Increases ball speed for 10 seconds",
       effect: (game) => {
-        const originalSpeed = game.ball.speed;
-        game.ball.speed *= 1.5;
-        game.ball.dx *= 1.5;
-        game.ball.dy *= 1.5;
-
-        setTimeout(() => {
-          game.ball.speed = originalSpeed;
-          game.ball.dx = game.ball.dx > 0 ? originalSpeed : -originalSpeed;
-          game.ball.dy = game.ball.dy > 0 ? originalSpeed : -originalSpeed;
+        game.storeBaseValues();
+        const baseSpeed = game.getBaseValues().ballSpeed;
+        
+        // Calculate current direction
+        const currentSpeed = Math.sqrt(game.ball.dx * game.ball.dx + game.ball.dy * game.ball.dy);
+        const directionX = currentSpeed > 0 ? game.ball.dx / currentSpeed : 1;
+        const directionY = currentSpeed > 0 ? game.ball.dy / currentSpeed : 1;
+        
+        // Apply boosted speed
+        const boostedSpeed = baseSpeed * 1.5;
+        game.ball.speed = boostedSpeed;
+        game.ball.dx = directionX * boostedSpeed;
+        game.ball.dy = directionY * boostedSpeed;
+        
+        console.log(`Speed boost activated: ${baseSpeed} → ${boostedSpeed}`);
+        
+        const timeout = setTimeout(() => {
+          const currentSpeed = Math.sqrt(game.ball.dx * game.ball.dx + game.ball.dy * game.ball.dy);
+          const directionX = currentSpeed > 0 ? game.ball.dx / currentSpeed : 1;
+          const directionY = currentSpeed > 0 ? game.ball.dy / currentSpeed : 1;
+          
+          game.ball.speed = baseSpeed;
+          game.ball.dx = directionX * baseSpeed;
+          game.ball.dy = directionY * baseSpeed;
+          game.clearPowerUpEffect("speed_boost");
+          console.log(`Speed boost expired, reset to: ${baseSpeed}`);
         }, 10000);
+        
+        game.setPowerUpEffect("speed_boost", timeout);
       },
       duration: 10000,
       icon: "🚀",
@@ -58,13 +77,23 @@ export class GameCustomization {
       name: "Paddle Grow",
       description: "Increases paddle size for 8 seconds",
       effect: (game) => {
-        const originalHeight = game.leftPaddle.height;
-        game.leftPaddle.height *= 1.5;
-        game.rightPaddle.height *= 1.5;
-        setTimeout(() => {
-          game.leftPaddle.height = originalHeight;
-          game.rightPaddle.height = originalHeight;
+        game.storeBaseValues();
+        const baseHeight = game.getBaseValues().paddleHeight;
+        const grownHeight = baseHeight * 1.5;
+        
+        game.leftPaddle.height = grownHeight;
+        game.rightPaddle.height = grownHeight;
+        
+        console.log(`Paddle grow activated: ${baseHeight} → ${grownHeight}`);
+        
+        const timeout = setTimeout(() => {
+          game.leftPaddle.height = baseHeight;
+          game.rightPaddle.height = baseHeight;
+          game.clearPowerUpEffect("paddle_grow");
+          console.log(`Paddle grow expired, reset to: ${baseHeight}`);
         }, 8000);
+        
+        game.setPowerUpEffect("paddle_grow", timeout);
       },
       duration: 8000,
       icon: "📏",
@@ -75,17 +104,35 @@ export class GameCustomization {
       name: "Slow Motion",
       description: "Slows down the ball for 6 seconds",
       effect: (game) => {
-        const originalSpeed = game.ball.speed;
-
-        game.ball.speed *= 0.5;
-        game.ball.dx *= 0.5;
-        game.ball.dy *= 0.5;
-
-        setTimeout(() => {
-          game.ball.speed = originalSpeed;
-          game.ball.dx = game.ball.dx > 0 ? originalSpeed : -originalSpeed;
-          game.ball.dy = game.ball.dy > 0 ? originalSpeed : -originalSpeed;
+        game.storeBaseValues();
+        const baseSpeed = game.getBaseValues().ballSpeed;
+        
+        // Calculate current direction
+        const currentSpeed = Math.sqrt(game.ball.dx * game.ball.dx + game.ball.dy * game.ball.dy);
+        const directionX = currentSpeed > 0 ? game.ball.dx / currentSpeed : 1;
+        const directionY = currentSpeed > 0 ? game.ball.dy / currentSpeed : 1;
+        
+        // Apply slow motion
+        const slowSpeed = baseSpeed * 0.5;
+        game.ball.speed = slowSpeed;
+        game.ball.dx = directionX * slowSpeed;
+        game.ball.dy = directionY * slowSpeed;
+        
+        console.log(`Slow motion activated: ${baseSpeed} → ${slowSpeed}`);
+        
+        const timeout = setTimeout(() => {
+          const currentSpeed = Math.sqrt(game.ball.dx * game.ball.dx + game.ball.dy * game.ball.dy);
+          const directionX = currentSpeed > 0 ? game.ball.dx / currentSpeed : 1;
+          const directionY = currentSpeed > 0 ? game.ball.dy / currentSpeed : 1;
+          
+          game.ball.speed = baseSpeed;
+          game.ball.dx = directionX * baseSpeed;
+          game.ball.dy = directionY * baseSpeed;
+          game.clearPowerUpEffect("slow_motion");
+          console.log(`Slow motion expired, reset to: ${baseSpeed}`);
         }, 6000);
+        
+        game.setPowerUpEffect("slow_motion", timeout);
       },
       duration: 6000,
       icon: "🐌",
@@ -97,21 +144,39 @@ export class GameCustomization {
       description: "Creates additional balls for 12 seconds",
       effect: (game) => {
         if (!game.additionalBalls) game.additionalBalls = [];
-        const newBall = {
-          x: game.ball.x,
-          y: game.ball.y,
-          radius: game.ball.radius,
-          dx: -game.ball.dx,
-          dy: game.ball.dy,
-          speed: game.ball.speed,
-        };
-        game.additionalBalls.push(newBall);
-
-        setTimeout(() => {
-          game.additionalBalls = game.additionalBalls.filter(
-            (b: any) => b !== newBall
-          );
+        
+        const ballsToAdd = 2;
+        const addedBalls: any[] = [];
+        
+        // Add new balls and track them
+        for (let i = 0; i < ballsToAdd; i++) {
+          const newBall = {
+            x: game.ball.x,
+            y: game.ball.y,
+            radius: game.ball.radius,
+            dx: (Math.random() > 0.5 ? 1 : -1) * game.ball.speed,
+            dy: (Math.random() > 0.5 ? 1 : -1) * game.ball.speed,
+            speed: game.ball.speed,
+          };
+          game.additionalBalls.push(newBall);
+          addedBalls.push(newBall);
+        }
+        
+        console.log(`Multi ball activated: added ${ballsToAdd} balls`);
+        
+        const timeout = setTimeout(() => {
+          // Remove only the balls we added
+          addedBalls.forEach(ball => {
+            const index = game.additionalBalls.indexOf(ball);
+            if (index > -1) {
+              game.additionalBalls.splice(index, 1);
+            }
+          });
+          game.clearPowerUpEffect("multi_ball");
+          console.log(`Multi ball expired: removed ${ballsToAdd} balls`);
         }, 12000);
+        
+        game.setPowerUpEffect("multi_ball", timeout);
       },
       duration: 12000,
       icon: "⚽",
@@ -228,23 +293,26 @@ export class GameCustomization {
   }
 
   activatePowerUp(powerUpId: string, game: any): void {
-  const powerUp = this.powerUps.find((p) => p.id === powerUpId);
-  if (!powerUp) return;
+    const powerUp = this.powerUps.find((p) => p.id === powerUpId);
+    if (!powerUp) return;
 
-  console.log(`Activating power-up: ${powerUp.name}`);
+    console.log(`Activating power-up: ${powerUp.name} for ${powerUp.duration}ms`);
+    console.log(`Current time:`, new Date(Date.now()).toISOString());
+    console.log(`Will expire at:`, new Date(Date.now() + powerUp.duration).toISOString());
 
-  // Apply the power-up effect
-  powerUp.effect(game);
+    // Apply the power-up effect
+    powerUp.effect(game);
 
-  // Track active power-up
-  const endTime = Date.now() + powerUp.duration;
-  this.activePowerUps.set(powerUp.id, { powerUp, endTime });
+    // Track active power-up
+    const endTime = Date.now() + powerUp.duration;
+    this.activePowerUps.set(powerUp.id, { powerUp, endTime });
 
-  // Clean up after duration
-  setTimeout(() => {
-    this.activePowerUps.delete(powerUp.id);
-  }, powerUp.duration);
-}
+    // Clean up after duration
+    setTimeout(() => {
+      console.log(`Power-up ${powerUp.name} tracking expired`);
+      this.activePowerUps.delete(powerUp.id);
+    }, powerUp.duration);
+  }
 
   
   getActivePowerUps(): Array<{ powerUp: PowerUp; endTime: number }> {

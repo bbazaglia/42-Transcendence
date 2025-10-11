@@ -216,6 +216,22 @@ export class GameManager {
     }
   }
 
+  public pauseGame(): void {
+    if (this.gameStateManager.isGameRunning()) {
+      this.gameStateManager.setState(GameState.PAUSED);
+    }
+  }
+
+  public resumeGame(): void {
+    if (this.gameStateManager.isGamePaused()) {
+      this.gameStateManager.setState(GameState.RUNNING);
+    }
+  }
+
+  public isGameActive(): boolean {
+    return this.gameStateManager.isGameActive();
+  }
+
   resetGame(): void {
     // Clear all active power-up effects first
     this.activePowerUpEffects.forEach((timeout) => clearTimeout(timeout));

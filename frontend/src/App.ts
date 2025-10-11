@@ -28,7 +28,7 @@ export class App {
     this.authModal = new AuthModal()
     this.navbar = new Navbar(this.authModal, this.handleSearchResults.bind(this))
     this.lobby = new Lobby(this.authModal)
-    this.pageService = new PageService(this.authModal)
+    this.pageService = new PageService(this.authModal, this.gameManager)
     this.rootElement = document.getElementById('root')!
   }
 
@@ -191,6 +191,32 @@ export class App {
       console.log('No current tournament found')
       console.log('Selected players data:', selectedPlayers)
 
+      // If game is active and we need to show modal, don't re-render
+      if (this.gameManager.isGameActive()) {
+        if (selectedPlayers && selectedPlayers.players && selectedPlayers.players.length >= 4) {
+          const playerCount = selectedPlayers.players.length
+          if (playerCount !== 4 && playerCount !== 8 && playerCount !== 16) {
+            showMessage('Tournaments require exactly 4, 8, or 16 players. Please adjust your selection.', 'error')
+            this.pageService.showUserSelection('tournament', (path) => {
+              window.history.pushState({}, '', path)
+              this.render()
+            }, () => {
+              console.log('User cancelled tournament player selection, game continues')
+            })
+            return
+          }
+        } else {
+          // No valid selection and game is active - just open modal
+          this.pageService.showUserSelection('tournament', (path) => {
+            window.history.pushState({}, '', path)
+            this.render()
+          }, () => {
+            console.log('User cancelled tournament player selection, game continues')
+          })
+          return
+        }
+      }
+
       if (selectedPlayers && selectedPlayers.players && selectedPlayers.players.length >= 4) {
         // Validate power of 2 players before creating tournament
         const playerCount = selectedPlayers.players.length
@@ -201,8 +227,11 @@ export class App {
             window.history.pushState({}, '', path)
             this.render()
           }, () => {
-            window.history.pushState({}, '', '/')
-            this.render()
+            // Cancel callback - only redirect if no game is active
+            if (!this.gameManager.isGameActive()) {
+              window.history.pushState({}, '', '/')
+              this.render()
+            }
           })
           return
         }
@@ -221,9 +250,11 @@ export class App {
           window.history.pushState({}, '', path)
           this.render()
         }, () => {
-          // Cancel callback - redirect to homepage
-          window.history.pushState({}, '', '/')
-          this.render()
+          // Cancel callback - only redirect if no game is active
+          if (!this.gameManager.isGameActive()) {
+            window.history.pushState({}, '', '/')
+            this.render()
+          }
         })
         return
       }
@@ -291,6 +322,40 @@ export class App {
         sessionStorage.removeItem('selectedPlayers')
       } catch (error) {
         console.error('Error parsing selected players:', error)
+      }
+    }
+
+    // Check if we need to open user selection modal BEFORE rendering
+    const needsPlayerSelection = !selectedPlayers || 
+      (isAIGame && (!selectedPlayers.players || selectedPlayers.players.length !== 1)) ||
+      (!isAIGame && (!selectedPlayers.players || selectedPlayers.players.length !== 2));
+
+    // If a game is active and we need player selection, don't re-render the page
+    // Just open the modal over the existing game
+    if (this.gameManager.isGameActive() && needsPlayerSelection) {
+      this.pageService.showUserSelection(isAIGame ? 'ai-game' : 'quick-game', (path) => {
+        window.history.pushState({}, '', path)
+        this.render()
+      }, () => {
+        // Cancel callback - do nothing, let game continue
+        console.log('User cancelled player selection, game continues')
+      })
+      return
+    }
+
+    // For tournament games, check if we need to open modal before rendering
+    if (!isQuickGame) {
+      const nextMatch = this.tournamentManager.getNextMatch()
+      if (!nextMatch && this.gameManager.isGameActive()) {
+        // Game is active but no next match - just open modal without re-rendering
+        this.pageService.showUserSelection('tournament', (path) => {
+          window.history.pushState({}, '', path)
+          this.render()
+        }, () => {
+          // Cancel callback - do nothing, let game continue
+          console.log('User cancelled tournament player selection, game continues')
+        })
+        return
       }
     }
 
@@ -386,9 +451,12 @@ export class App {
             window.history.pushState({}, '', path)
             this.render()
           }, () => {
-            // Cancel callback - redirect to homepage
-            window.history.pushState({}, '', '/')
-            this.render()
+            // Cancel callback - only redirect to homepage if no game is active
+            if (!this.gameManager.isGameActive()) {
+              window.history.pushState({}, '', '/')
+              this.render()
+            }
+            // If game is active, do nothing (let it resume)
           })
           return
         }
@@ -398,9 +466,12 @@ export class App {
           window.history.pushState({}, '', path)
           this.render()
         }, () => {
-          // Cancel callback - redirect to homepage
-          window.history.pushState({}, '', '/')
-          this.render()
+          // Cancel callback - only redirect to homepage if no game is active
+          if (!this.gameManager.isGameActive()) {
+            window.history.pushState({}, '', '/')
+            this.render()
+          }
+          // If game is active, do nothing (let it resume)
         })
         return
       }
@@ -424,9 +495,12 @@ export class App {
           window.history.pushState({}, '', path)
           this.render()
         }, () => {
-          // Cancel callback - redirect to homepage
-          window.history.pushState({}, '', '/')
-          this.render()
+          // Cancel callback - only redirect to homepage if no game is active
+          if (!this.gameManager.isGameActive()) {
+            window.history.pushState({}, '', '/')
+            this.render()
+          }
+          // If game is active, do nothing (let it resume)
         })
         return
       }
@@ -823,9 +897,11 @@ export class App {
         window.history.pushState({}, '', path)
         this.render()
       }, () => {
-        // Cancel callback - redirect to homepage
-        window.history.pushState({}, '', '/')
-        this.render()
+        // Cancel callback - only redirect if no game is active
+        if (!this.gameManager.isGameActive()) {
+          window.history.pushState({}, '', '/')
+          this.render()
+        }
       })
     })
   }

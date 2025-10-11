@@ -9,10 +9,12 @@ import { showMessage } from "../components/Notifier";
 
 export class ProfilePage {
   private authModal: any;
+  private gameManager?: any;
   private eventListenersSetup = false;
 
-  constructor(authModal: any) {
+  constructor(authModal: any, gameManager?: any) {
     this.authModal = authModal;
+    this.gameManager = gameManager;
   }
 
   async render(userId?: number): Promise<string> {
@@ -714,7 +716,8 @@ export class ProfilePage {
       () => {
         // User cancelled selection
         console.log("User selection cancelled");
-      }
+      },
+      this.gameManager // Pass the game manager to pause/resume the game
     );
   }
 

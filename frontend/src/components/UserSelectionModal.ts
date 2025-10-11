@@ -20,6 +20,8 @@ export class UserSelectionModal {
   private gameType: string = "";
   private minPlayers: number = 1;
   private maxPlayers: number = 2;
+  private gameManager?: any; // GameManager instance to pause/resume
+  private escapeKeyHandler?: (e: KeyboardEvent) => void; // Store reference to escape key handler
 
   constructor() {
     this.selectedPlayers = new Set();
@@ -31,7 +33,8 @@ export class UserSelectionModal {
   show(
     options: UserSelectionOptions,
     onComplete: (selection: SelectedUsers) => void,
-    onCancel?: () => void
+    onCancel?: () => void,
+    gameManager?: any
   ): void {
     this.gameType = options.gameType;
     this.minPlayers = options.minPlayers;
@@ -39,6 +42,12 @@ export class UserSelectionModal {
     this.onSelectionComplete = onComplete;
     this.onCancel = onCancel;
     this.selectedPlayers.clear();
+    this.gameManager = gameManager;
+
+    // Pause the game if a GameManager instance is provided
+    if (this.gameManager && typeof this.gameManager.pauseGame === 'function') {
+      this.gameManager.pauseGame();
+    }
 
     this.render();
     this.setupEventListeners();
@@ -48,6 +57,17 @@ export class UserSelectionModal {
    * Hides the modal
    */
   hide(): void {
+    // Remove escape key listener if it exists
+    if (this.escapeKeyHandler) {
+      document.removeEventListener("keydown", this.escapeKeyHandler);
+      this.escapeKeyHandler = undefined;
+    }
+
+    // Resume the game if a GameManager instance was provided
+    if (this.gameManager && typeof this.gameManager.resumeGame === 'function') {
+      this.gameManager.resumeGame();
+    }
+
     const modal = document.getElementById("user-selection-modal");
     if (modal) {
       modal.remove();
@@ -58,6 +78,12 @@ export class UserSelectionModal {
    * Renders the modal HTML
    */
   private render(): void {
+    // Remove any existing modal first
+    const existingModal = document.getElementById("user-selection-modal");
+    if (existingModal) {
+      existingModal.remove();
+    }
+
     const participants = sessionService.getParticipants();
     console.log("UserSelectionModal: Loading participants:", participants);
     const gameTypeLabels = {
@@ -67,7 +93,7 @@ export class UserSelectionModal {
     };
 
     const modalHTML = `
-      <div id="user-selection-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div id="user-selection-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
         <div class="bg-black/90 backdrop-blur-md rounded-2xl border border-white/20 shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
           <!-- Header -->
           <div class="p-6 border-b border-white/10">
@@ -179,17 +205,22 @@ export class UserSelectionModal {
    * Sets up event listeners for the modal
    */
   private setupEventListeners(): void {
+    console.log("UserSelectionModal: Setting up event listeners");
+    
     // Close modal
     document.getElementById("close-modal")?.addEventListener("click", () => {
+      console.log("UserSelectionModal: Close button clicked");
       this.handleCancel();
     });
 
     document.getElementById("cancel-btn")?.addEventListener("click", () => {
+      console.log("UserSelectionModal: Cancel button clicked");
       this.handleCancel();
     });
 
     // Confirm button
     document.getElementById("confirm-btn")?.addEventListener("click", () => {
+      console.log("UserSelectionModal: Confirm button clicked");
       this.handleConfirm();
     });
 
@@ -209,12 +240,13 @@ export class UserSelectionModal {
         }
       });
 
-    // Escape key
-    document.addEventListener("keydown", (e) => {
+    // Escape key - store reference so we can remove it later
+    this.escapeKeyHandler = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         this.handleCancel();
       }
-    });
+    };
+    document.addEventListener("keydown", this.escapeKeyHandler);
   }
 
   /**
@@ -272,6 +304,8 @@ export class UserSelectionModal {
    * Handles confirmation
    */
   private handleConfirm(): void {
+    console.log("UserSelectionModal: handleConfirm called, selectedPlayers:", this.selectedPlayers.size);
+    
     if (
       this.selectedPlayers.size < this.minPlayers ||
       this.selectedPlayers.size > this.maxPlayers
@@ -323,6 +357,8 @@ export class UserSelectionModal {
    * Handles cancellation
    */
   private handleCancel(): void {
+    console.log("UserSelectionModal: handleCancel called");
+    
     if (this.onCancel) {
       this.onCancel();
     }

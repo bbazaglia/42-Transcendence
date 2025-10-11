@@ -3,9 +3,11 @@ import { userSelectionModal } from '../components/UserSelectionModal.js'
 
 export class PageService {
   private profilePage: ProfilePage
+  private gameManager?: any
 
-  constructor(authModal: any) {
-    this.profilePage = new ProfilePage(authModal)
+  constructor(authModal: any, gameManager?: any) {
+    this.profilePage = new ProfilePage(authModal, gameManager)
+    this.gameManager = gameManager
   }
 
   async renderProfilePage(onNavigate: (path: string) => void, userId?: number): Promise<string> {
@@ -192,7 +194,8 @@ export class PageService {
       onCancel || (() => {
         // Default cancel behavior - just log
         console.log('User selection cancelled')
-      })
+      }),
+      this.gameManager // Pass the game manager to pause/resume the game
     )
   }
 

@@ -1036,8 +1036,8 @@ export class ProfilePage {
       });
   }
 
-  private async showSetup2FAModal(userId: number): Promise<void> {
-    this.closeSetup2FAModal(); 
+  private showSetup2FAModal(userId: number): void {
+    this.closeSetup2FAModal();
     const modalHTML = `
       <div id="setup-2fa-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50">
         <div class="flex items-center justify-center min-h-screen p-4">
@@ -1124,44 +1124,41 @@ export class ProfilePage {
     `;
 
     document.body.insertAdjacentHTML("beforeend", modalHTML);
+    const modalElement = document.getElementById("setup-2fa-modal");
+    if (!modalElement) {
+      console.error("Failed to create 2FA setup modal element.");
+      return;
+    }
 
     // Initialize setup
     this.initialize2FASetup(userId);
 
     // Event listeners
-    document
-      .getElementById("verify-2fa-form")
-      ?.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        await this.handleVerification(userId);
-      });
+    modalElement.querySelector("#verify-2fa-form")?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      await this.handleVerification(userId);
+    });
 
-    const codeInput = document.getElementById(
-      "verification-code"
-    ) as HTMLInputElement;
+    const codeInput = modalElement.querySelector("#verification-code") as HTMLInputElement;
     codeInput?.addEventListener("input", (e) => {
       const input = e.target as HTMLInputElement;
       input.value = input.value.replace(/[^0-9]/g, "");
     });
 
-    document.getElementById("retry-2fa-btn")?.addEventListener("click", () => {
+    modalElement.querySelector("#retry-2fa-btn")?.addEventListener("click", () => {
       this.initialize2FASetup(userId);
     });
 
-    document
-      .getElementById("cancel-setup-2fa")
-      ?.addEventListener("click", () => {
-        this.closeSetup2FAModal();
-      });
+    modalElement.querySelector("#cancel-setup-2fa")?.addEventListener("click", () => {
+      this.closeSetup2FAModal();
+    });
 
     // Close on outside click
-    document
-      .getElementById("setup-2fa-modal")
-      ?.addEventListener("click", (e) => {
-        if (e.target === document.getElementById("setup-2fa-modal")) {
-          this.closeSetup2FAModal();
-        }
-      });
+    modalElement.addEventListener("click", (e) => {
+      if (e.target === modalElement) {
+        this.closeSetup2FAModal();
+      }
+    });
   }
 
   private async initialize2FASetup(userId: number): Promise<void> {

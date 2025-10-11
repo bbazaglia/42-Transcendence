@@ -170,7 +170,7 @@ class SessionService {
     this.tempToken = null; // Consume the token
 
     if (response.error || !response.data) {
-      this.setState({ isLoading: false, isAwaitingTotp: false });
+      this.setState({ isLoading: false });
       return { success: false, error: response.error || 'TOTP verification failed.' };
     }
 

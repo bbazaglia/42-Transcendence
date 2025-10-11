@@ -101,15 +101,14 @@ class ApiService {
       const url = `${this.baseUrl}${endpoint}`;
       console.log('ApiService: Making request to:', url, 'with options:', options);
 
-      const defaultOptions: RequestInit = {
+      const finalOptions: RequestInit = {
+        ...options,
+        credentials: 'include', // Important for cookies
         headers: {
           'Content-Type': 'application/json',
           ...options.headers,
         },
-        credentials: 'include', // Important for cookies
       };
-
-      const finalOptions = { ...defaultOptions, ...options };
       console.log('ApiService: Final request options:', finalOptions);
 
       const response = await fetch(url, finalOptions);

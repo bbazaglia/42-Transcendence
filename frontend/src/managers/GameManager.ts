@@ -128,6 +128,14 @@ export class GameManager {
     this.activePowerUpEffects.forEach((timeout) => clearTimeout(timeout));
     this.activePowerUpEffects.clear();
 
+    // Recreate InputManager if it was destroyed (e.g., after stopGame was called)
+    // This ensures input handling works when starting a new game after navigation
+    if (this.inputManager) {
+      this.inputManager.destroy();
+    }
+    this.inputManager = new InputManager();
+    this.setupInputHandling();
+
     this.canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
     if (!this.canvas) {
       console.error("Canvas not found!");
@@ -230,6 +238,10 @@ export class GameManager {
 
   public isGameActive(): boolean {
     return this.gameStateManager.isGameActive();
+  }
+
+  public isTournamentGame(): boolean {
+    return this.tournamentManager !== null;
   }
 
   resetGame(): void {

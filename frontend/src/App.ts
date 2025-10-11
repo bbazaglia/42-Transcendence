@@ -100,6 +100,15 @@ export class App {
   private render(): void {
     const currentPath = window.location.pathname
 
+    // Stop any active game when navigating to non-game pages
+    const gamePages = ['/game', '/quick-game', '/play-ai'];
+    const isNavigatingToGamePage = gamePages.some(page => currentPath.startsWith(page));
+    
+    if (!isNavigatingToGamePage && this.gameManager.isGameActive()) {
+      console.log('Stopping active game - navigating away from game page to:', currentPath);
+      this.gameManager.stopGame();
+    }
+
     // Then navigate to the specific page
     this.router.navigate(currentPath)
   }
@@ -310,6 +319,17 @@ export class App {
       })
 
       return
+    }
+
+    // If there's an active game but it's of a different type (tournament vs quick), stop it
+    if (this.gameManager.isGameActive()) {
+      const isCurrentGameTournament = this.gameManager.isTournamentGame();
+      const isRequestedGameTournament = !isQuickGame;
+      
+      if (isCurrentGameTournament !== isRequestedGameTournament) {
+        console.log('Stopping game due to game type mismatch. Current is tournament:', isCurrentGameTournament, 'Requested is tournament:', isRequestedGameTournament);
+        this.gameManager.stopGame();
+      }
     }
 
     // Get selected players from session storage

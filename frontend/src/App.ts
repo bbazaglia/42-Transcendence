@@ -355,7 +355,6 @@ export class App {
           </div>
         </div>
       </div>
-      ${this.customization.renderSettingsButton()}
       ${this.customization.renderActivePowerUps()}
     `
 

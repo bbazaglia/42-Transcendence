@@ -150,7 +150,15 @@ export default async function (fastify, opts) {
             }
 
             const publicUser = await fastify.prisma.user.findUnique({ where: { id: decodedTempToken.id } });
-            const hydratedParticipants = await handleSuccessfulLogin(request, reply, fastify, publicUser);
+
+            // Simplified logic for new session creation after TOTP verification
+            const sessionId = request.session.sessionId;
+            const participantIds = [publicUser.id];
+            await request.sessionStore.set(sessionId, { participants: participantIds });
+            const token = await reply.jwtSign({ sessionId });
+            reply.setCookie('token', token, { path: '/', httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', signed: true });
+            const hydratedParticipants = await fastify.getHydratedParticipants(participantIds);
+
             fastify.log.info(`User ${publicUser.displayName} passed TOTP verification and logged in successfully.`);
             return { participants: hydratedParticipants };
 

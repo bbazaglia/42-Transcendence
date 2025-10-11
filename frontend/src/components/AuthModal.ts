@@ -119,9 +119,6 @@ export class AuthModal {
       .getElementById("close-auth-modal")
       ?.addEventListener("click", () => {
         this.hide();
-		this.isAwaitingTotp = false;
-		this.isLoginMode = true;
-		this.updateUI();
       });
 
     this.modalElement?.addEventListener("click", (e) => {
@@ -168,58 +165,71 @@ export class AuthModal {
     const submitText = document.getElementById("submit-text");
     const toggleText = document.getElementById("toggle-text");
     const toggleBtn = document.getElementById("toggle-mode-btn");
-    const displayNameField = document.getElementById("display-name-field");
-    const displayNameInput = document.getElementById(
-      "displayName"
-    ) as HTMLInputElement;
     const googleAuthText = document.getElementById("google-auth-text");
 
-    const emailField = (document.getElementById("email") as HTMLInputElement)
-      .parentElement;
-    const passwordField = (
-      document.getElementById("password") as HTMLInputElement
-    ).parentElement;
+    const displayNameField = document.getElementById("display-name-field");
     const totpField = document.getElementById("totp-field");
-    const totpCodeInput = document.getElementById(
-      "totp-code"
-    ) as HTMLInputElement;
+    const emailField = (document.getElementById("email") as HTMLInputElement)?.parentElement;
+    const passwordField = (document.getElementById("password") as HTMLInputElement)?.parentElement;
+
+    const emailInput = document.getElementById("email") as HTMLInputElement;
+    const passwordInput = document.getElementById("password") as HTMLInputElement;
+    const displayNameInput = document.getElementById("displayName") as HTMLInputElement;
+    const totpCodeInput = document.getElementById("totp-code") as HTMLInputElement;
+
     const toggleSection = document.querySelector(".text-center.mt-6");
     const googleSection = document.getElementById("google-auth-section");
 
-    // Reset all fields first
-    displayNameField!.classList.add("hidden");
-    emailField!.classList.remove("hidden");
-    passwordField!.classList.remove("hidden");
-    totpField!.classList.add("hidden");
-    toggleSection!.classList.remove("hidden");
-    googleSection!.classList.remove("hidden");
-    displayNameInput!.required = false;
-    totpCodeInput!.required = false;
+    if (!title || !submitText || !toggleText || !toggleBtn || !googleAuthText || !displayNameField || !totpField || !emailField || !passwordField || !emailInput || !passwordInput || !displayNameInput || !totpCodeInput || !toggleSection || !googleSection) {
+        console.error("AuthModal UI elements not found!");
+        return;
+    }
+
+    // Reset visibility
+    displayNameField.classList.add("hidden");
+    emailField.classList.remove("hidden");
+    passwordField.classList.remove("hidden");
+    totpField.classList.add("hidden");
+    toggleSection.classList.remove("hidden");
+    googleSection.classList.remove("hidden");
+
+    // Reset required attributes
+    emailInput.required = false;
+    passwordInput.required = false;
+    displayNameInput.required = false;
+    totpCodeInput.required = false;
 
     if (this.isAwaitingTotp) {
-      title!.textContent = "Enter 2FA Code";
-      submitText!.textContent = "Verify Code";
-      emailField!.classList.add("hidden");
-      passwordField!.classList.add("hidden");
-      totpField!.classList.remove("hidden");
-      totpCodeInput!.required = true;
-      toggleSection!.classList.add("hidden");
-      googleSection!.classList.add("hidden");
+      title.textContent = "Enter 2FA Code";
+      submitText.textContent = "Verify Code";
+      emailField.classList.add("hidden");
+      passwordField.classList.add("hidden");
+      totpField.classList.remove("hidden");
+      toggleSection.classList.add("hidden");
+      googleSection.classList.add("hidden");
+      
+      totpCodeInput.required = true;
     } else if (this.isLoginMode) {
-      title!.textContent = "Login";
-      submitText!.textContent = "Sign In";
-      toggleText!.textContent = "Don't have an account?";
-      toggleBtn!.textContent = "Create an account";
-      googleAuthText!.textContent = "Sign in with Google";
+      title.textContent = "Login";
+      submitText.textContent = "Sign In";
+      toggleText.textContent = "Don't have an account?";
+      toggleBtn.textContent = "Create an account";
+      googleAuthText.textContent = "Sign in with Google";
+
+      emailInput.required = true;
+      passwordInput.required = true;
     } else {
       // Register mode
-      title!.textContent = "Create Account";
-      submitText!.textContent = "Create Account";
-      toggleText!.textContent = "Already have an account?";
-      toggleBtn!.textContent = "Sign in";
-      displayNameField!.classList.remove("hidden");
-      displayNameInput!.required = true;
-      googleAuthText!.textContent = "Register with Google";
+      title.textContent = "Create Account";
+      submitText.textContent = "Create Account";
+      toggleText.textContent = "Already have an account?";
+      toggleBtn.textContent = "Sign in";
+      displayNameField.classList.remove("hidden");
+      googleAuthText.textContent = "Register with Google";
+
+      emailInput.required = true;
+      passwordInput.required = true;
+      displayNameInput.required = true;
     }
 
     this.hideMessage();
@@ -248,7 +258,6 @@ export class AuthModal {
           this.isAwaitingTotp = true;
           this.updateUI();
           this.showMessage("Please enter your 2FA code.", "success");
-          this.setLoading(false);
           return; // Stop here and wait for TOTP submission
         }
       } else {
@@ -286,7 +295,7 @@ export class AuthModal {
           result.error || "Authentication error"
         );
         this.showMessage(friendlyError, "error");
-        // If TOTP submission fails, go back to the login screen
+        // If TOTP verification fails, reset the login flow.
         if (this.isAwaitingTotp) {
           this.isAwaitingTotp = false;
           this.updateUI();
@@ -368,6 +377,9 @@ export class AuthModal {
     this.modalElement?.classList.add("hidden");
     this.clearForm();
     this.hideMessage();
+    // Reset state for next time the modal is opened
+    this.isAwaitingTotp = false;
+    this.isLoginMode = true;
   }
 
   destroy(): void {

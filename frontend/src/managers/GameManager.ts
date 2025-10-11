@@ -115,6 +115,19 @@ export class GameManager {
     customization?: any,
     isAIGame: boolean = false
   ): void {
+    // Clean up any previous game state first
+    if (this.animationId) {
+      window.cancelAnimationFrame(this.animationId);
+      this.animationId = null;
+    }
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+      this.countdownInterval = null;
+    }
+    // Clear all active power-up effects from previous game
+    this.activePowerUpEffects.forEach((timeout) => clearTimeout(timeout));
+    this.activePowerUpEffects.clear();
+
     this.canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
     if (!this.canvas) {
       console.error("Canvas not found!");
@@ -209,6 +222,10 @@ export class GameManager {
   }
 
   resetGame(): void {
+    // Clear all active power-up effects first
+    this.activePowerUpEffects.forEach((timeout) => clearTimeout(timeout));
+    this.activePowerUpEffects.clear();
+
     // Reset scores
     this.score1 = 0;
     this.score2 = 0;
@@ -226,6 +243,9 @@ export class GameManager {
     // Reset additional game elements
     this.additionalBalls = [];
     this.powerUpManager.reset();
+
+    // Store the current base values after reset
+    this.storeBaseValues();
   }
 
   private applyCustomizationSettings(): void {
@@ -437,6 +457,10 @@ private resetBall(): void {
   private resetPaddles(): void {
     this.leftPaddle.y = GAME_CONFIG.PADDLE.INITIAL_Y;
     this.rightPaddle.y = GAME_CONFIG.PADDLE.INITIAL_Y;
+    
+    // Reset paddle heights to default (important after power-ups like paddle grow)
+    this.leftPaddle.height = GAME_CONFIG.PADDLE.HEIGHT;
+    this.rightPaddle.height = GAME_CONFIG.PADDLE.HEIGHT;
   }
 
   private async endGame(): Promise<void> {
